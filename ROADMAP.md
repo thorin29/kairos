@@ -66,9 +66,8 @@ live in the database, never in this repository.
     notifications in v0.762 / app 0.550. Still to come:
     - More alerts once notifications reach phones: driving over a speed, no
       update for a while, low battery.
-18. **Program tile look.** The plan card says it's the program and its
-    actions are buttons. Mockup "Kairos: program tile"; the look is still to
-    be picked.
+18. **Program tile look.** Done in v0.784 (option B). Kept here only until
+    it's confirmed and removed.
 
 ## Not doing (decided)
 
@@ -110,9 +109,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.783.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.784.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   180_seventh_week, all registered in `MIGRATIONS`.
-- App 0.561.0 (versionCode 633, CLIENT_BUILD 633).
+- App 0.562.0 (versionCode 634, CLIENT_BUILD 634).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 

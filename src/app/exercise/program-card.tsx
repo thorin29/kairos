@@ -317,12 +317,11 @@ export function ProgramCard({
   const a = data.active;
   if (a) {
     return (
-      <section className="space-y-3 rounded-2xl border border-hairline bg-surface p-4">
+      <section className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+        {/* The program tile (v0.784): a header band says it's the program. */}
+        <TileHeader kind="Program" title={a.name} trailing={a.cycle > 1 ? `Cycle ${a.cycle} \u00b7 ${a.label}` : a.label} />
+        <div className="space-y-3 p-4 pt-3">
         <div>
-          <div className="flex items-baseline justify-between gap-3">
-            <h4 className="font-display text-base font-semibold">{a.name}</h4>
-            <span className="text-sm text-muted">{a.cycle > 1 ? `Cycle ${a.cycle} \u00b7 ${a.label}` : a.label}</span>
-          </div>
           {data.plan && data.plan.others.length > 0 && (
             <p className="text-xs text-muted">With {listWords(data.plan.others)}</p>
           )}
@@ -355,36 +354,24 @@ export function ProgramCard({
           </div>
         ))}
         {data.plan && <WeekStrip days={data.plan.strip} />}
-        <div className="flex flex-wrap gap-4 text-sm font-semibold">
-          {onEditPlan && (
-            <button type="button" onClick={onEditPlan} className="text-accent">
-              Edit
-            </button>
-          )}
-          <button type="button" onClick={() => setChoosing(true)} className="text-accent">
-            Change
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if ((data.also ?? []).length >= 1) setAskThird(true);
-              else {
-                setAdding(true);
-                setChoosing(true);
-              }
-            }}
-            className="text-accent"
-          >
-            Add program
-          </button>
-          {onSaved && (
-            <button type="button" onClick={onSaved} className="text-accent">
-              Saved
-            </button>
-          )}
-          <button type="button" onClick={() => setEnding(true)} className="text-muted hover:text-ink">
-            End
-          </button>
+        <TileButtons
+          buttons={[
+            ...(onEditPlan ? [["Edit", onEditPlan] as const] : []),
+            ["Change", () => setChoosing(true)] as const,
+            [
+              "Add program",
+              () => {
+                if ((data.also ?? []).length >= 1) setAskThird(true);
+                else {
+                  setAdding(true);
+                  setChoosing(true);
+                }
+              },
+            ] as const,
+            ...(onSaved ? [["Saved", onSaved] as const] : []),
+            ["End", () => setEnding(true)] as const,
+          ]}
+        />
         </div>
         {endingId && (
           <Modal small title={`End ${(data.also ?? []).find((x) => x.id === endingId)?.name ?? ""}?`} onClose={() => setEndingId(null)}>
@@ -583,29 +570,18 @@ export function ProgramCard({
   // Your own plan (v0.747): the same card, Edit / Change / End.
   if (data.plan?.hasPlan) {
     return (
-      <section className="space-y-3 rounded-2xl border border-hairline bg-surface p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h4 className="font-display text-base font-semibold">My plan</h4>
-          <span className="text-sm text-muted">{data.plan.ends ? `Ends ${shortDate(data.plan.ends)}` : "No end date"}</span>
-        </div>
+      <section className="overflow-hidden rounded-2xl border border-hairline bg-surface">
+        <TileHeader kind="Plan" title="My plan" trailing={data.plan.ends ? `Ends ${shortDate(data.plan.ends)}` : "No end date"} />
+        <div className="space-y-3 p-4 pt-3">
         <WeekStrip days={data.plan.strip} />
-        <div className="flex flex-wrap gap-4 text-sm font-semibold">
-          {onEditPlan && (
-            <button type="button" onClick={onEditPlan} className="text-accent">
-              Edit
-            </button>
-          )}
-          <button type="button" onClick={() => setChoosing(true)} className="text-accent">
-            Change
-          </button>
-          {onSaved && (
-            <button type="button" onClick={onSaved} className="text-accent">
-              Saved
-            </button>
-          )}
-          <button type="button" onClick={() => setEndingOwn(true)} className="text-muted hover:text-ink">
-            End
-          </button>
+        <TileButtons
+          buttons={[
+            ...(onEditPlan ? [["Edit", onEditPlan] as const] : []),
+            ["Change", () => setChoosing(true)] as const,
+            ...(onSaved ? [["Saved", onSaved] as const] : []),
+            ["End", () => setEndingOwn(true)] as const,
+          ]}
+        />
         </div>
         {endingOwn && (
           <Modal small title="End my plan?" onClose={() => setEndingOwn(false)}>
@@ -764,6 +740,31 @@ function PlateauCard({
           </div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+/** The plan tile's header band (v0.784): PROGRAM or PLAN, the name, and its
+ *  week (or end date) on the right. */
+function TileHeader({ kind, title, trailing }: { kind: string; title: string; trailing: string }) {
+  return (
+    <div className="flex items-center gap-2 bg-accent px-4 py-2.5 text-on-accent">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] opacity-85">{kind}</span>
+      <span className="min-w-0 flex-1 truncate font-display text-base font-bold">{title}</span>
+      <span className="shrink-0 text-xs opacity-90">{trailing}</span>
+    </div>
+  );
+}
+
+/** The plan tile's actions (v0.784): white outlined buttons, two to a row. */
+function TileButtons({ buttons }: { buttons: readonly (readonly [string, () => void])[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {buttons.map(([label, onClick]) => (
+        <button key={label} type="button" onClick={onClick} className={`${QUIET} justify-center`}>
+          {label}
+        </button>
+      ))}
     </div>
   );
 }

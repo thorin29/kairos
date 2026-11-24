@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11 — Program tile (v0.784.0)
+
+- Mockup "Kairos: program tile", option B: the plan card opens with a header
+  band in the accent colour (PROGRAM or PLAN, the name, the week or end date
+  on the right), and its actions are white outlined buttons, two to a row
+  (`TileHeader`, `TileButtons` in program-card.tsx; the same in the app's
+  WorkoutsScreen). Programs beside the first keep their own rows inside.
+
 ## 2026-11 — 5/3/1's 7th-week protocol; the lift page line (v0.783.0)
 
 - 5/3/1 (only; Boring But Big keeps its 4-week cycle, 5/3/1 for Beginners
