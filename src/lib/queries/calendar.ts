@@ -87,6 +87,10 @@ export type GridEvent = {
   schoolBadges?: { userId: string; type: string }[];
   /** Background-image key (see lib/event-bg). Null/absent = color only. */
   bgKey?: string | null;
+  /** v0.788: work or backpacking — drawn behind the day, others on top. */
+  background?: boolean;
+  /** v0.788: a work feed's own title when the block shows the feed's name. */
+  feedTitle?: string | null;
 };
 
 export type WeekData = {
@@ -429,8 +433,8 @@ export async function loadRange(
     orderBy: { startsAt: "asc" },
     include: {
       user: { select: { name: true, displayName: true, color: true } },
-      externalCalendar: { select: { name: true, memberIds: true, sportWorkout: true } },
-      eventType: { select: { id: true, name: true, color: true, sportWorkout: true, defaultReminder: true } },
+      externalCalendar: { select: { name: true, memberIds: true, sportWorkout: true, isWork: true } },
+      eventType: { select: { id: true, name: true, color: true, sportWorkout: true, defaultReminder: true, backpacking: true } },
       schoolClass: { select: { id: true } },
       participants: { select: { userId: true, user: { select: { color: true, name: true, displayName: true } } } },
     },
@@ -513,7 +517,7 @@ export async function loadRange(
     // A custom event type sets its own color (a "Hockey game" is that color
     // for everyone); otherwise it's the owner's color, or the family color
     // for shared events.
-    const eventType = (e as { eventType?: { id: string; name: string; color: string; sportWorkout?: boolean } | null })
+    const eventType = (e as { eventType?: { id: string; name: string; color: string; sportWorkout?: boolean; backpacking?: boolean } | null })
       .eventType;
     const color = eventType?.color
       ? eventType.color
@@ -618,13 +622,21 @@ export async function loadRange(
             : "",
       }));
 
+    // Work and backpacking sit behind the day (v0.788): other events go on
+    // top at full width. A work feed's shifts take the feed's display name;
+    // the feed's own title moves to the details.
+    const isWorkFeed = Boolean((e.externalCalendar as { isWork?: boolean } | null)?.isWork);
+    const background = (e.kind as string) === "WORK" || isWorkFeed || Boolean(eventType?.backpacking);
+    const friendly = isWorkFeed && e.externalCalendar?.name ? e.externalCalendar.name : null;
     const base = {
       id: `${e.id}${suffix}`,
       startDayISO: start.iso,
       startMinExact: start.minutes,
       endDayISO: end.iso,
       endMinExact: end.minutes,
-      title: e.title,
+      title: friendly ?? e.title,
+      feedTitle: friendly && friendly !== e.title ? e.title : null,
+      background,
       location:
         (e as { locationOverride?: string | null }).locationOverride ??
         e.location,

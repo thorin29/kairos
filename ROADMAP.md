@@ -110,9 +110,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.787.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.788.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   180_seventh_week, all registered in `MIGRATIONS`.
-- App 0.564.0 (versionCode 636, CLIENT_BUILD 636).
+- App 0.565.0 (versionCode 637, CLIENT_BUILD 637).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -266,6 +266,11 @@ Kept here so they don't come back as open items.
 
 ### Calendar
 
+- Work and backpacking in the background (v0.788 / app 0.565): a tint (web)
+  or stripes (app) in the person's color with a solid edge, behind the day;
+  other events lay out on top at full width. Overlapping shifts split into
+  lanes. A work feed's shifts show the feed's name, its own title in the
+  details. Events show whose they are (the app leaves off your own).
 - Day (a column per person), 3-day, week, month and agenda views; overlap
   lanes; midnight-crossing events split across days; all-day events with
   inclusive dates and optional day shading.

@@ -622,14 +622,15 @@ CalEvent: { "id","eventId","title","location":str|null,
             "ownerId":str|null,"eventTypeId":str|null,
             "reminders":[int],"reminderUserIds":[str],"memberIds":[str],
             "calendarName":str|null,"recurring":bool,"recurLabel":str|null,
-            "external":bool,"schoolType":str|null,"schoolClassName":str|null }
+            "external":bool,"schoolType":str|null,"schoolClassName":str|null,
+            "background":bool,"feedTitle":str|null }   // v0.788: work/backpacking drawn behind; a work feed's own title
 
 CalendarOptions: { "people":[{id,name,color}],
                    "subscriptions":[{id,name,ownerName,color}],
                    "shownPeople":[id],"shownSubs":[id],
                    "showFamily":bool,"showSchoolWork":bool,
                    "canManageFamily":bool,                    // parent or admin
-                   "eventTypes":[{id,name,color,defaultMinutes,defaultReminder}],
+                   "eventTypes":[{id,name,color,defaultMinutes,defaultReminder,backpacking}],
                    "colorPrefs":{ personalizeColors,othersMode,othersColor,holidayColor,
                                   familyColor,nowColor,kindColors,eventTypeColors,subColors },
                    "meColor","holidaySystemColor","familySystemColor","nowSystemColor" }

@@ -277,10 +277,12 @@ export function WeekGrid({
 
   // A positioned timed-event block (used in day/week columns and, in person
   // mode, for the family events that span all columns).
-  const timedBlock = (e: GridEvent, lane: { index: number; of: number }) => {
+  const timedBlock = (e: GridEvent, lane: { index: number; of: number }, overBackground = false) => {
     const top = (e.startMin / 60) * HOUR_PX;
     const height = Math.max(((e.endMin - e.startMin) / 60) * HOUR_PX - 2, 18);
     const width = 100 / lane.of;
+    // Over a shift or trip: set in so its colored edge still shows (v0.788).
+    const inset = overBackground && lane.index === 0 ? 10 : 2;
     const selected = selectedId === e.id;
     return (
       <div
@@ -295,13 +297,13 @@ export function WeekGrid({
           e.location ? `\n${e.locationName ?? e.location}` : ""
         }\n${e.whoLabel}`}
         className={`pointer-events-auto absolute cursor-pointer overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight text-white ${
-          selected ? "z-[6]" : "shadow-sm"
+          selected ? "z-[6]" : "z-[2] shadow-sm"
         }`}
         style={{
           top,
           height,
-          left: `calc(${lane.index * width}% + 2px)`,
-          width: `calc(${width}% - 8px)`,
+          left: `calc(${lane.index * width}% + ${inset}px)`,
+          width: `calc(${width}% - ${inset + 6}px)`,
           ...bgFor(e),
           boxShadow: selected ? SELECTED_RING : undefined,
         }}
@@ -324,6 +326,8 @@ export function WeekGrid({
         {height > 34 && (
           <span className="tabular block truncate opacity-90">
             {e.timeLabel}
+            {/* Whose it is (v0.788), unless the school line already says. */}
+            {!e.schoolType && e.whoLabel ? ` \u00b7 ${e.whoLabel}` : ""}
           </span>
         )}
         {e.schoolBadges && e.schoolBadges.length > 0 && (
@@ -338,6 +342,46 @@ export function WeekGrid({
           </span>
         )}
         </div>
+      </div>
+    );
+  };
+
+  // Work and backpacking (v0.788): a tint of the person's color with a solid
+  // left edge, behind the day's other events. Shifts that overlap split the
+  // background into lanes, one each.
+  const backgroundBlock = (e: GridEvent, lane: { index: number; of: number }) => {
+    const top = (e.startMin / 60) * HOUR_PX;
+    const height = Math.max(((e.endMin - e.startMin) / 60) * HOUR_PX - 2, 18);
+    const width = 100 / lane.of;
+    const selected = selectedId === e.id;
+    return (
+      <div
+        key={e.id}
+        onClick={(ev) => {
+          ev.stopPropagation();
+          openDetail(e, ev.currentTarget);
+        }}
+        onContextMenu={(ev) => ev.preventDefault()}
+        onPointerDown={(ev) => ev.stopPropagation()}
+        title={`${e.title}\n${e.timeLabel}\n${e.whoLabel}`}
+        className="pointer-events-auto absolute z-[1] cursor-pointer overflow-hidden rounded-md px-1.5 py-1 text-[0.7rem] leading-tight"
+        style={{
+          top,
+          height,
+          left: `calc(${lane.index * width}% + 2px)`,
+          width: `calc(${width}% - ${lane.of > 1 ? 4 : 6}px)`,
+          backgroundColor: `color-mix(in srgb, ${e.color} 16%, transparent)`,
+          borderLeft: `3px solid ${e.color}`,
+          color: `color-mix(in srgb, ${e.color} 80%, black)`,
+          boxShadow: selected ? SELECTED_RING : undefined,
+        }}
+      >
+        <span className="block truncate font-semibold">{e.title}</span>
+        {height > 30 && (
+          <span className="tabular block truncate opacity-85">
+            {e.timeLabel} · {e.whoLabel}
+          </span>
+        )}
       </div>
     );
   };
@@ -639,7 +683,12 @@ export function WeekGrid({
           </div>
 
           {cols.map((key) => {
-            const events = colEvents(key);
+            const all = colEvents(key);
+            // Work and backpacking go behind (v0.788); the rest lay out over
+            // them at full width, as if they weren't there.
+            const behind = all.filter((e) => e.background);
+            const events = all.filter((e) => !e.background);
+            const behindLanes = assignLanes(behind);
             // Week view (day columns, not person columns) draws the longer of
             // two overlapping events on the left; the day view keeps start order.
             const lanes = assignLanes(events, !personMode && days.length > 1);
@@ -705,8 +754,15 @@ export function WeekGrid({
                     );
                   })()}
 
+                {behind.map((e) =>
+                  backgroundBlock(e, behindLanes.get(e.id) ?? { index: 0, of: 1 }),
+                )}
                 {events.map((e) =>
-                  timedBlock(e, lanes.get(e.id) ?? { index: 0, of: 1 }),
+                  timedBlock(
+                    e,
+                    lanes.get(e.id) ?? { index: 0, of: 1 },
+                    behind.some((b) => b.startMin < e.endMin && b.endMin > e.startMin),
+                  ),
                 )}
               </div>
             );

@@ -90,6 +90,10 @@ export type CalEvent = {
   external: boolean;
   schoolType: string | null;
   schoolClassName: string | null;
+  /** v0.788: work or backpacking, drawn behind the day. */
+  background: boolean;
+  /** v0.788: a work feed's own title when `title` is the feed's name. */
+  feedTitle: string | null;
 };
 
 export type CalendarOptions = {
@@ -208,6 +212,8 @@ function toWire(e: GridEvent): CalEvent {
     external: e.external,
     schoolType: e.schoolType ?? null,
     schoolClassName: e.schoolClassName ?? null,
+    background: e.background ?? false,
+    feedTitle: e.feedTitle ?? null,
   };
 }
 

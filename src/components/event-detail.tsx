@@ -238,6 +238,11 @@ export function EventDetail({
                 <span>{event.calendarName} (subscribed)</span>
               </div>
             )}
+            {event.feedTitle && (
+              <div className="text-muted">
+                <span className="break-words">{event.feedTitle}</span>
+              </div>
+            )}
             {isSchoolWork && event.schoolType && (
               <div className="flex items-center gap-2 text-muted">
                 <SchoolIcon className="h-4 w-4 shrink-0" />

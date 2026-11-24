@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Work and backpacking behind the day (v0.788.0)
+
+- Mockup "Kairos: Work in the background". `background` on a grid event: the
+  WORK kind, a feed marked work, or the Backpacking type. Those are laid out
+  on their own (`assignLanes` on just them, so overlapping shifts get one lane
+  each) under the day; everything else is laid out as if they weren't there,
+  set in 10 px where it covers one so the edge shows.
+- Web: a 16% tint of the event's color, a 3 px edge, title then time · who.
+  App: diagonal stripes in the event's color — grey when others are grey, so
+  it never reads as a grey event; your own stay in color.
+- A work feed's shifts take the subscription's display name as the title;
+  the feed's title is `feedTitle`, shown in the details. Hand-made work events
+  keep their own names.
+- Web events show whose they are after the time; the app shows names on
+  others' events only.
+
 ## 2026-11 — Trips start on the calendar; the trip tile (v0.787.0)
 
 - Mockup "Kairos: Trips and home tiles". The colored band stays for things
