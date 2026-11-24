@@ -1,4 +1,5 @@
 import "server-only";
+import { onTripToday } from "@/lib/workouts/backpacking-trips";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { PLACES_MAP_ID, PLACES_MAP_KEY } from "@/lib/places/config";
@@ -82,6 +83,7 @@ export async function loadLive(): Promise<LiveData> {
 
   const now = Date.now();
   const centers = await zoneCenters();
+  const onTrip = await onTripToday(users.map((u) => u.id));
   const people: LivePerson[] = [];
   const waiting: WaitingPerson[] = [];
 
@@ -150,6 +152,7 @@ export async function loadLive(): Promise<LiveData> {
       since: pres.since ? pres.since.toISOString() : null,
       stale: now - latest.at.getTime() > STALE_MS,
       place,
+      ...(onTrip.has(u.id) ? { backpacking: true } : {}),
     });
   }
   return { people, waiting, asOf: new Date(now).toISOString() };

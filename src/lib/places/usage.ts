@@ -5,7 +5,7 @@ import { todayISO } from "@/lib/dates";
 /**
  * Counts of the Google calls Kairos makes, per household day, so Admin can
  * show usage and Kairos can stop itself before Google's free monthly
- * allowance. Map loads are counted when a browser opens the map.
+ * allowance. Map loads are counted (and capped) just before a map opens.
  */
 import type { ApiKind, UsageSummary } from "@/lib/places/usage-types";
 export type { ApiKind, UsageSummary };
@@ -19,6 +19,10 @@ export const DAILY_LIMIT: Record<Exclude<ApiKind, "mapload">, number> = {
   routes: 280,
   search: 40,
 };
+
+/** Map loads Kairos allows a day (v0.778): a map that would go past it isn't
+ *  opened (the cards still work). 300 a day stays under the 10,000 free a month. */
+export const MAP_LOADS_PER_DAY = 300;
 
 /** Google's free calls per month for each SKU Kairos uses (since March 2025:
  *  Essentials 10,000; Pro 5,000 — Nearby Search and Roads are Pro; Routes with ≤10 stops is Essentials). */
@@ -48,6 +52,13 @@ export async function usedToday(kind: ApiKind): Promise<number> {
   return row?.count ?? 0;
 }
 
+/** Count a map about to open, or false when today's map loads are used up. */
+export async function takeMapLoad(): Promise<boolean> {
+  if ((await usedToday("mapload")) >= MAP_LOADS_PER_DAY) return false;
+  await bump("mapload");
+  return true;
+}
+
 /** True when another call of this kind fits today's ceiling. */
 export async function canCall(kind: Exclude<ApiKind, "mapload">): Promise<boolean> {
   return (await usedToday(kind)) < DAILY_LIMIT[kind];
@@ -68,7 +79,7 @@ export async function usageSummary(): Promise<UsageSummary> {
       today: mine.filter((r) => r.day === today).reduce((s, r) => s + r.count, 0),
       month: mine.reduce((s, r) => s + r.count, 0),
       free: FREE_PER_MONTH[k],
-      limit: k === "mapload" ? null : DAILY_LIMIT[k],
+      limit: k === "mapload" ? MAP_LOADS_PER_DAY : DAILY_LIMIT[k],
     };
   }
   return out;

@@ -130,7 +130,13 @@ export function HistoryView({
     (window as unknown as { gm_authFailure?: () => void }).gm_authFailure = () =>
       setMapError("Google refused the map key. Check the key and its website restriction in Admin → Family map.");
     loadMaps(mapKey)
-      .then(() => {
+      .then(async () => {
+        if (cancelled || !mapDiv.current || mapRef.current) return;
+        // Counted before it opens, so Kairos's daily map cap holds (v0.778).
+        if (!(await mapLoaded(embed))) {
+          if (!cancelled) setMapError("Map paused for today: the daily map limit is used up.");
+          return;
+        }
         if (cancelled || !mapDiv.current || mapRef.current) return;
         mapRef.current = new google.maps.Map(mapDiv.current, {
           mapId,
@@ -144,7 +150,6 @@ export function HistoryView({
           zoomControl: true,
         });
         setReady(true);
-        void mapLoaded(embed).catch(() => undefined);
       })
       .catch(() => {
         if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Family map.");

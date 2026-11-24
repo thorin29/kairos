@@ -1482,6 +1482,8 @@ POST /api/v1/workouts/cardio/remove  { "date","sessionId" } → { "date","cardio
 POST /api/v1/workouts/track          { "clientId","activity":walk|run|ruck|hike,"startAt","endAt" (ISO),
                                        "movingSec","distanceM","load"? (ruck),"path":[[lat,lng,ms]…] }
                                        → { "sessionId","date","cardio" }   // v0.777; same clientId again = no change
+GET  /api/v1/workouts/backpacking    → { "today": { "date","day","of","status":asked|hiking|skip|null,"miles" }|null }   // v0.778
+POST /api/v1/workouts/backpacking    { "hiking":bool } | { "start":true,"until":"YYYY-MM-DD" } → the same
 POST /api/v1/workouts/warmup         { "date","plannedWorkoutId","done","completedOn"? } → { "date","status" }
 GET  /api/v1/workouts/order          → { "everyDay":[kind…], "days":{ "1":[kind…] } }
 POST /api/v1/workouts/order          { "day":0-6|null, "order":[kind…]|null } → the same   // null order resets
@@ -1938,7 +1940,7 @@ map. Web sign-in is for parents, so the device hands itself over:
   (a stop on the trip between from and to, at the time it passed nearest the spot). A day's
   `items[]` stops carry `editId` when added; `removed[]` lists removed stops `{ editId, start, end, place }`.
 - The embed pages read through `GET /api/v1/places/view/live`, `GET /api/v1/places/view/tracks?ids=a,b`
-  and count map loads with `POST /api/v1/places/view/mapload`. These accept a device token, the
+  and count map loads with `POST /api/v1/places/view/mapload` (v0.778: called before the map opens; `{ ok: false }` past 300 a day, and the map isn't opened). These accept a device token, the
   `fd_places` cookie, or a parent's web session (`requirePlacesViewer`).
 
 ### Notification choices — **built (v0.771)**

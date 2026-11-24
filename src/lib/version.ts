@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.777.0";
+export const APP_VERSION = "0.778.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -189,11 +189,16 @@ export const MIGRATIONS = [
   "174_places_retrack",
   "175_my_reminders",
   "176_workout_tracks",
+  "177_backpacking",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.778.0",
+    summary: ["Backpacking: a new Backpacking event type. On the days of a trip (one event over several days, or a repeating one on back-to-back days) each day's hiking is read from Family map locations and logged as that day's workout; the first time you're seen hiking you're asked \"Hiking today?\", and a day you didn't answer is still logged. Long stops show as Camp and the hiking as a workout line on History; people on a trip have a backpack on their card. Family map: a Terrain button, and Kairos stops opening maps for the day at 300 map loads."],
+  },
   {
     version: "0.777.0",
     summary: ["Workouts: a walk, run, ruck or hike tracked in the app is saved as its own cardio workout for the day (one of two with a planned workout), and its route shows on Family map History as a thin dashed line. Family map: a drive whose phone went quiet ends where it was last seen (and is drawn on roads); drives are drawn on roads a minute after they end; a drive still under way is drawn faded."],

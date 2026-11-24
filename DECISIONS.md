@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — Backpacking trips; terrain; a daily map cap (v0.778.0)
+
+- Owner's call: no phone GPS for multi-day trips (he has a backpacking app
+  for terrain). A trip is a calendar event of the new Backpacking type
+  (`EventType.backpacking`; migration 177 adds the type, or flags an existing
+  one named Backpacking). Trip days: every day a single event covers (all-day
+  end exclusive), or each occurrence of a repeating one; the owner and the
+  event's people (`tripDays`, pure).
+- A trip day's hiking = the `move` legs (≥ 100 m) of `planDay` over that
+  day's Family map points; drives (to the trailhead) don't count. On History
+  those legs are workout lines ("Backpacking") and stops of 2 h+ outside any
+  zone are "Camp" (no Google lookup).
+- `backpackingTick` (5-min timer): the first time someone on a trip day has
+  walked 400 m+, a "Hiking today?" notification (`/exercise` → Workouts,
+  where the trip card answers it); `BackpackDay` keeps the answer. Days that
+  are over (21 days back) are logged as a "Backpacking" cardio session
+  unless the answer was no — answered or not, per the owner. Each logged day
+  is a workout of its own (`trackedCount`).
+- From the app, "Backpacking trip" only makes the event (today → the chosen
+  day) and marks today hiking; `GET/POST /api/v1/workouts/backpacking`.
+- Live map: `backpacking` on people on a trip today (a backpack on the card).
+- Terrain map type button beside Satellite (same map load).
+- Map loads: counted before the map opens (`takeMapLoad`); past 300 a day
+  the map isn't opened ("Map paused for today"), the cards still work. Google
+  doesn't allow caching its map; panning and zooming aren't extra loads.
+
+
 ## 2026-11 — Tracked walks, runs, rucks and hikes; quiet drives end (v0.777.0)
 
 - `POST /api/v1/workouts/track` saves one outing tracked with the phone's GPS

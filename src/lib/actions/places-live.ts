@@ -6,7 +6,7 @@ import { loadDay } from "@/lib/places/history";
 import { nearbyChoices, saveFamilyName, searchChoices, type PlaceChoice } from "@/lib/places/naming";
 import { addStop, canEditHistory, removeStop, undoStopEdit } from "@/lib/places/stop-edits";
 import { currentUser } from "@/lib/user-session";
-import { bump } from "@/lib/places/usage";
+import { takeMapLoad } from "@/lib/places/usage";
 import type { LiveData } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
 
@@ -18,9 +18,10 @@ export async function refreshPlacesLive(): Promise<LiveData> {
   return loadLive();
 }
 
-/** Counted once per map the browser opens — Google bills per map load. */
-export async function notePlacesMapLoad(): Promise<void> {
-  await bump("mapload");
+/** Counted once per map the browser opens — Google bills per map load.
+ *  False when today's map loads are used up (v0.778). */
+export async function notePlacesMapLoad(): Promise<boolean> {
+  return takeMapLoad();
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;

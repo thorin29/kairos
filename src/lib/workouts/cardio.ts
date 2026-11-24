@@ -24,6 +24,8 @@ export const CARDIO_ACTIVITIES: readonly CardioActivity[] = [
   { key: "ruck", label: "Ruck", category: "RUCKING", name: "Rucking", distance: true, load: true },
   { key: "hike", label: "Hike", category: "CARDIO", name: "Hiking", distance: true },
   { key: "walk", label: "Walk", category: "CARDIO", name: "Walking", distance: true },
+  // A backpacking trip day (v0.778), logged from Family map locations.
+  { key: "backpack", label: "Backpacking", category: "CARDIO", name: "Backpacking", distance: true, load: true },
   { key: "jump_rope", label: "Jump rope", category: "CARDIO", name: "Jump rope" },
   { key: "bike", label: "Bike", category: "CARDIO", name: "Bike", distance: true },
   { key: "other", label: "Other", category: "CARDIO", name: "Cardio" },

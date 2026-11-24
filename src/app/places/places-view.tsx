@@ -224,6 +224,28 @@ function TrafficGlyph() {
   );
 }
 
+/** On a backpacking trip (v0.778): Tabler's backpack. */
+function BackpackGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M5 18v-6a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3Z" />
+      <path d="M10 6V5a2 2 0 1 1 4 0v1" />
+      <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4" />
+      <path d="M11 10h2" />
+    </svg>
+  );
+}
+
+/** Terrain (v0.778): Tabler's mountain. */
+function TerrainGlyph() {
+  return (
+    <svg {...glyph}>
+      <path d="M3 20h18l-6.921-14.612a2.3 2.3 0 0 0-4.158 0L3 20Z" />
+      <path d="m7.5 11 2 2.5 2.5-2.5 2 3 2.5-2" />
+    </svg>
+  );
+}
+
 function LayersGlyph() {
   return (
     <svg {...glyph}>
@@ -260,6 +282,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const [full, setFull] = useState(false);
   const [traffic, setTraffic] = useState(false);
   const [satellite, setSatellite] = useState(false);
+  const [terrain, setTerrain] = useState(false);
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [tracksOn, setTracksOn] = useState<string[]>([]);
@@ -350,7 +373,13 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
     (window as unknown as { gm_authFailure?: () => void }).gm_authFailure = () =>
       setMapError("Google refused the map key. Check the key and its website restriction in Admin → Family map.");
     loadMaps(mapKey)
-      .then(() => {
+      .then(async () => {
+        if (cancelled || !mapDiv.current || mapRef.current) return;
+        // Counted before it opens, so Kairos's daily map cap holds (v0.778).
+        if (!(await mapLoaded(embed))) {
+          if (!cancelled) setMapError("Map paused for today: the daily map limit is used up.");
+          return;
+        }
         if (cancelled || !mapDiv.current || mapRef.current) return;
         const first = dataRef.current.people[0];
         const map = new google.maps.Map(mapDiv.current, {
@@ -371,7 +400,6 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
         info.current = new google.maps.InfoWindow();
         info.current.addListener("closeclick", () => setSelected(null));
         setReady(true);
-        void mapLoaded(embed).catch(() => undefined);
       })
       .catch(() => {
         if (!cancelled) setMapError("The map couldn't load. Check your connection, or the map key in Admin → Family map.");
@@ -673,8 +701,8 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   }, [traffic, ready]);
 
   useEffect(() => {
-    if (ready) mapRef.current?.setMapTypeId(satellite ? "hybrid" : "roadmap");
-  }, [satellite, ready]);
+    if (ready) mapRef.current?.setMapTypeId(satellite ? "hybrid" : terrain ? "terrain" : "roadmap");
+  }, [satellite, terrain, ready]);
 
   // Full screen: same map, grown to the window. Esc closes it.
   useEffect(() => {
@@ -800,13 +828,29 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
             </button>
             <button
               type="button"
-              onClick={() => setSatellite((v) => !v)}
+              onClick={() => {
+                setSatellite((v) => !v);
+                setTerrain(false);
+              }}
               className={satellite ? iconBtnOn : iconBtn}
               aria-pressed={satellite}
               aria-label="Satellite"
               title="Satellite"
             >
               <LayersGlyph />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTerrain((v) => !v);
+                setSatellite(false);
+              }}
+              className={terrain ? iconBtnOn : iconBtn}
+              aria-pressed={terrain}
+              aria-label="Terrain"
+              title="Terrain"
+            >
+              <TerrainGlyph />
             </button>
           </div>
           {(mapError || !ready || empty) && (
@@ -843,7 +887,14 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                   <Avatar name={p.name} color={p.color} avatarPath={p.avatarPath} avatarPosition={p.avatarPosition} size="md" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate font-semibold">{p.name}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-semibold">{p.name}</span>
+                        {p.backpacking && (
+                          <span className="shrink-0 text-muted" title="Backpacking" aria-label="Backpacking">
+                            <BackpackGlyph />
+                          </span>
+                        )}
+                      </span>
                       {now != null && !p.moving && p.since && (
                         <span className="shrink-0 text-xs text-muted">{span(p.since, t)}</span>
                       )}

@@ -27,6 +27,12 @@ export function startTimers(): void {
       console.warn(`[timers] chore turns failed: ${(e as Error).message}`);
     }
     try {
+      const { backpackingTick } = await import("@/lib/workouts/backpacking");
+      await backpackingTick();
+    } catch (e) {
+      console.warn(`[timers] backpacking failed: ${(e as Error).message}`);
+    }
+    try {
       const { pingDue } = await import("@/lib/push");
       await pingDue(since);
     } catch (e) {

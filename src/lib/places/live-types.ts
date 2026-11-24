@@ -27,6 +27,8 @@ export type LivePerson = {
   since: string | null;
   stale: boolean;
   place: PlaceLabel | null;
+  /** On a backpacking trip today (v0.778). */
+  backpacking?: boolean;
 };
 
 /** People without any location yet still appear in the list (not the map). */

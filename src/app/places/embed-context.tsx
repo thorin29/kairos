@@ -59,9 +59,17 @@ export async function tracksNow(embed: boolean, ids: string[]): Promise<Record<s
   return data.tracks;
 }
 
-export async function mapLoaded(embed: boolean): Promise<void> {
-  if (!embed) return notePlacesMapLoad();
-  await fetch("/api/v1/places/view/mapload", { method: "POST", credentials: "same-origin" });
+/** Count a map about to open; false when today's map loads are used up.
+ *  A failed count lets the map open. */
+export async function mapLoaded(embed: boolean): Promise<boolean> {
+  try {
+    if (!embed) return await notePlacesMapLoad();
+    const res = await fetch("/api/v1/places/view/mapload", { method: "POST", credentials: "same-origin" });
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean };
+    return body.ok !== false;
+  } catch {
+    return true;
+  }
 }
 
 type Spot = { lat: number; lng: number; accuracyM: number | null };

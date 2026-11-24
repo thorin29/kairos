@@ -12,6 +12,7 @@ import { applyEdits, type AddedStop, type StopEdit } from "@/lib/places/day-edit
 import { shortAddress } from "@/lib/places/geo";
 import type { DayData, DayItem, DayRemovedStop } from "@/lib/places/history-types";
 import { withWorkouts, type TrackedWorkout } from "@/lib/places/workout-legs";
+import { tripDaysFor } from "@/lib/workouts/backpacking-trips";
 
 /**
  * One person's day for the History page and today's tracks on the map:
@@ -21,6 +22,8 @@ import { withWorkouts, type TrackedWorkout } from "@/lib/places/workout-legs";
  */
 
 const MAX_POINTS = 6_000;
+/** On a backpacking day, a stop this long outside any zone is camp (v0.778). */
+const CAMP_MS = 2 * 60 * 60_000;
 /** A drive this recent may still be going; it's drawn raw until it settles. */
 const SETTLE_MS = 60_000;
 const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true, courseDeg: true } as const;
@@ -80,6 +83,8 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
   const edited = applyEdits(planDay(points, start, before, known, now), edits);
   const plan = edited.plan;
   const centers = await zoneCenters();
+  // A backpacking trip day (v0.778): walking is hiking, long stops are camp.
+  const trip = (await tripDaysFor(userId, dateISO, dateISO)).length > 0;
   const items: DayItem[] = [];
   let n = 0;
 
@@ -101,7 +106,9 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
         lng,
         place: added?.name
           ? { name: added.name, address: shortAddress(added.address), kind: "saved" }
-          : opts.names
+          : trip && !added && !it.zone && it.end.getTime() - it.start.getTime() >= CAMP_MS
+            ? { name: "Camp", address: null, kind: "saved" }
+            : opts.names
             ? await placeFor(lat, lng, 30, userId, it.zone)
             : null,
         editId: added?.editId ?? null,
@@ -116,10 +123,18 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
         ? await snappedDrive(key, userId, leg.points)
         : { path: leg.points.map((p) => [p.lat, p.lng] as [number, number]), snapped: false };
     const secs = Math.max(1, (leg.end.getTime() - leg.start.getTime()) / 1000);
-    const motion = leg.kind === "drive" ? "drive" : (leg.distanceM / secs) * MPS_TO_MPH < 5 ? "walk" : "move";
+    const hiking = trip && leg.kind === "move";
+    const motion = hiking
+      ? "workout"
+      : leg.kind === "drive"
+        ? "drive"
+        : (leg.distanceM / secs) * MPS_TO_MPH < 5
+          ? "walk"
+          : "move";
     items.push({
       kind: leg.kind,
       motion,
+      ...(hiking ? { activity: "Backpacking" } : {}),
       start: leg.start.toISOString(),
       end: leg.end.toISOString(),
       // Raw reports (off-road, parking lots, walks) are softened for drawing;
