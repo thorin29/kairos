@@ -11,6 +11,7 @@ import { zoneCenters } from "@/lib/places/zones";
 import { applyEdits, type AddedStop, type StopEdit } from "@/lib/places/day-edits";
 import { shortAddress } from "@/lib/places/geo";
 import type { DayData, DayItem, DayRemovedStop } from "@/lib/places/history-types";
+import { withWorkouts, type TrackedWorkout } from "@/lib/places/workout-legs";
 
 /**
  * One person's day for the History page and today's tracks on the map:
@@ -21,7 +22,7 @@ import type { DayData, DayItem, DayRemovedStop } from "@/lib/places/history-type
 
 const MAX_POINTS = 6_000;
 /** A drive this recent may still be going; it's drawn raw until it settles. */
-const SETTLE_MS = 3 * 60_000;
+const SETTLE_MS = 60_000;
 const SELECT = { at: true, lat: true, lng: true, accuracyM: true, speed: true, zone: true, courseDeg: true } as const;
 
 /** Saved addresses and the family's named spots (everyone's and this
@@ -75,10 +76,10 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
         : [],
   );
   const known = await knownPlaces(userId);
-  const edited = applyEdits(planDay(points, start, before, known), edits);
+  const now = Date.now();
+  const edited = applyEdits(planDay(points, start, before, known, now), edits);
   const plan = edited.plan;
   const centers = await zoneCenters();
-  const now = Date.now();
   const items: DayItem[] = [];
   let n = 0;
 
@@ -104,6 +105,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
             ? await placeFor(lat, lng, 30, userId, it.zone)
             : null,
         editId: added?.editId ?? null,
+        ...("lastSeen" in it && it.lastSeen ? { lastSeen: true } : {}),
       });
       continue;
     }
@@ -124,6 +126,8 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
       // replay still uses the reports themselves.
       path: track.snapped ? track.path : smoothPath(track.path),
       snapped: track.snapped,
+      // Still under way (the day's last item): drawn faded until it ends.
+      ...(leg.kind === "drive" && i === plan.items.length - 1 ? { live: true } : {}),
       distanceM: Math.round(leg.distanceM),
       topMph: leg.topMps != null ? Math.round(leg.topMps * MPS_TO_MPH) : null,
       times: leg.points.map((p) => p.at.getTime()),
@@ -162,8 +166,19 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     }
     k++;
   }
+  const tracked = (await prisma.workoutTrack.findMany({
+    where: { userId, startAt: { lt: end }, endAt: { gt: start } },
+    orderBy: { startAt: "asc" },
+    select: { activity: true, startAt: true, endAt: true, distanceM: true, path: true },
+  })) as { activity: string; startAt: Date; endAt: Date; distanceM: number; path: unknown }[];
+  const workouts: TrackedWorkout[] = tracked.map((w) => ({
+    ...w,
+    path: Array.isArray(w.path) ? (w.path as [number, number, number][]) : [],
+  }));
+  const shown = withWorkouts(items, workouts);
+
   let stopNo = 0;
-  for (const it of items) if (it.kind === "stop") it.n = ++stopNo;
+  for (const it of shown) if (it.kind === "stop") it.n = ++stopNo;
 
   const removed: DayRemovedStop[] = [];
   for (const r of edited.removed) {
@@ -179,7 +194,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
   return {
     removed,
     date: dateISO,
-    items,
+    items: shown,
     totals: {
       miles: Math.round((t.distanceM / 1609.344) * 10) / 10,
       driveMin: Math.round(t.driveMs / 60_000),

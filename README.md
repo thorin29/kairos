@@ -31,7 +31,8 @@ parties holding your family's schedule.
   Big, wave loading and more) that write the plan, with every set logged
   against last time's. A day can hold warm-ups, strength, core, cardio,
   conditioning (with a timer for every format and a library of named workouts,
-  Rx or Scaled), mobility, stretching and isometrics. Suggestions offer the
+  Rx or Scaled), mobility, stretching and isometrics. Walks, runs, rucks and
+  hikes can be tracked with the phone's GPS. Suggestions offer the
   next weight, a lighter day or a swap around a sore spot, and never act on
   their own. Progress lives on a body map with a **training heat map** whose
   colour is earned by getting stronger and eases back when progress stalls,

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
-import { CarIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
+import { CarIcon, DumbbellIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
 import { changeStopNow, mapLoaded, placesHref, useEmbed, type StopChange } from "../embed-context";
 import type { DayData, DayItem, DayLegItem, DayStopItem } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "../map-kit";
@@ -395,7 +395,9 @@ export function HistoryView({
                       <span className="block font-mono text-xs text-muted">
                         {it.editId
                           ? `${time(it.start)} · added`
-                          : `${time(it.start)} – ${idx === day.items.length - 1 && day.date === today ? "now" : time(it.end)} · ${minutes(it.start, it.end)}`}
+                          : it.lastSeen
+                            ? `Last seen ${time(it.start)}`
+                            : `${time(it.start)} – ${idx === day.items.length - 1 && day.date === today ? "now" : time(it.end)} · ${minutes(it.start, it.end)}`}
                       </span>
                     </span>
                   </button>
@@ -430,12 +432,19 @@ export function HistoryView({
                 <span className="inline-flex items-center gap-1.5">
                   {it.motion === "drive" ? (
                     <CarIcon className="h-4 w-4" />
+                  ) : it.motion === "workout" ? (
+                    <DumbbellIcon className="h-4 w-4" />
                   ) : it.motion === "walk" ? (
                     <WalkIcon className="h-4 w-4" />
                   ) : (
                     <MotionIcon className="h-4 w-4" />
                   )}
-                  <span className="sr-only">{it.motion === "drive" ? "Drive" : it.motion === "walk" ? "Walk" : "Moving"}</span>
+                  {it.motion === "workout" ? (
+                    <span className="font-medium text-ink">{it.activity}</span>
+                  ) : (
+                    <span className="sr-only">{it.motion === "drive" ? "Drive" : it.motion === "walk" ? "Walk" : "Moving"}</span>
+                  )}
+                  {it.motion === "workout" ? " · " : ""}
                   {minutes(it.start, it.end)} · {miles(it.distanceM)}
                   {it.topMph != null && it.motion !== "walk" ? ` · top ${it.topMph} mph` : ""}
                 </span>

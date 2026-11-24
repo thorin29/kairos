@@ -1479,6 +1479,9 @@ CardioEntry: { "sessionId","name","summary",
 POST /api/v1/workouts/cardio         { "date","activity":row|run|ruck|hike|walk|jump_rope|bike|other,
                                        "meters"?,"distance"?,"seconds"?,"load"?,"completedOn"? } → { "date","cardio" }
 POST /api/v1/workouts/cardio/remove  { "date","sessionId" } → { "date","cardio" }   // a Concept2 row stays out
+POST /api/v1/workouts/track          { "clientId","activity":walk|run|ruck|hike,"startAt","endAt" (ISO),
+                                       "movingSec","distanceM","load"? (ruck),"path":[[lat,lng,ms]…] }
+                                       → { "sessionId","date","cardio" }   // v0.777; same clientId again = no change
 POST /api/v1/workouts/warmup         { "date","plannedWorkoutId","done","completedOn"? } → { "date","status" }
 GET  /api/v1/workouts/order          → { "everyDay":[kind…], "days":{ "1":[kind…] } }
 POST /api/v1/workouts/order          { "day":0-6|null, "order":[kind…]|null } → the same   // null order resets

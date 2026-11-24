@@ -97,6 +97,7 @@ model User {
   workoutExercises Exercise[]        @relation("WorkoutExercises")
   workoutSchedules WorkoutSchedule[] @relation("WorkoutSchedules")
   workoutSessions  WorkoutSession[]  @relation("WorkoutSessions")
+  workoutTracks    WorkoutTrack[]    @relation("WorkoutTracks")
   workoutSkips     WorkoutMovementSkip[]
   workoutFeedback  WorkoutFeedback[]
   workoutPauses    WorkoutPause[]
@@ -1789,9 +1790,33 @@ model WorkoutSession {
   createdAt   DateTime @default(now())
 
   sets SessionSet[]
+  /// The route, when it was tracked in the app (v0.777).
+  track WorkoutTrack?
 
   @@index([userId, date])
   @@index([sourceEventId])
+}
+
+// A walk, run, ruck or hike tracked with the phone's GPS (v0.777): the route
+// and times behind one cardio session. Shown on Family map History.
+model WorkoutTrack {
+  id        String         @id @default(cuid())
+  sessionId String         @unique
+  session   WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation("WorkoutTracks", fields: [userId], references: [id], onDelete: Cascade)
+  /// Made by the phone, so a resend never logs it twice.
+  clientId  String         @unique
+  activity  String
+  startAt   DateTime
+  endAt     DateTime
+  movingSec Int
+  distanceM Float
+  /// [[lat, lng, ms], …]
+  path      Json
+  createdAt DateTime       @default(now())
+
+  @@index([userId, startAt])
 }
 
 // What was actually done, one row per exercise per set. A uniform shape holds

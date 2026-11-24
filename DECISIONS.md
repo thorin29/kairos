@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-11 — Tracked walks, runs, rucks and hikes; quiet drives end (v0.777.0)
+
+- `POST /api/v1/workouts/track` saves one outing tracked with the phone's GPS
+  (app 0.557): `logCardio` makes the session (walk/run/ruck/hike, distance in
+  the household's unit, moving seconds, pack weight for a ruck) and a
+  `WorkoutTrack` row keeps the route, times and the phone's `clientId` (a
+  resend returns the first save). Removing the cardio entry removes the route
+  (cascade).
+- It is a workout of its own: `workoutBlocksFor` counts each tracked outing as
+  a done block, so a morning run plus the planned workout reads "1 of 2". As
+  with any extra, it finishes the day's workout task only when nothing is
+  planned (`settleWorkoutTask` fallback).
+- Family map History: the tracked route replaces the trips Home Assistant
+  recorded in that time (`withWorkouts`), labelled with the activity and drawn
+  in thin short dashes (walks HA recorded stay dotted).
+- A trailing trip with nothing heard for 10 min (`QUIET_END_MS`) ends in a
+  "last seen" stop at its last report (`planDay(..., now)`), so it settles,
+  is drawn on roads and its place is named. A phone that stops reporting
+  once parked left the drive "under way" (raw straight lines) for good.
+- Drives settle 1 min after the stop that ends them (was 3); the day's last
+  drive, still under way, is drawn at 40% opacity (`live`).
+
+
 ## 2026-11 — History layout; smarter places (v0.776.0)
 
 - History: totals are one line under the name (no tiles). Wide screens: map

@@ -13,6 +13,8 @@ export type DayStopItem = {
   place: PlaceLabel | null;
   /** Set when the family added this stop (v0.769); removing it deletes the edit. */
   editId?: string | null;
+  /** The phone went quiet here mid-trip (v0.777): last seen, not a visit. */
+  lastSeen?: boolean;
 };
 
 /** A recorded stop the family removed (v0.769), so it can be put back. */
@@ -20,13 +22,18 @@ export type DayRemovedStop = { editId: string; start: string; end: string; place
 
 export type DayLegItem = {
   kind: "drive" | "move";
-  /** drive, walk (averaging under 5 mph) or move (in between). */
-  motion: "drive" | "walk" | "move";
+  /** drive, walk (averaging under 5 mph), move (in between), or a walk, run,
+   *  ruck or hike tracked as a workout in the app (v0.777). */
+  motion: "drive" | "walk" | "move" | "workout";
+  /** For a workout: "Run", "Ruck", … */
+  activity?: string;
   start: string;
   end: string;
   /** What to draw: the road-snapped path, or the raw points. */
   path: [number, number][];
   snapped: boolean;
+  /** A drive still under way (v0.777), drawn faded until it ends. */
+  live?: boolean;
   distanceM: number;
   topMph: number | null;
   /** The raw points and their times (ms), for replay. */

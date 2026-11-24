@@ -107,9 +107,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.760.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  168_places_zones, all registered in `MIGRATIONS`.
-- App 0.549.0 (versionCode 621, CLIENT_BUILD 621).
+- Web 0.777.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  176_workout_tracks, all registered in `MIGRATIONS`.
+- App 0.557.0 (versionCode 629, CLIENT_BUILD 629).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -286,6 +286,11 @@ Kept here so they don't come back as open items.
   pauses).
 
 ### Workouts
+
+- Go for a walk, run, ruck or hike (v0.777 / app 0.557): tracked with the
+  phone's GPS from a Workouts tile, + Additional or a long-press shortcut;
+  saved as its own cardio workout, its route on Family map History. Saved
+  plans moved to the plan card in the app.
 
 - The plan card (v0.747): the program or your own plan, the week at a
   glance, Edit / Change / End; Edit opens Your plan, with the program's

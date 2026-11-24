@@ -21,22 +21,42 @@ export function touchInline(): boolean {
 }
 
 /**
- * Lines for a day's trips: drives solid (thicker when road-snapped), walks
- * and other slow trips dotted. Stops aren't lines.
+ * Lines for a day's trips: drives solid (thicker when road-snapped, faded
+ * while still under way), walks and other slow trips dotted, workouts tracked
+ * in the app in thin short dashes. Stops aren't lines.
  */
 export function drawTrips(map: google.maps.Map, items: DayItem[], color: string): google.maps.Polyline[] {
   const lines: google.maps.Polyline[] = [];
   for (const it of items) {
     if (it.kind === "stop" || it.path.length < 2) continue;
     const path = it.path.map(([lat, lng]) => ({ lat, lng }));
-    if (it.kind === "drive") {
+    if (it.motion === "workout") {
+      // A walk, run, ruck or hike tracked in the app: thin short dashes.
+      lines.push(
+        new google.maps.Polyline({
+          map,
+          path,
+          clickable: false,
+          strokeOpacity: 0,
+          zIndex: 3,
+          icons: [
+            {
+              icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: color, strokeWeight: 2, scale: 2 },
+              offset: "0",
+              repeat: "7px",
+            },
+          ],
+        }),
+      );
+    } else if (it.kind === "drive") {
       lines.push(
         new google.maps.Polyline({
           map,
           path,
           clickable: false,
           strokeColor: color,
-          strokeOpacity: it.snapped ? 0.9 : 0.75,
+          // Still under way: faded until it ends and is drawn on roads.
+          strokeOpacity: it.live ? 0.4 : it.snapped ? 0.9 : 0.75,
           strokeWeight: it.snapped ? 5 : 4,
           zIndex: 2,
         }),

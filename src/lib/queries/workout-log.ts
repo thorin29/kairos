@@ -1,4 +1,5 @@
 import "server-only";
+import { trackedCount } from "@/lib/workouts/tracked-count";
 import { repeatsByPlan } from "@/lib/workouts/day-repeats";
 import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
 import { swapName } from "@/lib/workouts/day-swap";
@@ -2800,11 +2801,13 @@ export async function workoutBlocksFor(userId: string, dateISO: string): Promise
   const planned = progress.planCount > 0;
   // Two programs that day (v0.749): each counts as its own workout.
   const progs = planned ? await dayProgramBlocks(userId, dateISO) : [];
-  const total = (progs.length ? progs.length : planned ? 1 : 0) + sports.length;
+  // A walk, run, ruck or hike tracked in the app (v0.777) is a workout of its own.
+  const tracked = await trackedCount(userId, dateISO);
+  const total = (progs.length ? progs.length : planned ? 1 : 0) + sports.length + tracked;
   if (total < 2) return null;
   const planDone = planned && (progress.done || (task != null && task.status !== "PENDING"));
   const plannedDone = progs.length ? progs.filter((b) => b.done || planDone).length : planDone ? 1 : 0;
-  const done = plannedDone + sports.filter((x) => x.state !== "open").length;
+  const done = plannedDone + sports.filter((x) => x.state !== "open").length + tracked;
   return { done, total };
 }
 

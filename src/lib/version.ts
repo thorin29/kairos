@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.776.0";
+export const APP_VERSION = "0.777.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -188,11 +188,16 @@ export const MIGRATIONS = [
   "173_notify_prefs",
   "174_places_retrack",
   "175_my_reminders",
+  "176_workout_tracks",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.777.0",
+    summary: ["Workouts: a walk, run, ruck or hike tracked in the app is saved as its own cardio workout for the day (one of two with a planned workout), and its route shows on Family map History as a thin dashed line. Family map: a drive whose phone went quiet ends where it was last seen (and is drawn on roads); drives are drawn on roads a minute after they end; a drive still under way is drawn faded."],
+  },
   {
     version: "0.776.0",
     summary: ["Family map History: the map stays put while the timeline scrolls, and the day's totals are one line. Smarter places: quick stops at zones and saved places (a drop-off) show up, chargers, ATMs and parking lots are passed over for the store you went to, and a phone that went quiet while moving shows where it was last seen instead of still driving."],

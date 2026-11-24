@@ -31,6 +31,8 @@ export type Stop = {
   lng: number;
   /** The Home Assistant zone most of the stop's reports were in, if any. */
   zone: string | null;
+  /** The phone went quiet here mid-trip (v0.777): where they were last seen. */
+  lastSeen?: boolean;
 };
 
 function mainZone(points: DayPoint[]): string | null {
@@ -118,6 +120,9 @@ export type KnownPlace = { lat: number; lng: number; radiusM: number };
 
 /** Inside a Home Assistant zone or at a known place, this long is a stop. */
 const KNOWN_STOP_MS = 60_000;
+/** A trip whose phone has said nothing for this long has ended where it was
+ *  last heard from (a phone that stops reporting once parked). */
+export const QUIET_END_MS = 10 * 60_000;
 
 function atKnownPlace(cluster: DayPoint[], known: KnownPlace[]): boolean {
   const zoned = cluster.filter((p) => p.zone).length;
@@ -131,6 +136,8 @@ export function planDay(
   dayStart: Date,
   before: DayPoint | null = null,
   known: KnownPlace[] = [],
+  /** The time now (ms), so a trip that went quiet can be ended; omit in tests that don't care. */
+  now: number | null = null,
 ): DayPlan {
   const pts = points.filter((p) => p.accuracyM == null || p.accuracyM <= MAX_ACCURACY_M);
   if (before && (before.accuracyM == null || before.accuracyM <= MAX_ACCURACY_M)) {
@@ -185,6 +192,12 @@ export function planDay(
     const lead = prevStop && prevStop.kind === "stop" ? [{ ...trip[0], ...centroidPoint(prevStop) }] : [];
     const legPts = [...lead, ...trip];
     if (legPts.length >= 2) items.push(legOf(legPts));
+    // Nothing heard for a while: the trip is over, ending where the phone was
+    // last heard from, so it's drawn on roads and the place gets a name.
+    const last = trip[trip.length - 1];
+    if (legPts.length >= 2 && now != null && now - last.at.getTime() >= QUIET_END_MS) {
+      items.push({ kind: "stop", start: last.at, end: last.at, lat: last.lat, lng: last.lng, zone: last.zone ?? null, lastSeen: true });
+    }
   }
   return { items: mergeNearbyStops(items) };
 }
@@ -200,7 +213,15 @@ export function mergeNearbyStops(items: (Stop | Leg)[]): (Stop | Leg)[] {
   const join = (a: Stop, b: Stop): Stop => {
     // Keep the spot of the longer half; the visit runs from first to last.
     const longer = a.end.getTime() - a.start.getTime() >= b.end.getTime() - b.start.getTime() ? a : b;
-    return { kind: "stop", start: a.start, end: b.end, lat: longer.lat, lng: longer.lng, zone: a.zone ?? b.zone };
+    return {
+      kind: "stop",
+      start: a.start,
+      end: b.end,
+      lat: longer.lat,
+      lng: longer.lng,
+      zone: a.zone ?? b.zone,
+      ...(b.lastSeen ? { lastSeen: true } : {}),
+    };
   };
   // Back-to-back stops (no trip between) that close together.
   for (let k = 0; k + 1 < out.length; ) {

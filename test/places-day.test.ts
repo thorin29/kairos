@@ -108,3 +108,20 @@ describe("quick stops at known places", () => {
     expect(planDay(pts, new Date(BASE), null, known).items.filter((i) => i.kind === "stop")).toHaveLength(1);
   });
 });
+
+describe("a phone that went quiet mid-trip", () => {
+  const pts = [p(0, 60), p(10, 90), p(5, 120), p(2000, 123, 15), p(6000, 127, 18), p(9000, 130, 17)];
+
+  it("ends the trip where it was last heard from after 10 minutes", () => {
+    const items = planDay(pts, at(0), null, [], at(141).getTime()).items;
+    expect(items.map((i) => i.kind)).toEqual(["stop", "drive", "stop"]);
+    const last = items[2];
+    expect(last.kind === "stop" && last.lastSeen).toBe(true);
+    expect(last.start.toISOString()).toBe(at(130).toISOString());
+  });
+
+  it("keeps it a trip under way before then", () => {
+    const items = planDay(pts, at(0), null, [], at(135).getTime()).items;
+    expect(items.map((i) => i.kind)).toEqual(["stop", "drive"]);
+  });
+});
