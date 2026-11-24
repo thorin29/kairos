@@ -66,3 +66,27 @@ describe("5/3/1 misses and too-hard weeks (v0.754)", () => {
     expect(waveCheck(4, 5, false, { asked: 1, drop: 15 })).toEqual({ suggest: 5, reason: "+ set: 4 reps" });
   });
 });
+
+describe("5/3/1's 7th week (v0.783)", () => {
+  it("adds a deload or test week to the cycle", async () => {
+    const { programByKey, withSeventh, weekLabel, weekIntent, programWeek, blocksDone } = await import("@/lib/workouts/programs");
+    const base = programByKey("wendler-531")!;
+    expect(base.weeks).toBe(3);
+    expect(withSeventh(base, null)).toBe(base);
+    const d = withSeventh(base, "deload");
+    expect(d.weeks).toBe(4);
+    expect(weekLabel(d, 4)).toBe("7th week · deload");
+    expect(weekIntent(d, 4)).toBe("LIGHT");
+    expect(weekLabel(withSeventh(base, "ask"), 4)).toBe("7th week");
+    const t = withSeventh(base, "test");
+    expect(weekIntent(t, 4)).toBe("TEST");
+    expect(t.wave?.[3].at(-1)).toMatchObject({ pct: 1, reps: 3, plus: true });
+    // Week 4 of a cycle that started 3 weeks ago, still in it.
+    expect(programWeek(d, "2026-11-02", "2026-11-24")).toBe(4);
+    expect(blocksDone(d, "2026-11-02", "2026-11-24")).toBe(0);
+    expect(blocksDone(base, "2026-11-02", "2026-11-24")).toBe(1);
+    // Boring But Big and Beginners are unchanged.
+    expect(programByKey("wendler-bbb")?.weeks).toBe(4);
+    expect(programByKey("wendler-beginners")?.weeks).toBe(3);
+  });
+});

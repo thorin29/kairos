@@ -66,6 +66,9 @@ live in the database, never in this repository.
     notifications in v0.762 / app 0.550. Still to come:
     - More alerts once notifications reach phones: driving over a speed, no
       update for a while, low battery.
+18. **Program tile look.** The plan card says it's the program and its
+    actions are buttons. Mockup "Kairos: program tile"; the look is still to
+    be picked.
 
 ## Not doing (decided)
 
@@ -107,9 +110,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.782.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  179_track_elevation, all registered in `MIGRATIONS`.
-- App 0.560.0 (versionCode 632, CLIENT_BUILD 632).
+- Web 0.783.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  180_seventh_week, all registered in `MIGRATIONS`.
+- App 0.561.0 (versionCode 633, CLIENT_BUILD 633).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -314,7 +317,8 @@ Kept here so they don't come back as open items.
   a moon on Workout days and This week (v0.753). Endurance days (Long steady,
   Intervals, circuits) count toward the endurance heart; lift days can end
   with a Core, Holds or Carries finisher; a missed 5/3/1 + set drops the max
-  10% and a too-hard lift holds (v0.754).
+  10% and a too-hard lift holds (v0.754). 5/3/1 runs 3-week cycles with a
+  7th week (deload or training-max test) every other cycle (v0.783).
 - Plans: weekly plan and rolling plan (pausable, end dates, a future start),
   programs that write the plan (5/3/1, Boring But Big, 5/3/1 for Beginners,
   wave loading, Odd squad with ladders, density, carry and club finishers),

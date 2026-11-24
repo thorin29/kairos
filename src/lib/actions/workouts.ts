@@ -137,7 +137,7 @@ import {
   type CurrentSetup,
   type ProgramChoice,
   type ProgramInfo,
-  type StartProgramInput, currentOtherDays, dayProgramInfo, alsoPrograms } from "@/lib/workouts/program-run";
+  type StartProgramInput, currentOtherDays, dayProgramInfo, alsoPrograms, setSeventhWeek } from "@/lib/workouts/program-run";
 import { planSummary, type PlanSummary } from "@/lib/workouts/plan-summary";
 import type { ProgramVersion } from "@/lib/workouts/program-version";
 import { addDayExtra, dayExtrasFor, removeDayExtra, type DayExtraView } from "@/lib/workouts/day-extras-run";
@@ -1362,6 +1362,8 @@ export async function loadDayLog(
   /** A program day after its cycle ended, before What's next was chosen
    *  (v0.748): the program's name; the day waits for the choice. */
   programWait: string | null;
+  /** 5/3/1's 7th week, not picked yet (v0.783): the program, to ask Deload or TM test. */
+  programAsk: { id: string; name: string } | null;
   /** Two programs that day (v0.749): each its own workout. */
   programBlocks: DayProgramBlock[];
 }> {
@@ -1394,6 +1396,7 @@ export async function loadDayLog(
     sports,
     workoutTime,
     programWait: prog?.blockDone ? prog.name : null,
+    programAsk: prog?.seventhAsk ? { id: prog.id, name: prog.name } : null,
     state,
     adjusted,
     sportDay,
@@ -1758,6 +1761,14 @@ export async function loadProgramsFor(userId: string): Promise<{
     plateauFor(userId, todayISO()),
   ]);
   return { choices, active, invite, current, warmups, setup, versions, plan, otherDays, also, plateau };
+}
+
+/** Pick 5/3/1's 7th week (v0.783): "deload" or "test". */
+export async function setSeventhWeekAction(userId: string, programId: string, kind: string): Promise<void> {
+  await requireInteractive();
+  await requireCanActFor(userId);
+  await setSeventhWeek(userId, programId, kind);
+  refresh();
 }
 
 /** Answer the plateau card (v0.752): light, swap or keep. */

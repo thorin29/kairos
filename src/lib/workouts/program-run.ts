@@ -43,6 +43,8 @@ import {
   ladderCheck,
   ladderStepAfter,
   lastHeavyWeek,
+  seventhKindOf,
+  withSeventh,
   waveCheck,
   type Program,
   type ProgramRole,
@@ -58,6 +60,7 @@ type ProgramRow = {
   previousPlan: unknown;
   cycle?: number;
   lastRaises?: unknown;
+  seventhWeek?: string | null;
 };
 
 export type ActiveProgram = {
@@ -89,6 +92,7 @@ export async function loadActivePrograms(userId: string): Promise<ActiveProgram[
       previousPlan: true,
       cycle: true,
       lastRaises: true,
+      seventhWeek: true,
     },
   })) as ProgramRow[];
   return rows.map(toActive).filter((p): p is ActiveProgram => !!p);
@@ -109,6 +113,7 @@ export async function loadActiveProgram(userId: string): Promise<ActiveProgram |
       previousPlan: true,
       cycle: true,
       lastRaises: true,
+      seventhWeek: true,
     },
   })) as ProgramRow | null;
   return row ? toActive(row) : null;
@@ -121,8 +126,10 @@ function numbersOf(v: unknown): Record<string, number> {
 }
 
 function toActive(row: ProgramRow): ActiveProgram | null {
-  const program = programByKey(row.programKey);
-  if (!program) return null;
+  const base = programByKey(row.programKey);
+  if (!base) return null;
+  // This cycle as it runs (v0.783): a week longer when it has its 7th week.
+  const program = withSeventh(base, seventhKindOf(row.seventhWeek));
   const tm: Record<string, number> = {};
   if (row.trainingMaxes && typeof row.trainingMaxes === "object") {
     for (const [k, v] of Object.entries(row.trainingMaxes as Record<string, unknown>)) {
@@ -159,6 +166,7 @@ async function loadProgramOn(userId: string, dateISO: string): Promise<ActivePro
       endedOn: true,
       cycle: true,
       lastRaises: true,
+      seventhWeek: true,
     },
   })) as (ProgramRow & { status: string; endedOn: Date | null })[];
   const row = rows.find((r) =>
@@ -191,6 +199,9 @@ export type ProgramInfo = {
   check: { poolExerciseId: string; suggest: number; reason: string }[];
   /** With `blockDone`, when the cycle felt easy: a harder program to try. */
   harder: { key: string; name: string; blurb: string; days: string[]; weeks: number } | null;
+  /** 5/3/1's 7th week under way and not picked yet (v0.783): the day page
+   *  asks Deload or TM test. */
+  seventhAsk?: boolean;
 };
 
 /**
@@ -252,6 +263,7 @@ async function infoOf(userId: string, p: ActiveProgram, dateISO: string): Promis
     label: weekLabel(p.program, week),
     intent: weekIntent(p.program, week),
     blockDone,
+    seventhAsk: p.program.seventhKind === "ask" && week === p.program.weeks && !blockDone,
     maxes: ids.map((id) => ({
       poolExerciseId: id,
       name: names.find((n) => n.id === id)?.name ?? "",
@@ -299,7 +311,8 @@ async function cycleCheck(
     { effort: string | null; slot: string; date: Date }[],
   ];
   const allRoles = p.program.days.flatMap((d) => d.roles);
-  const heavy = lastHeavyWeek(p.program);
+  // After a training-max test (v0.783) its top set is the one that counts.
+  const heavy = p.program.seventhKind === "test" ? p.program.weeks : lastHeavyWeek(p.program);
   const check = ids.map((id) => {
     const step = steps[id] ?? 5;
     const role = allRoles.find((r) => r.key === roles.find((x) => x.poolExerciseId === id)?.programRole);
@@ -1222,6 +1235,7 @@ export async function startProgram(userId: string, input: StartProgramInput): Pr
       done >= 1
         ? {
             cycle: running.cycle + 1,
+            seventhWeek: nextSeventh(running),
             lastRaises: Object.fromEntries(
               Object.entries(newMaxes)
                 .map(([id, w]) => [id, Math.round((w - (running.trainingMaxes[id] ?? w)) * 100) / 100] as const)
@@ -1512,8 +1526,27 @@ export async function nextBlock(userId: string, raise: boolean, raises?: Record<
   );
   await prisma.personProgram.update({
     where: { id: p.id },
-    data: { blockStartedOn: toDateColumn(start), trainingMaxes: maxes, cycle: p.cycle + 1, lastRaises },
+    data: { blockStartedOn: toDateColumn(start), trainingMaxes: maxes, cycle: p.cycle + 1, lastRaises, seventhWeek: nextSeventh(p) },
   });
+}
+
+/** The next cycle's 7th week (v0.783): 5/3/1 has one every other cycle. */
+function nextSeventh(p: ActiveProgram): string | null {
+  const base = programByKey(p.program.key);
+  if (!base?.seventh) return null;
+  return p.program.seventhKind ? null : "ask";
+}
+
+/** Pick this cycle's 7th week (v0.783): a deload or a training-max test.
+ *  Only while the cycle has one; it can change until the cycle ends. */
+export async function setSeventhWeek(userId: string, programId: string | null, kind: string): Promise<boolean> {
+  if (kind !== "deload" && kind !== "test") return false;
+  const all = await loadActivePrograms(userId);
+  const p = (programId ? all.find((x) => x.id === programId) : all.find((x) => x.program.seventhKind)) ?? null;
+  if (!p || !p.program.seventhKind) return false;
+  await prisma.personProgram.update({ where: { id: p.id }, data: { seventhWeek: kind } });
+  await generateWorkoutTasks();
+  return true;
 }
 
 /** Set (or clear, with 0) one lift's training max. */

@@ -186,6 +186,12 @@ export type Program = {
   supplemental?: "FSL" | "BBB";
   /** Only main lifts test in a test week; the rest go light (Odd squad). */
   testMainOnly?: boolean;
+  /** 5/3/1's 7th-week protocol (v0.783): every other cycle ends with one
+   *  more week, a deload or a training-max test, picked when it starts. */
+  seventh?: { deload: WaveSet[]; test: WaveSet[] };
+  /** On a cycle that has its 7th week (set by withSeventh): which one, or
+   *  "ask" until it's picked. The 7th week is then week `weeks`. */
+  seventhKind?: SeventhKind;
   /** Set up with the block builder (Odd squad, v0.732): a muscle group per
    *  weekday, then each day's blocks. Picked again after it ends, it starts
    *  the builder over (no saved version). */
@@ -225,6 +231,37 @@ export const WAVE_531: WaveSet[][] = [
   [{ reps: 5, pct: 0.75 }, { reps: 3, pct: 0.85 }, { reps: 1, pct: 0.95, top: true, plus: true }],
   [{ reps: 5, pct: 0.4 }, { reps: 5, pct: 0.5 }, { reps: 5, pct: 0.6 }],
 ];
+
+/** The 7th week's training-max test (5/3/1 Forever): up to 100% of the max
+ *  for 3–5 reps. Fewer than 3 means the max is too heavy. */
+export const TM_TEST: WaveSet[] = [
+  { reps: 5, pct: 0.7 },
+  { reps: 5, pct: 0.8 },
+  { reps: 5, pct: 0.9 },
+  { reps: 3, pct: 1, top: true, plus: true },
+];
+
+export type SeventhKind = "ask" | "deload" | "test";
+export const seventhKindOf = (v: unknown): SeventhKind | null => (v === "ask" || v === "deload" || v === "test" ? v : null);
+
+/**
+ * A program as one cycle runs it (v0.783): with its 7th week, a cycle is a
+ * week longer and that week is the deload (also until it's picked) or the
+ * test. Every pure function (weeks, labels, targets, the cycle check) works
+ * on this as on any program.
+ */
+export function withSeventh(program: Program, kind: SeventhKind | null): Program {
+  if (!program.seventh || !kind || !program.wave) return program;
+  const w = program.weeks + 1;
+  return {
+    ...program,
+    weeks: w,
+    wave: [...program.wave, kind === "test" ? program.seventh.test : program.seventh.deload],
+    lightWeeks: kind === "test" ? [] : [w],
+    testWeeks: kind === "test" ? [w] : [],
+    seventhKind: kind,
+  };
+}
 
 /** Wave loading: two waves of 3, 2, 1 in one session, the second a little
  *  heavier; each week a little heavier again; week 4 light. */
@@ -281,13 +318,15 @@ const BASE_PROGRAMS: readonly Program[] = [
     warmupSets: true,
     name: "5/3/1",
     blurb:
-      "Jim Wendler's original 5/3/1: four days, one main lift a day, with a + set to finish weeks 1–3 and a deload in week 4. " +
+      "Jim Wendler's 5/3/1: four days, one main lift a day, 3-week cycles with a + set to finish each week. " +
+      "Every other cycle ends with a 7th week: a deload or a training-max test, picked that week. " +
       "Two assistance lifts a day, 5 sets each (the Triumvirate).",
-    weeks: 4,
-    lightWeeks: [4],
+    weeks: 3,
+    lightWeeks: [],
     testWeeks: [],
     defaultDays: [1, 2, 4, 5],
-    wave: WAVE_531,
+    wave: WAVE_531.slice(0, 3),
+    seventh: { deload: WAVE_531[3], test: TM_TEST },
     days: [
       {
         name: "Press day",
@@ -746,6 +785,11 @@ export function weekIntent(program: Program, week: number): Intent {
 
 /** "Week 2 of 4", "Week 4 of 4 · light", "Week 6 of 6 · test". */
 export function weekLabel(program: Program, week: number): string {
+  // The 7th week (v0.783): "7th week · deload", "7th week · test", or just
+  // "7th week" until it's picked.
+  if (program.seventhKind && week === program.weeks) {
+    return `7th week${program.seventhKind === "ask" ? "" : ` \u00b7 ${program.seventhKind}`}`;
+  }
   const intent = weekIntent(program, week);
   return `Week ${week} of ${program.weeks}${intent === "LIGHT" ? " · light" : intent === "TEST" ? " · test" : ""}`;
 }
@@ -838,7 +882,8 @@ export function targetsFor(input: {
   const odd = oddTargets({ ...input, intent, up, load });
   if (odd) return odd;
 
-  if (intent === "TEST") {
+  // 5/3/1's training-max test is its own wave, below (v0.783).
+  if (intent === "TEST" && !(scheme.kind === "WAVE" && program.seventhKind === "test")) {
     const best = input.bestForThree ?? null;
     const at = (pct: number) => (best ? roundLoad(best * pct, unit) : null);
     return [

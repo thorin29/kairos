@@ -1264,6 +1264,15 @@ Arms days: `POST /workouts/plan/core` and `POST /workouts/core-workouts` take
 `kind: "arms"`; `GET /workouts/core-workouts?kind=arms`; plan options add
 `armsWorkouts`; a plan entry's `core` adds `kind`.
 
+v0.783: 5/3/1's 7th week. A program's `label` can read "7th week",
+"7th week · deload" or "7th week · test", and `seventhAsk` is true while
+that week is under way and not picked. Pick it:
+```
+POST /api/v1/workouts/programs/seventh
+request: { "programId"?, "kind": "deload" | "test" }
+200: { "kind" }   404 when the cycle has no 7th week
+```
+
 v0.754: an `other` kind may be `endurance` (`@steady.<CARDIO>.<min>`,
 `@int.<CARDIO>.<rounds>.<work s>.<rest s>`, or circuit ids; CARDIO is ROW,
 RUN, RUCK, BIKE, WALK, HIKE or ROPE). `POST /workouts/programs/start` takes

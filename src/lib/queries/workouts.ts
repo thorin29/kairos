@@ -10,7 +10,7 @@ import { getSetting } from "@/lib/settings";
 import { loadMovementStats, type MovementStats } from "@/lib/queries/movement-stats";
 import { setsSummary } from "@/lib/workouts/sets";
 import { loadDayOrders, type DayOrders } from "@/lib/workouts/day-order";
-import { programByKey, programWeek, weekLabel } from "@/lib/workouts/programs";
+import { programByKey, programWeek, seventhKindOf, weekLabel, withSeventh } from "@/lib/workouts/programs";
 import { dayNumbers, isFixedWeight } from "@/lib/workouts/lift-stats";
 import { bodyweightSeries } from "@/lib/queries/bodyweight";
 import { groupHistory } from "@/lib/workouts/history";
@@ -582,9 +582,11 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
     // the line on a lift's chart.
     const prog = (await prisma.personProgram.findFirst({
       where: { userId: person.id, status: "ACTIVE" },
-      select: { programKey: true, trainingMaxes: true, startedOn: true, blockStartedOn: true },
-    })) as { programKey: string; trainingMaxes: unknown; startedOn: Date; blockStartedOn: Date } | null;
-    const progDef = prog ? programByKey(prog.programKey) : null;
+      select: { programKey: true, trainingMaxes: true, startedOn: true, blockStartedOn: true, seventhWeek: true },
+    })) as { programKey: string; trainingMaxes: unknown; startedOn: Date; blockStartedOn: Date; seventhWeek: string | null } | null;
+    // This cycle as it runs, 7th week and all (v0.783).
+    const progBase = prog ? programByKey(prog.programKey) : null;
+    const progDef = progBase ? withSeventh(progBase, seventhKindOf(prog?.seventhWeek)) : null;
     const tms = (prog?.trainingMaxes ?? {}) as Record<string, unknown>;
     const programFor = (id: string): GraphSeries["program"] => {
       if (!prog || !progDef || typeof tms[id] !== "number") return null;

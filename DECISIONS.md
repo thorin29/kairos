@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-11 — 5/3/1's 7th-week protocol; the lift page line (v0.783.0)
+
+- 5/3/1 (only; Boring But Big keeps its 4-week cycle, 5/3/1 for Beginners
+  its 3-week cycles with no deload) runs 3-week cycles. Every other cycle
+  ends with a 7th week, as in 5/3/1 Forever: a deload (40/50/60% × 5, as the
+  old week 4) or a training-max test (70/80/90% × 5, then 100% × 3+).
+- `PersonProgram.seventhWeek` (migration 180): null for a cycle without one,
+  "ask" until picked, then "deload" or "test". Continue alternates it (a
+  fresh 5/3/1 starts without, so two cycles come before the first 7th week).
+  `withSeventh` turns the program into that cycle as it runs (a week longer,
+  the 7th week its last), so weeks, labels, targets, the wait for What's next
+  and the cycle check all work unchanged on `ActiveProgram.program`.
+- The day page asks Deload / TM test when the 7th week is under way and not
+  picked (until then it's the deload's sets). It can change until the cycle
+  ends. After a test, What's next checks the test's top set: under 3 reps is
+  a miss (the max drops 10%), otherwise the usual raise.
+- Moving over: a running 5/3/1 keeps its 4-week cycle, its 4th week now the
+  7th week ("deload" when it's already under way, "ask" before).
+- The lift page shows the program line ("5/3/1 · 7th week · deload · Cycle
+  2") and the green raise, without "Today <sets>"; a lift with no program
+  line (an extra lift) still shows its sets.
+
 ## 2026-11 — US spelling in the UI (v0.782.0)
 
 - Owner: "color", not "colour", in anything people see (labels, What's new).

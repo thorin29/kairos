@@ -28,6 +28,7 @@ import {
   setWarmup,
   removeDayExtraAction,
   skipProgramDayAction,
+  setSeventhWeekAction,
   type LoggedSet,
 } from "@/lib/actions/workouts";
 import type { DayProgramBlock } from "@/lib/queries/workout-log";
@@ -185,6 +186,7 @@ export function DayLog({
     workoutTime?: { time: number | null; usual: number | null; changed: boolean };
     /** A program day waiting for What's next (v0.748). */
     programWait?: string | null;
+    programAsk?: { id: string; name: string } | null;
     /** One per program when two run today (v0.750). */
     programBlocks?: DayProgramBlock[];
   } | null>(null);
@@ -208,7 +210,7 @@ export function DayLog({
   const [open, setOpen] = useState<OpenMovement | null>(null);
   // A Core day opens as one screen, every movement in its own section (v0.639).
   const [openCore, setOpenCore] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
   const [c2, setC2] = useState<Concept2Day | null>(null);
   const [c2Checking, setC2Checking] = useState(false);
 
@@ -664,6 +666,30 @@ export function DayLog({
         </div>
       ) : (
         <>
+      {/* 5/3/1's 7th week, not picked yet (v0.783). */}
+      {data?.programAsk && !future && (
+        <div className="rounded-xl border border-hairline bg-surface p-4">
+          <p className="font-semibold">{data.programAsk.name} · 7th week</p>
+          <div className="mt-3 flex gap-2">
+            {(["deload", "test"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                disabled={pending}
+                onClick={() =>
+                  startTransition(async () => {
+                    await setSeventhWeekAction(userId, data.programAsk!.id, k);
+                    reload();
+                  })
+                }
+                className={`${k === "deload" ? SECONDARY_BTN : PRIMARY_BTN} flex-1 justify-center`}
+              >
+                {k === "deload" ? "Deload" : "TM test"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div>
         <p className={`text-xs font-semibold uppercase tracking-widest ${lateDay ? "text-red-700 dark:text-red-400" : "text-muted"}`}>
           {date === todayISO ? "Today" : dayLabel(date)}
@@ -2145,11 +2171,11 @@ function MovementLogger({
 
       {sugg && !skipped && <SuggestionCard s={sugg} onAnswer={answerSugg} />}
 
-      {log?.target && (
+      {/* The program, its week and cycle (v0.783: no "Today <sets>" on a
+          program's lift); a lift without a program shows its sets. */}
+      {log?.target && (log.target.title || log.target.scheme) && (
         <p className="text-sm">
-          <span className="font-semibold text-muted">Today</span>{" "}
-          <span className="font-semibold">{log.target.scheme}</span>
-          {log.target.title && <span className="text-muted"> · {log.target.title}</span>}
+          <span className="font-semibold">{log.target.title || log.target.scheme}</span>
           {log.target.up && <span className="font-semibold text-emerald-700"> · {log.target.up}</span>}
         </p>
       )}

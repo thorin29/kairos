@@ -1667,6 +1667,9 @@ model PersonProgram {
   /// v0.748: what each main lift went up by when this cycle began, by pool id
   /// ({} on cycle 1): the success marks.
   lastRaises     Json      @default("{}")
+  /// v0.783: this cycle's 7th week (5/3/1): null for none, "ask" until it's
+  /// picked, then "deload" or "test". Continue alternates it.
+  seventhWeek    String?
   createdAt      DateTime  @default(now())
 
   @@index([userId, status])

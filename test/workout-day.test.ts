@@ -3,7 +3,7 @@ import { topSet, setsSummary, fmtSet } from "@/lib/workouts/sets";
 import { platesFor, PLATE_BY_ID } from "@/lib/workouts/plates";
 import { isHoldName, poolMetricFor } from "@/lib/workouts/catalog";
 import { repRecords, recordChips, isNewBest, bandPoints, REP_BANDS, weeksInARow } from "@/lib/workouts/records";
-import { PROGRAMS, programByKey, parseScheme, schemeKey, programWeek, blocksDone, targetsFor, weekLabel, raisedMaxes, defaultMovement } from "@/lib/workouts/programs";
+import { PROGRAMS, programByKey, parseScheme, schemeKey, programWeek, blocksDone, targetsFor, weekLabel, raisedMaxes, defaultMovement, withSeventh } from "@/lib/workouts/programs";
 import { daySuggestion, movementSuggestion, bigJump, recentHurt, lightFactor } from "@/lib/workouts/suggest";
 import { cleanOrder, withCardio, isSimpleCategory, blockKind } from "@/lib/workouts/blocks";
 import { parseClock, cardioActivity } from "@/lib/workouts/cardio";
@@ -284,7 +284,8 @@ describe("weeks in a row (v0.610)", () => {
 });
 
 describe("programs (v0.611)", () => {
-  const waves = programByKey("wendler-531")!;
+  // A cycle with its 7th week (v0.783): four weeks, the last a deload, as 5/3/1 ran before.
+  const waves = withSeventh(programByKey("wendler-531")!, "deload");
   const tens = programByKey("sets-of-ten")!;
   const full = programByKey("full-body-3")!;
   it("every program's days and defaults line up", () => {
@@ -303,7 +304,7 @@ describe("programs (v0.611)", () => {
     expect(programWeek(waves, "2026-10-25", "2026-11-22")).toBe(1);
     expect(blocksDone(waves, "2026-10-25", "2026-11-21")).toBe(0);
     expect(blocksDone(waves, "2026-10-25", "2026-11-22")).toBe(1);
-    expect(weekLabel(waves, 4)).toBe("Week 4 of 4 · light");
+    expect(weekLabel(waves, 4)).toBe("7th week · deload");
   });
   it("waves: the week's sets from the training max, or last time without one", () => {
     expect(targetsFor({ program: waves, week: 3, scheme: { kind: "WAVE" }, unit: "lb", trainingMax: 170, last: [] })).toEqual([
