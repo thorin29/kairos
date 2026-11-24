@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.781.0";
+export const APP_VERSION = "0.782.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -198,6 +198,10 @@ export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
   {
+    version: "0.782.0",
+    summary: ["\"Color\", not \"colour\", everywhere you see it."],
+  },
+  {
     version: "0.781.0",
     summary: ["Workouts on the web: Saved plans moved to the plan card, like the app; the other eight buttons sit four to a row."],
   },
@@ -207,7 +211,7 @@ export const CHANGES: Change[] = [
   },
   {
     version: "0.779.0",
-    summary: ["Backpacking with the phone's GPS: the app's points go to Family map and are used where Home Assistant's overlap, so trip miles and routes are exact; without it the trip still goes by Home Assistant. Each trip day keeps its elevation gain and loss, and a summary (miles, time hiking, feet up and down) arrives when the trip is over. Family map cards are tinted by where people are: the zone's colour with its Home Assistant icon, coral when in no zone; pick zone colours in Admin → Family map."],
+    summary: ["Backpacking with the phone's GPS: the app's points go to Family map and are used where Home Assistant's overlap, so trip miles and routes are exact; without it the trip still goes by Home Assistant. Each trip day keeps its elevation gain and loss, and a summary (miles, time hiking, feet up and down) arrives when the trip is over. Family map cards are tinted by where people are: the zone's color with its Home Assistant icon, coral when in no zone; pick zone colors in Admin → Family map."],
   },
   {
     version: "0.778.0",
@@ -223,7 +227,7 @@ export const CHANGES: Change[] = [
   },
   {
     version: "0.775.0",
-    summary: ["Family map History: adding a stop is a small, soft + and pin on the dashed line between stops, in the person's colour."],
+    summary: ["Family map History: adding a stop is a small, soft + and pin on the dashed line between stops, in the person's color."],
   },
   {
     version: "0.774.0",
@@ -231,7 +235,7 @@ export const CHANGES: Change[] = [
   },
   {
     version: "0.773.0",
-    summary: ["Optional news for those who turn it on in the app (0.555): money and suggested family workouts waiting for approval (parents), a family workout you're in, and each morning your turn on shared chores. Family map History: the add-stop button sits on the line between stops in the person's colour."],
+    summary: ["Optional news for those who turn it on in the app (0.555): money and suggested family workouts waiting for approval (parents), a family workout you're in, and each morning your turn on shared chores. Family map History: the add-stop button sits on the line between stops in the person's color."],
   },
   {
     version: "0.772.0",
@@ -343,7 +347,7 @@ export const CHANGES: Change[] = [
   },
   {
     version: "0.745.0",
-    summary: ["Cardio splits each week by type in its own colour, with sport in green. Hike and Walk are new.", "Pick the sport on an event type or subscribed calendar; with none named it is just Sport, not Hockey.", "The home card shows \"1 of 2 workouts\" on days with more than one; a skipped one counts. Weekly training's Planned line counts planned parts and sport events, saved each day from now on."],
+    summary: ["Cardio splits each week by type in its own color, with sport in green. Hike and Walk are new.", "Pick the sport on an event type or subscribed calendar; with none named it is just Sport, not Hockey.", "The home card shows \"1 of 2 workouts\" on days with more than one; a skipped one counts. Weekly training's Planned line counts planned parts and sport events, saved each day from now on."],
   },
   {
     version: "0.744.0",
@@ -613,7 +617,7 @@ export const CHANGES: Change[] = [
     version: "0.693.0",
     summary: [
       "Cardio and Conditioning pages get the chart pop-up: each pace dot, weekly bar and workout attempt shows its number and date on hover or tap.",
-      "Conditioning's attempt dots now use conditioning's colour.",
+      "Conditioning's attempt dots now use conditioning's color.",
     ],
   },
   {
@@ -638,8 +642,8 @@ export const CHANGES: Change[] = [
   {
     version: "0.689.0",
     summary: [
-      "Heat map colours are now earned by getting stronger over months and ease back when progress stalls, so the map rises and falls instead of filling up red.",
-      "A muscle's own exercises drive its colour: bench and rows count only a quarter toward arms.",
+      "Heat map colors are now earned by getting stronger over months and ease back when progress stalls, so the map rises and falls instead of filling up red.",
+      "A muscle's own exercises drive its color: bench and rows count only a quarter toward arms.",
       "Tap a muscle to see how far it's come since you started.",
     ],
   },
@@ -655,7 +659,7 @@ export const CHANGES: Change[] = [
     version: "0.687.0",
     summary: [
       "Heat map: a shorter hold (wall sit, split squat hold) no longer counts as losing strength, so groups trained with holds stop going grey.",
-      "The body map pop-ups say why a group is its colour, under the week's sets.",
+      "The body map pop-ups say why a group is its color, under the week's sets.",
       "A page left open past midnight refreshes itself, so today is today.",
     ],
   },
@@ -702,7 +706,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.681.0",
     summary: [
-      "Tap a day on Workout days to see what each colour was, with the movements.",
+      "Tap a day on Workout days to see what each color was, with the movements.",
       "Family WOD: you're first in the list of people, and the day and workout sit on their own card.",
     ],
   },
@@ -799,7 +803,7 @@ export const CHANGES: Change[] = [
       "Good mornings and back extensions are listed as Lower back, beside the deadlifts, and no longer show up as deadlift days.",
       "A past core rotation day shows the workout you did that day, and isn't marked overdue.",
       "Workouts done outside the plan show just their name; tap for what was in them.",
-      "Weekly training: dates under the bars, and Strength, Conditioning, Cardio and Sport in their own colours.",
+      "Weekly training: dates under the bars, and Strength, Conditioning, Cardio and Sport in their own colors.",
       "Lift rows give long names the room the small chart isn't using.",
     ],
   },
@@ -1034,7 +1038,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.636.0",
     summary: [
-      "Workout days shows core days (and other days without weights) in their own colour; the legend sits in two tidy rows.",
+      "Workout days shows core days (and other days without weights) in their own color; the legend sits in two tidy rows.",
       "Planks and other holds count on the heat map. A plank's best shows its Marine Corps PFT points.",
       "New core movements: McGill curl-up, TRX Pallof press, back extension hold and overhead carry (add them from Admin).",
     ],
@@ -1059,7 +1063,7 @@ export const CHANGES: Change[] = [
     version: "0.632.0",
     summary: [
       "Companion lifts suggest a weight for all their sets, not just one: five sets of 10 come out about 60% of your estimated max.",
-      "Timer number choices show each font and colour as it looks; the colours are neon.",
+      "Timer number choices show each font and color as it looks; the colors are neon.",
     ],
   },
   {
@@ -1071,7 +1075,7 @@ export const CHANGES: Change[] = [
   },
   {
     version: "0.630.0",
-    summary: ["Choose the workout timer's number font and colour (Profile \u2192 Workout timer)."],
+    summary: ["Choose the workout timer's number font and color (Profile \u2192 Workout timer)."],
   },
   {
     version: "0.629.0",
@@ -1331,8 +1335,8 @@ export const CHANGES: Change[] = [
     version: "0.603.0",
     summary: [
       "Characters grow from every day, not just perfect ones: finish most of your list and it still grows most of a step.",
-      "Today's growth shows straight away, in a lighter colour.",
-      "The bar's colours show what you did to grow your character.",
+      "Today's growth shows straight away, in a lighter color.",
+      "The bar's colors show what you did to grow your character.",
       "This month and the family goal count the same days of work.",
       "Rarer eggs come from finishing your list over the last two weeks, not from a streak.",
       "Team practices and games you confirm add to Life.",
@@ -1555,7 +1559,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.578.0",
     summary: [
-      "One bar on the companion card instead of two. The row of squares now fills with growth and breaks where each stage ends, so the squares tie straight to raising the creature. The colours still show what earned it.",
+      "One bar on the companion card instead of two. The row of squares now fills with growth and breaks where each stage ends, so the squares tie straight to raising the creature. The colors still show what earned it.",
       "Dropped the \u201cgrowing\u201d caption \u2014 a bar that is filling says that already.",
       "Deepening keeps its own short rail, since it is a separate job from the growth the row is about.",
     ],
@@ -1707,7 +1711,7 @@ export const CHANGES: Change[] = [
     summary: [
       "Workout days reaches the current week. It was ending several days short, so this week never appeared.",
       "Reopening a logged day fills in the weight and the reps you recorded, and the button says Edit rather than offering to log it again.",
-      "A day with three or more muscle groups splits into that many colours instead of showing only the first two.",
+      "A day with three or more muscle groups splits into that many colors instead of showing only the first two.",
       "Compare no longer draws a second line above the top one when nothing rises past it.",
     ],
   },
@@ -1747,7 +1751,7 @@ export const CHANGES: Change[] = [
     version: "0.553.0",
     summary: [
       "Compare is a bar per person now instead of a scatter of sessions, with the reps written above each bar and a toggle between heaviest weight and most reps.",
-      "The dots on a movement's chart take its muscle group's colour, so the chart matches the body you tapped.",
+      "The dots on a movement's chart take its muscle group's color, so the chart matches the body you tapped.",
       "\u201cBest weight at each rep count\u201d is now \u201cBest reps per weight\u201d.",
     ],
   },
@@ -1773,9 +1777,9 @@ export const CHANGES: Change[] = [
   {
     version: "0.550.0",
     summary: [
-      "Fixes the body map rendering as two black silhouettes \u2014 it was asking for colours by the wrong names, and nothing was being painted.",
+      "Fixes the body map rendering as two black silhouettes \u2014 it was asking for colors by the wrong names, and nothing was being painted.",
       "The body now opens on everything today asks for, so a day that trains Core and Legs lights both. Tap a muscle to narrow to it, and the calendar button comes back to today.",
-      "Each muscle group has its own fixed colour now, the same one on the body, in the heading above its charts, and in the Workout days legend.",
+      "Each muscle group has its own fixed color now, the same one on the body, in the heading above its charts, and in the Workout days legend.",
     ],
   },
   {
@@ -1793,7 +1797,7 @@ export const CHANGES: Change[] = [
     version: "0.548.0",
     summary: [
       "A movement can now sit in no muscle group at all. Pick \u201cNo group\u201d on it and it charts as its own progress block, named after itself \u2014 for lifts like the deadlift that are neither a back lift nor a leg lift.",
-      "Ungrouped movements get their own colour and their own name on the Workout days grid instead of sharing an \u201cOther\u201d.",
+      "Ungrouped movements get their own color and their own name on the Workout days grid instead of sharing an \u201cOther\u201d.",
     ],
   },
   {
@@ -1816,14 +1820,14 @@ export const CHANGES: Change[] = [
     summary: [
       "Progress is split into one block per muscle group, each with its own numbers and its own plot, so a Core + Legs day reads as two sections instead of hiding movements behind a picker.",
       "Six equal tiles per movement \u2014 record, reps at that record, 30-day change, time since best, sessions (with the date they start from) and your last session. Dates read \u201c29 Sep\u201d.",
-      "\u201cDid you show up\u201d is now \u201cWorkout days\u201d: squares coloured by muscle group, a row only for weekdays your plan uses, Sunday first, month labels across the top and bigger squares.",
+      "\u201cDid you show up\u201d is now \u201cWorkout days\u201d: squares colored by muscle group, a row only for weekdays your plan uses, Sunday first, month labels across the top and bigger squares.",
       "The rep-count card now says why it is empty instead of disappearing \u2014 it fills in as reps get logged.",
     ],
   },
   {
     version: "0.544.0",
     summary: [
-      "The attendance grid colours each day by the movement logged, so every workout reads on one grid, with a key naming each colour. A day with two movements is split between them.",
+      "The attendance grid colors each day by the movement logged, so every workout reads on one grid, with a key naming each color. A day with two movements is split between them.",
     ],
   },
   {
@@ -1906,7 +1910,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.535.0",
     summary: [
-      "The display name on a profile is now set by a parent only. Everyone can still change their own picture, colour and birthday; the name field shows as read-only with a note to ask a parent, and the server ignores a name sent by anyone who isn't an admin.",
+      "The display name on a profile is now set by a parent only. Everyone can still change their own picture, color and birthday; the name field shows as read-only with a note to ask a parent, and the server ignores a name sent by anyone who isn't an admin.",
     ],
   },
   {
@@ -2162,49 +2166,49 @@ export const CHANGES: Change[] = [
   {
     version: "0.493.0",
     summary: [
-      "Two fixes. (1) School dots now match everywhere: the card, progress page and admin overlay use the subject's colour instead of a leftover per-class colour, so a subject looks the same in the editor and on the cards. (2) Calendar subscriptions: in edit mode you can set a \u201cdefault event length\u201d per feed \u2014 feed events that publish only a start time (like 75-minute hockey games) get that length instead of the old fixed 60 minutes. Saving re-syncs the feed so existing games update right away.",
+      "Two fixes. (1) School dots now match everywhere: the card, progress page and admin overlay use the subject's color instead of a leftover per-class color, so a subject looks the same in the editor and on the cards. (2) Calendar subscriptions: in edit mode you can set a \u201cdefault event length\u201d per feed \u2014 feed events that publish only a start time (like 75-minute hockey games) get that length instead of the old fixed 60 minutes. Saving re-syncs the feed so existing games update right away.",
     ],
   },
   {
     version: "0.492.0",
     summary: [
-      "Subject colours editor reworked to the model you wanted: the SUBJECT is the colour group, and CLASS NAMES hang under it. Geometry + Pre-Algebra sit under Math and share its colour. Press Edit, then drag a class onto another subject, \u2191 to give a class its own colour, rename / add / recolour subjects; classes with no subject sit in an \u201cUnassigned\u201d bucket. Moving a class name moves it for every student who has it. Colours now live on the subject (the base-subject layer is retired) \u2014 a subject's colour may look different than before since grouping changed; re-pick any you want in the editor.",
+      "Subject colors editor reworked to the model you wanted: the SUBJECT is the color group, and CLASS NAMES hang under it. Geometry + Pre-Algebra sit under Math and share its color. Press Edit, then drag a class onto another subject, \u2191 to give a class its own color, rename / add / recolor subjects; classes with no subject sit in an \u201cUnassigned\u201d bucket. Moving a class name moves it for every student who has it. Colors now live on the subject (the base-subject layer is retired) \u2014 a subject's color may look different than before since grouping changed; re-pick any you want in the editor.",
     ],
   },
   {
     version: "0.491.0",
     summary: [
-      "The Subject colours editor is now organised by base subject. Base subjects are real, editable groups with a colour, and each subject hangs under one (Science \u2192 Biology, Geology, Science; Math \u2192 Geometry, Pre-Algebra). It's read-only until you press Edit; then you can drag a subject onto another group, promote it to its own colour, and rename / add / recolour groups \u2014 everything alphabetical. Colours flow to the school card, app home card, progress page and admin overlay. The migration builds the groups from your existing mapping.",
+      "The Subject colors editor is now organised by base subject. Base subjects are real, editable groups with a color, and each subject hangs under one (Science \u2192 Biology, Geology, Science; Math \u2192 Geometry, Pre-Algebra). It's read-only until you press Edit; then you can drag a subject onto another group, promote it to its own color, and rename / add / recolor groups \u2014 everything alphabetical. Colors flow to the school card, app home card, progress page and admin overlay. The migration builds the groups from your existing mapping.",
     ],
   },
   {
     version: "0.490.0",
     summary: [
-      "Five more subject colours to choose from: light green, bright yellow, dark yellow, dark orange and brown. The warm ones sit near the holiday-marker amber, so they're kept distinct from it and placed last \u2014 auto-assignment still reaches the clearly-different cool colours first, and these are mainly there to pick in the Subject colours panel. (Bright yellow is faint on white, so use it sparingly.)",
+      "Five more subject colors to choose from: light green, bright yellow, dark yellow, dark orange and brown. The warm ones sit near the holiday-marker amber, so they're kept distinct from it and placed last \u2014 auto-assignment still reaches the clearly-different cool colors first, and these are mainly there to pick in the Subject colors panel. (Bright yellow is faint on white, so use it sparingly.)",
     ],
   },
   {
     version: "0.488.0",
     summary: [
-      "More variety in the subject-colour palette \u2014 spread across more distinct hues instead of clustering in near-identical blues, greens and purples (and the pink that was quietly collapsing into cyan is gone). Still steers clear of red and the holiday/vacation ambers.",
+      "More variety in the subject-color palette \u2014 spread across more distinct hues instead of clustering in near-identical blues, greens and purples (and the pink that was quietly collapsing into cyan is gone). Still steers clear of red and the holiday/vacation ambers.",
     ],
   },
   {
     version: "0.487.0",
     summary: [
-      "Admin can now edit subject colours. A \u201cSubject colours\u201d panel on the school structure page sets each subject's base subject (share one colour with everything under it \u2014 Geometry + Pre-Algebra = Math) and, optionally, an exact colour that breaks a subject out of its group. So Grammar / Writing / Handwriting can each get their own colour while staying under Writing. Changes apply everywhere colours show.",
+      "Admin can now edit subject colors. A \u201cSubject colors\u201d panel on the school structure page sets each subject's base subject (share one color with everything under it \u2014 Geometry + Pre-Algebra = Math) and, optionally, an exact color that breaks a subject out of its group. So Grammar / Writing / Handwriting can each get their own color while staying under Writing. Changes apply everywhere colors show.",
     ],
   },
   {
     version: "0.486.0",
     summary: [
-      "School colours are now grouped by BASE SUBJECT. Different class names under the same base share a colour \u2014 Geometry and Pre-Algebra are both Math, Geology/Biology/Science are all Science, etc. \u2014 and the same colour is used everywhere it appears: the school card dots, the app home school card, the School progress page, and the admin year-calendar overlay. A subject with no base keeps its own colour. Ships the base-subject mapping (Math, Science, Foreign Language, History, Writing); a way to edit it in the admin is coming next.",
+      "School colors are now grouped by BASE SUBJECT. Different class names under the same base share a color \u2014 Geometry and Pre-Algebra are both Math, Geology/Biology/Science are all Science, etc. \u2014 and the same color is used everywhere it appears: the school card dots, the app home school card, the School progress page, and the admin year-calendar overlay. A subject with no base keeps its own color. Ships the base-subject mapping (Math, Science, Foreign Language, History, Writing); a way to edit it in the admin is coming next.",
     ],
   },
   {
     version: "0.484.0",
     summary: [
-      "School subjects now have a consistent colour. Each subject gets a fixed colour from its place in the shared subject order, so the same subject is the same colour for every student (a student missing a subject no longer shifts the others), and a subject added later just takes the next colour. The School card dots and the admin year-calendar overlay both use it, so they finally match instead of the card showing grey.",
+      "School subjects now have a consistent color. Each subject gets a fixed color from its place in the shared subject order, so the same subject is the same color for every student (a student missing a subject no longer shifts the others), and a subject added later just takes the next color. The School card dots and the admin year-calendar overlay both use it, so they finally match instead of the card showing grey.",
     ],
   },
   {
@@ -2324,7 +2328,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.461.0",
     summary: [
-      "Egg rarity reworked (companion rework, part 3). Which creature you get is still random and never a duplicate, but the odds of a rarer one now rise with your current streak instead of a season tier, on a steeper curve \u2014 and rares and legendaries stay genuinely special even at a long streak, so pulling one is a moment. A pity rule guarantees a non-common after four commons in a row, so dry spells always break. The tell is visual, not text: the next-egg meter glows in the rarity colour your streak is unlocking \u2014 slate, then blue, purple, gold \u2014 so a strong streak visibly makes the egg more promising.",
+      "Egg rarity reworked (companion rework, part 3). Which creature you get is still random and never a duplicate, but the odds of a rarer one now rise with your current streak instead of a season tier, on a steeper curve \u2014 and rares and legendaries stay genuinely special even at a long streak, so pulling one is a moment. A pity rule guarantees a non-common after four commons in a row, so dry spells always break. The tell is visual, not text: the next-egg meter glows in the rarity color your streak is unlocking \u2014 slate, then blue, purple, gold \u2014 so a strong streak visibly makes the egg more promising.",
     ],
   },
   {
@@ -2366,13 +2370,13 @@ export const CHANGES: Change[] = [
   {
     version: "0.454.0",
     summary: [
-      "School admin: the \u201c\u2039 School\u201d back link is now a coloured button, not faint text. On the year calendar, a student's classes keep the same order no matter which student you're viewing (by subject setup order), and each class is guaranteed its own colour \u2014 older classes that shared a colour now get distinct, non-reserved colours per student on the overlay. And the \u201cafter class\u201d attendance prompt on a student's card now shows when it met (Today, Yesterday, the weekday, \u201clast week\u201d, or a date once it's a couple of weeks old), while a sport/subscribed-event prompt shows the date next to the day.",
+      "School admin: the \u201c\u2039 School\u201d back link is now a colored button, not faint text. On the year calendar, a student's classes keep the same order no matter which student you're viewing (by subject setup order), and each class is guaranteed its own color \u2014 older classes that shared a color now get distinct, non-reserved colors per student on the overlay. And the \u201cafter class\u201d attendance prompt on a student's card now shows when it met (Today, Yesterday, the weekday, \u201clast week\u201d, or a date once it's a couple of weeks old), while a sport/subscribed-event prompt shows the date next to the day.",
     ],
   },
   {
     version: "0.453.0",
     summary: [
-      "School admin: the \u201c\u2039 School\u201d back link (Curriculum, Year calendar, Classes and Work pages) is now a bordered pill button so it's easier to spot as a way back. And imported classes are now given a distinct colour per student automatically \u2014 chosen to avoid that student's other class colours and to stay clear of the reserved calendar colours (past-term-end red, and holiday/vacation amber), so two of a student's classes no longer land on the same colour.",
+      "School admin: the \u201c\u2039 School\u201d back link (Curriculum, Year calendar, Classes and Work pages) is now a bordered pill button so it's easier to spot as a way back. And imported classes are now given a distinct color per student automatically \u2014 chosen to avoid that student's other class colors and to stay clear of the reserved calendar colors (past-term-end red, and holiday/vacation amber), so two of a student's classes no longer land on the same color.",
     ],
   },
   {
@@ -2583,7 +2587,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.418.0",
     summary: [
-      "Year-calendar overlay: the calendar now extends past the term end to show a class's overflow days (they were being computed but had no month to render in), the overflow projection skips holidays and vacations rather than only weekends, and a reddish class colour is shown in a substitute so red stays reserved for \u201cpast term end\u201d (now marked with a ring so it never blends into a red class).",
+      "Year-calendar overlay: the calendar now extends past the term end to show a class's overflow days (they were being computed but had no month to render in), the overflow projection skips holidays and vacations rather than only weekends, and a reddish class color is shown in a substitute so red stays reserved for \u201cpast term end\u201d (now marked with a ring so it never blends into a red class).",
     ],
   },
   {
@@ -2877,7 +2881,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.372.0",
     summary: [
-      "Subscribed calendar events you\u2019re not on now show in grey (with custom colours), and newly added calendars are visible to everyone by default (opt-out) instead of hidden.",
+      "Subscribed calendar events you\u2019re not on now show in grey (with custom colors), and newly added calendars are visible to everyone by default (opt-out) instead of hidden.",
     ],
   },
   {
@@ -2979,7 +2983,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.352.0",
     summary: [
-      "Lightened the shading over the event details picture so the artwork\u2019s colours show through, with the buttons kept legible on top.",
+      "Lightened the shading over the event details picture so the artwork\u2019s colors show through, with the buttons kept legible on top.",
     ],
   },
   {
@@ -2991,7 +2995,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.350.0",
     summary: [
-      "Family vacations and other calendar pauses no longer show up as red \u201cMedical / Dental\u201d events. Pauses now have their own type and colour (and a vacation background), and any existing ones on your calendar are fixed automatically.",
+      "Family vacations and other calendar pauses no longer show up as red \u201cMedical / Dental\u201d events. Pauses now have their own type and color (and a vacation background), and any existing ones on your calendar are fixed automatically.",
     ],
   },
   {
@@ -3432,7 +3436,7 @@ export const CHANGES: Change[] = [
   {
     version: "0.279.1",
     summary: [
-      "Spelling: American forms throughout \u2014 \"colour\" \u2192 \"color\", \"personalise\" \u2192 \"personalize\", \"behaviour\" \u2192 \"behavior\".",
+      "Spelling: American forms throughout \u2014 \"color\" \u2192 \"color\", \"personalise\" \u2192 \"personalize\", \"behaviour\" \u2192 \"behavior\".",
     ],
   },
   {

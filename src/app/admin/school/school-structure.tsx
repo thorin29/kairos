@@ -906,10 +906,10 @@ function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
-            Subject colours
+            Subject colors
           </h3>
           <p className="mt-1 text-sm text-muted">
-            Each colour is a subject; the classes under it share that colour.
+            Each color is a subject; the classes under it share that color.
             {editing
               ? " Drag a class onto another subject, or use \u2191 to give it its own."
               : ""}
@@ -1019,7 +1019,7 @@ function SubjectGroupsEditor({ groups }: { groups: SubjectGroup[] }) {
                       {editing && g.id !== null && (
                         <button
                           type="button"
-                          title="Give it its own colour"
+                          title="Give it its own color"
                           onClick={() => run(() => promoteClass(cn))}
                           className="text-muted transition-colors hover:text-ink"
                         >

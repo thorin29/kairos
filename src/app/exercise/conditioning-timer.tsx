@@ -84,7 +84,7 @@ export const TIMER_FONTS = [
 ] as const;
 export const TIMER_COLORS = [
   ["plain", "Plain"],
-  ["accent", "Theme colour"],
+  ["accent", "Theme color"],
   ["green", "Neon green"],
   ["blue", "Neon blue"],
   ["pink", "Neon pink"],

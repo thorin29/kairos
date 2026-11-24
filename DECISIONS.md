@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-11 — US spelling in the UI (v0.782.0)
+
+- Owner: "color", not "colour", in anything people see (labels, What's new).
+  Code comments may vary; migration names stay as they are.
+
+
 ## 2026-11 — Web Saved plans on the plan card (v0.781.0)
 
 - As in app 0.557: Saved plans is a "Saved" link on the plan card (and

@@ -136,7 +136,7 @@ export function TimerThemeForm() {
         look={(k) => ({ fontFamily: FONT_FAMILY[k], color: digit(color) })}
       />
       <Looks
-        label="Number colour"
+        label="Number color"
         choices={TIMER_COLORS}
         value={color}
         onPick={setColor}

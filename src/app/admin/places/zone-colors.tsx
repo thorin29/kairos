@@ -25,7 +25,7 @@ export function ZoneColors({ zones }: { zones: ZoneView[] }) {
   };
   return (
     <section className={card}>
-      <h2 className={label}>Zone colours</h2>
+      <h2 className={label}>Zone colors</h2>
       <ul className="divide-y divide-hairline">
         {zones.map((z) => (
           <li key={z.name} className="flex items-center gap-3 py-2">
