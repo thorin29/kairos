@@ -591,7 +591,8 @@ export default async function PersonPage({
                 return (
                   <section key="reading">
                     <div className="mb-3 flex items-center gap-2">
-                      <span aria-hidden style={{ color: "#b45309" }} className="flex">
+                      {/* Reading's side-menu color (v0.789). */}
+                      <span aria-hidden style={{ color: "#0891b2" }} className="flex">
                         <BookIcon className="h-5 w-5" />
                       </span>
                       <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">

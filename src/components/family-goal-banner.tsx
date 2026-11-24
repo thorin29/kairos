@@ -122,7 +122,8 @@ export async function FamilyGoalBanner() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-4 flex items-center gap-4 rounded-2xl border border-hairline bg-surface p-4">
+    // Outlined in Summary's gold (v0.789), where the goal's progress lives.
+    <div className="mb-4 flex items-center gap-4 rounded-2xl border border-[#ca8a04]/45 bg-surface p-4">
       {children}
     </div>
   );

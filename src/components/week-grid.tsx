@@ -324,7 +324,7 @@ export function WeekGrid({
           <span className="block truncate font-medium">{e.title}</span>
         )}
         {height > 34 && (
-          <span className="tabular block truncate opacity-90">
+          <span className="tabular block truncate text-[0.6rem] opacity-90">
             {e.timeLabel}
             {/* Whose it is (v0.788), unless the school line already says. */}
             {!e.schoolType && e.whoLabel ? ` \u00b7 ${e.whoLabel}` : ""}
@@ -378,7 +378,7 @@ export function WeekGrid({
       >
         <span className="block truncate font-semibold">{e.title}</span>
         {height > 30 && (
-          <span className="tabular block truncate opacity-85">
+          <span className="tabular block truncate text-[0.6rem] opacity-85">
             {e.timeLabel} · {e.whoLabel}
           </span>
         )}

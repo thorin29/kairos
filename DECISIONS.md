@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Summary gold (v0.789.0)
+
+- Summary's side-menu color is gold (#ca8a04, was #b45309, which Bible's
+  tracker, holidays and the deadlift color also use). The family goal card
+  is outlined in it at about half strength. Book reading's icon uses
+  Reading's color. Calendar sub-lines (time, names) are 0.6 rem.
+
 ## 2026-11 — Work and backpacking behind the day (v0.788.0)
 
 - Mockup "Kairos: Work in the background". `background` on a grid event: the
