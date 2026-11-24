@@ -14,6 +14,8 @@ export type TripEvent = {
   endsAt: Date;
   allDay: boolean;
   rrule: string | null;
+  /** Occurrence days a single-occurrence edit replaced (v0.785). */
+  skip?: string[];
 };
 
 const DAY = 86_400_000;
@@ -26,6 +28,7 @@ export function eventDays(e: TripEvent, fromISO: string, toISO: string): string[
   const out = new Set<string>();
   for (const s of starts) {
     const first = localParts(s, tz).iso;
+    if (e.rrule && e.skip?.includes(first)) continue;
     // The last moment it covers: an all-day end is the start of the next day.
     const lastAt = new Date(s.getTime() + Math.max(span, 1) - (e.allDay ? 1 : 0));
     const last = localParts(lastAt, tz).iso;

@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Replaced occurrences outside the calendar (v0.785.0)
+
+- Editing or cancelling one occurrence of a repeating event makes a child
+  event (`recurrenceId`, `recurrenceDate`). Only the calendar view skipped the
+  replaced day; sport attendance prompts, sport days, class check-ins, trip
+  days and phone reminders still expanded the series onto it. Now they all
+  use `replacedOccurrences` (`calendar/overrides.ts`) and ignore cancelled
+  rows; a moved class meeting asks on its new day. Reminders also key the
+  skipped day by the event's local day, not the UTC date.
+
 ## 2026-11 — Program tile (v0.784.0)
 
 - Mockup "Kairos: program tile", option B: the plan card opens with a header

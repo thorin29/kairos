@@ -1,4 +1,5 @@
 import { Category } from "@/generated/prisma/client";
+import { replacedOccurrences } from "@/lib/calendar/overrides";
 import { OPTIONAL_CATEGORIES } from "@/lib/workouts/blocks";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { prisma } from "@/lib/prisma";
@@ -371,6 +372,8 @@ export async function pendingSportPrompts(
 
   const events = await prisma.event.findMany({
     where: {
+      // A cancelled single occurrence never asks (v0.785).
+      cancelled: false,
       OR: [
         { eventType: { is: { sportWorkout: true } } },
         { externalCalendar: { is: { sportWorkout: true } } },
@@ -399,6 +402,9 @@ export async function pendingSportPrompts(
   // practice nobody confirmed keeps a pending prompt until it's answered.
   const fromISO = addDays(dateISO, -(SPORT_LOOKBACK_DAYS - 1));
   const occs: { e: (typeof events)[number]; iso: string }[] = [];
+  // Occurrences moved, changed or cancelled on their own: the edited copy is
+  // its own event, so the series must not ask on the original day (v0.785).
+  const replaced = await replacedOccurrences(events);
   for (const e of events) {
     // One occurrence's length (occurrenceSpanMs): an older series saved with a
     // multi-day span would otherwise never count as ended.
@@ -407,8 +413,9 @@ export async function pendingSportPrompts(
       : e.endsAt.getTime() - e.startsAt.getTime();
     if (e.rrule) {
       for (const start of occurrencesIn(e.startsAt, e.rrule, fromISO, dateISO, tz)) {
-        if (start.getTime() + durationMs <= now) {
-          occs.push({ e, iso: localParts(start).iso });
+        const iso = localParts(start).iso;
+        if (start.getTime() + durationMs <= now && !replaced.get(e.id)?.has(iso)) {
+          occs.push({ e, iso });
         }
       }
     } else {

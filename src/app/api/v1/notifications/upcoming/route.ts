@@ -2,8 +2,9 @@ import type { NextRequest } from "next/server";
 import { apiOk } from "@/lib/api/errors";
 import { requireDevice } from "@/lib/api/device-auth";
 import { prisma } from "@/lib/prisma";
-import { householdTz, todayISO, addDays, toDateColumn, fromDateColumn } from "@/lib/dates";
+import { householdTz, todayISO, addDays, toDateColumn, fromDateColumn, localParts, eventTz } from "@/lib/dates";
 import { occurrencesIn } from "@/lib/calendar/recur";
+import { replacedOccurrences } from "@/lib/calendar/overrides";
 import { TaskStatus } from "@/generated/prisma/client";
 import { loadPrefs } from "@/lib/notify-prefs";
 
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     }),
     prisma.event.findMany({
       where: { ...scope, rrule: { not: null }, startsAt: { lte: windowEnd } },
-      select: { id: true, userId: true, isFamily: true, title: true, location: true, locationOverride: true, startsAt: true, rrule: true, reminders: true, participants: { select: { userId: true } }, subscribedReminders: { where: { userId: uid }, select: { minutes: true } } },
+      select: { id: true, userId: true, isFamily: true, title: true, location: true, locationOverride: true, startsAt: true, endsAt: true, allDay: true, rrule: true, reminders: true, participants: { select: { userId: true } }, subscribedReminders: { where: { userId: uid }, select: { minutes: true } } },
     }),
   ]);
 
@@ -95,22 +96,11 @@ export async function GET(req: NextRequest) {
     out.push({ id: e.id, title: e.title, location: e.locationOverride ?? e.location, startMs: e.startsAt.getTime(), reminders: mins });
   }
 
-  // Dates cancelled by a single-occurrence override, so the series skips them.
-  const seriesIds = series.map((s) => s.id);
-  const cancelledDates = new Set<string>();
-  if (seriesIds.length > 0) {
-    const overrides = await prisma.event.findMany({
-      where: { recurrenceId: { in: seriesIds }, cancelled: true },
-      select: { recurrenceId: true, recurrenceDate: true },
-    });
-    for (const o of overrides) {
-      if (o.recurrenceId && o.recurrenceDate) {
-        cancelledDates.add(`${o.recurrenceId}|${o.recurrenceDate.toISOString().slice(0, 10)}`);
-      }
-    }
-  }
+  // Occurrences a single-occurrence edit moved, changed or cancelled: the
+  // series skips them and the edited copy reminds on its own (v0.785).
+  const replaced = await replacedOccurrences(series);
 
-  for (const s of series as (Row & { rrule: string | null })[]) {
+  for (const s of series as (Row & { rrule: string | null; endsAt: Date; allDay: boolean })[]) {
     if (!s.rrule) continue;
     const mins = minutesFor(s);
     if (mins.length === 0) continue;
@@ -118,8 +108,7 @@ export async function GET(req: NextRequest) {
     for (const occ of occs) {
       const ms = occ.getTime();
       if (ms < now || ms > windowEnd.getTime()) continue;
-      const dayKey = occ.toISOString().slice(0, 10);
-      if (cancelledDates.has(`${s.id}|${dayKey}`)) continue;
+      if (replaced.get(s.id)?.has(localParts(occ, eventTz(s.allDay)).iso)) continue;
       out.push({ id: `${s.id}:${ms}`, title: s.title, location: s.locationOverride ?? s.location, startMs: ms, reminders: mins });
     }
   }

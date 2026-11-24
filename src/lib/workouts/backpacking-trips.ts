@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { todayISO } from "@/lib/dates";
+import { replacedOccurrences } from "@/lib/calendar/overrides";
 import { tripDays, type TripEvent } from "@/lib/workouts/backpacking-days";
 
 /** Backpacking trips from the calendar (v0.778): events of the Backpacking type. */
@@ -9,6 +10,7 @@ export async function tripEvents(): Promise<TripEvent[]> {
   const rows = (await prisma.event.findMany({
     where: { eventType: { is: { backpacking: true } }, cancelled: false },
     select: {
+      id: true,
       userId: true,
       startsAt: true,
       endsAt: true,
@@ -17,6 +19,7 @@ export async function tripEvents(): Promise<TripEvent[]> {
       participants: { select: { userId: true } },
     },
   })) as {
+    id: string;
     userId: string | null;
     startsAt: Date;
     endsAt: Date;
@@ -24,7 +27,12 @@ export async function tripEvents(): Promise<TripEvent[]> {
     rrule: string | null;
     participants: { userId: string }[];
   }[];
-  return rows.map((r) => ({ ...r, participants: r.participants.map((p) => p.userId) }));
+  const replaced = await replacedOccurrences(rows);
+  return rows.map(({ id, ...r }) => ({
+    ...r,
+    participants: r.participants.map((p) => p.userId),
+    skip: [...(replaced.get(id) ?? [])],
+  }));
 }
 
 /** A person's trip days in a range. */

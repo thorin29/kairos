@@ -1,4 +1,5 @@
 import "server-only";
+import { replacedOccurrences } from "@/lib/calendar/overrides";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { loadSubjectColors, displaySubjectColor } from "@/lib/school/subject-colors";
 import { prisma } from "@/lib/prisma";
@@ -724,10 +725,23 @@ export async function pendingClassPrompts(
       id: true,
       name: true,
       members: { select: { userId: true } },
-      event: { select: { startsAt: true, endsAt: true, rrule: true } },
+      event: { select: { id: true, startsAt: true, endsAt: true, allDay: true, rrule: true, cancelled: true } },
     },
   });
   if (classes.length === 0) return [];
+
+  // Meetings moved, changed or cancelled on their own (v0.785): the series
+  // skips the replaced day and a moved meeting asks on its new day.
+  const series = classes.flatMap((c) => (c.event ? [c.event] : []));
+  const [replaced, moved] = await Promise.all([
+    replacedOccurrences(series),
+    series.some((e) => e.rrule)
+      ? prisma.event.findMany({
+          where: { recurrenceId: { in: series.filter((e) => e.rrule).map((e) => e.id) }, cancelled: false },
+          select: { recurrenceId: true, startsAt: true, endsAt: true },
+        })
+      : Promise.resolve([] as { recurrenceId: string | null; startsAt: Date; endsAt: Date }[]),
+  ]);
 
   // Ended meeting dates per class, newest first.
   const endedByClass = new Map<string, string[]>();
@@ -737,14 +751,22 @@ export async function pendingClassPrompts(
     const durationMs = c.event.rrule
       ? occurrenceSpanMs(c.event.startsAt, c.event.endsAt, false, tz)
       : c.event.endsAt.getTime() - c.event.startsAt.getTime();
-    const starts = c.event.rrule
-      ? occurrencesIn(c.event.startsAt, c.event.rrule, fromISO, today, tz)
-      : [c.event.startsAt];
+    if (!c.event.rrule && c.event.cancelled) continue;
+    const ev = c.event;
+    const skip = replaced.get(ev.id);
+    const meetings: { start: Date; ms: number }[] = ev.rrule
+      ? occurrencesIn(ev.startsAt, ev.rrule, fromISO, today, tz)
+          .filter((s) => !skip?.has(localParts(s).iso))
+          .map((start) => ({ start, ms: durationMs }))
+      : [{ start: ev.startsAt, ms: durationMs }];
+    for (const m of moved) {
+      if (m.recurrenceId === ev.id) meetings.push({ start: m.startsAt, ms: m.endsAt.getTime() - m.startsAt.getTime() });
+    }
     const ended: string[] = [];
-    for (const s of starts) {
-      const iso = localParts(s).iso;
-      if (iso < fromISO || iso > today) continue;
-      if (s.getTime() + durationMs <= now) ended.push(iso);
+    for (const { start, ms } of meetings) {
+      const iso = localParts(start).iso;
+      if (iso < fromISO || iso > today || ended.includes(iso)) continue;
+      if (start.getTime() + ms <= now) ended.push(iso);
     }
     if (ended.length > 0) {
       ended.sort((a, b) => (a < b ? 1 : -1));

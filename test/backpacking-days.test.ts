@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayOfTrip, tripDays, type TripEvent } from "@/lib/workouts/backpacking-days";
+import { dayOfTrip, eventDays, tripDays, type TripEvent } from "@/lib/workouts/backpacking-days";
 
 const allDay = (from: string, toExclusive: string, extra: Partial<TripEvent> = {}): TripEvent => ({
   userId: "alex",
@@ -105,5 +105,20 @@ describe("elevationNote", () => {
     expect(n).toBe("↑ 1,240 ft ↓ 1,181 ft");
     expect(isElevationNote(n)).toBe(true);
     expect(isElevationNote("felt good")).toBe(false);
+  });
+});
+
+describe("replaced occurrences (v0.785)", () => {
+  it("skips a repeating trip's moved occurrence", () => {
+    const e = {
+      userId: "u1",
+      participants: [],
+      startsAt: new Date("2026-06-06T00:00:00Z"),
+      endsAt: new Date("2026-06-07T00:00:00Z"),
+      allDay: true,
+      rrule: "FREQ=WEEKLY",
+    };
+    expect(eventDays(e, "2026-06-06", "2026-06-20")).toEqual(["2026-06-06", "2026-06-13", "2026-06-20"]);
+    expect(eventDays({ ...e, skip: ["2026-06-13"] }, "2026-06-06", "2026-06-20")).toEqual(["2026-06-06", "2026-06-20"]);
   });
 });

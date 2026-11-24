@@ -4,6 +4,7 @@ import { householdTz, localParts, toDateColumn } from "@/lib/dates";
 import { occurrenceSpanMs } from "@/lib/calendar/repeat-span";
 import { timeLabel } from "@/lib/workouts/workout-time";
 import { occurrencesIn } from "@/lib/calendar/recur";
+import { replacedOccurrences } from "@/lib/calendar/overrides";
 import { cleanSport, eventSport, sportDayLabel, sportKindOf, type SportKind } from "@/lib/sport/label";
 
 /**
@@ -17,6 +18,8 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
   const tz = householdTz();
   const events = (await prisma.event.findMany({
     where: {
+      // A cancelled single occurrence never counts (v0.785).
+      cancelled: false,
       OR: [{ eventType: { is: { sportWorkout: true } } }, { externalCalendar: { is: { sportWorkout: true } } }],
     },
     select: {
@@ -24,6 +27,7 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
       userId: true,
       title: true,
       startsAt: true,
+      endsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
       eventType: { select: { sport: true, sportWorkout: true, name: true } },
@@ -35,11 +39,13 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
     userId: string | null;
     title: string | null;
     startsAt: Date;
+    endsAt: Date;
     rrule: string | null;
     participants: { userId: string }[];
     eventType: { sport: string | null; sportWorkout: boolean; name: string } | null;
     externalCalendar: { sport: string | null; sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
   }[];
+  const replaced = await replacedOccurrences(events);
   for (const e of events) {
     const mine =
       e.userId === userId ||
@@ -48,7 +54,7 @@ export async function sportOn(userId: string, dateISO: string): Promise<{ eventI
         (e.externalCalendar.userId === userId || (e.externalCalendar.memberIds ?? []).includes(userId)));
     if (!mine) continue;
     const on = e.rrule
-      ? occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).length > 0
+      ? !replaced.get(e.id)?.has(dateISO) && occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz).length > 0
       : localParts(e.startsAt).iso === dateISO;
     if (on) return { eventId: e.id, title: eventSport(e) };
   }
@@ -67,6 +73,8 @@ export async function sportDaysBetween(
   const tz = householdTz();
   const events = (await prisma.event.findMany({
     where: {
+      // A cancelled single occurrence never counts (v0.785).
+      cancelled: false,
       OR: [{ eventType: { is: { sportWorkout: true } } }, { externalCalendar: { is: { sportWorkout: true } } }],
     },
     select: {
@@ -74,6 +82,7 @@ export async function sportDaysBetween(
       userId: true,
       title: true,
       startsAt: true,
+      endsAt: true,
       rrule: true,
       participants: { select: { userId: true } },
       eventType: { select: { sport: true, name: true, sportKind: true } },
@@ -84,12 +93,14 @@ export async function sportDaysBetween(
     userId: string | null;
     title: string | null;
     startsAt: Date;
+    endsAt: Date;
     rrule: string | null;
     participants: { userId: string }[];
     eventType: { sport: string | null; name: string; sportKind: string | null } | null;
     externalCalendar: { sport: string | null; sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
   }[];
   const out: { date: string; label: string; kind: SportKind }[] = [];
+  const replaced = await replacedOccurrences(events);
   for (const e of events) {
     const mine =
       e.userId === userId ||
@@ -98,7 +109,9 @@ export async function sportDaysBetween(
         (e.externalCalendar.userId === userId || (e.externalCalendar.memberIds ?? []).includes(userId)));
     if (!mine) continue;
     const days = e.rrule
-      ? occurrencesIn(e.startsAt, e.rrule, fromISO, toISO, tz).map((d) => localParts(d, tz).iso)
+      ? occurrencesIn(e.startsAt, e.rrule, fromISO, toISO, tz)
+          .map((d) => localParts(d, tz).iso)
+          .filter((d) => !replaced.get(e.id)?.has(d))
       : [localParts(e.startsAt).iso].filter((d) => d >= fromISO && d <= toISO);
     const label = eventSport(e);
     const kind = sportKindOf(e.title, e.eventType?.sportKind);
@@ -139,6 +152,8 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
   const tz = householdTz();
   const events = (await prisma.event.findMany({
     where: {
+      // A cancelled single occurrence never counts (v0.785).
+      cancelled: false,
       OR: [{ eventType: { is: { sportWorkout: true } } }, { externalCalendar: { is: { sportWorkout: true } } }],
     },
     select: {
@@ -164,6 +179,7 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
     externalCalendar: { sport: string | null; sportWorkout: boolean; userId: string | null; memberIds: string[] | null; name: string } | null;
   }[];
   const found: { e: (typeof events)[number]; at: Date; ms: number }[] = [];
+  const replaced = await replacedOccurrences(events);
   for (const e of events) {
     const mine =
       e.userId === userId ||
@@ -173,7 +189,10 @@ export async function sportsForDay(userId: string, dateISO: string): Promise<Day
     if (!mine) continue;
     if (e.rrule) {
       const ms = occurrenceSpanMs(e.startsAt, e.endsAt, false, tz);
-      for (const at of occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz)) found.push({ e, at, ms });
+      for (const at of occurrencesIn(e.startsAt, e.rrule, dateISO, dateISO, tz)) {
+        // Moved, changed or cancelled on its own (v0.785): the series skips it.
+        if (!replaced.get(e.id)?.has(localParts(at, tz).iso)) found.push({ e, at, ms });
+      }
     } else if (localParts(e.startsAt, tz).iso === dateISO) {
       found.push({ e, at: e.startsAt, ms: e.endsAt.getTime() - e.startsAt.getTime() });
     }
