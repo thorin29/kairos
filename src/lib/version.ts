@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.795.0";
+export const APP_VERSION = "0.796.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -201,6 +201,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.796.0",
+    summary: [
+      "Maps are fingers only: no zoom buttons or arrow pad.",
+      "Admin: Game time is on the menu; Characters left it (it isn't admin). Pages inside a section go back to that section.",
+      "Every main page's lock opens its own admin section, Ice time, Family map and Game time included.",
+      "Movement library: hamstring press, arm lift-off, knee to wall and reverse Nordic holds.",
+    ],
+  },
   {
     version: "0.795.0",
     summary: [

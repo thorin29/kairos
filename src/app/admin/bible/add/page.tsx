@@ -26,7 +26,7 @@ export default async function AddFamilyReadingsPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/bible", label: "Bible reading" }} />
       <header className="mb-6 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">Add readings</h1>
         <p className="mt-1 text-muted">{plan.name}</p>

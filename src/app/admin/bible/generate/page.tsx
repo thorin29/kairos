@@ -32,7 +32,7 @@ export default async function GeneratePlanPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/bible", label: "Bible reading" }} />
 
       <header className="mb-8 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">

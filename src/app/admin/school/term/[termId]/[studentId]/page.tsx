@@ -16,7 +16,7 @@ export default async function TermCompilePage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/school", label: "School" }} />
       <TermCompileView data={data} />
     </main>
   );

@@ -9,7 +9,7 @@ export default async function AdminAddressesPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/calendar", label: "Calendar" }} />
 
       <header className="mb-8 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">

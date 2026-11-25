@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Fingers-only maps; admin navigation tidy (v0.796.0)
+
+- All three Google maps set `zoomControl: false` and `cameraControl: false`
+  (the arrow pad). Pinch and drag only; a mouse wheel still zooms on the web.
+- `src/lib/admin-sections.ts` is the one table, both ways: `ADMIN_FOR_PAGE`
+  (the lock on each main page) and `pageForAdmin` ("Close admin" and "Lock
+  admin" used two copies of the same list, missing tasks, school, hockey and
+  places). Added: /games, /hockey, /places, /coop → chores; /characters,
+  /summary, /scoring → Scoring & rewards (/admin/season).
+- Admin hub: Game time added (/admin/games had no tile and was unreachable
+  from the menu); Characters removed (it linked out to the main page);
+  About gets an info icon instead of the lock; stale blurbs fixed.
+- `AdminBack` takes a `parent`: pages inside a section go back to it (Settings
+  → Device/Appearance/Email/Scoring; Calendar → Addresses/Event names; School,
+  Bible, Workouts, Money sub-pages), with "Admin Menu" beside it.
+- Library: four isometric holds added (hamstring press, arm lift-off, knee to
+  wall, reverse Nordic); Copenhagen is already there as "Copenhagen plank".
+  They reach the pool from Admin → Workouts → Movement library. The Isometric
+  day's own rotation (`ISO_LIBRARY`) is unchanged.
+
 ## 2026-11 — Places page: visits kept for good (v0.795.0, app 0.573.0)
 
 - Plan: project doc `claude/places-visits-plan.md`. Confirmed places stay in

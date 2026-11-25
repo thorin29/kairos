@@ -20,7 +20,7 @@ export default async function ScoringRewardsPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/settings", label: "Settings" }} />
 
       <header className="mb-6 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">

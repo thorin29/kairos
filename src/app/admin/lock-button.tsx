@@ -1,27 +1,17 @@
 "use client";
 
+import { pageForAdmin } from "@/lib/admin-sections";
 import { useTransition } from "react";
 import { usePathname } from "next/navigation";
 import { lockAdmin } from "@/lib/actions/session";
 
-// Admin sub-pages map back to their own dashboard; the hub goes home.
-const DASHBOARDS = new Set([
-  "chores",
-  "calendar",
-  "exercise",
-  "bible",
-  "games",
-  "groceries",
-  "money",
-]);
 
 export function LockButton() {
   const path = usePathname();
   const [pending, startTransition] = useTransition();
 
-  // "/admin/chores" -> "/chores"; "/admin/bible/progress" -> "/bible"; "/admin" -> "/".
-  const section = path.split("/")[2] ?? "";
-  const dashboard = DASHBOARDS.has(section) ? `/${section}` : "/";
+  // "/admin/chores" -> "/chores"; "/admin/bible/progress" -> "/bible"; "/admin" -> "/" (v0.796: one table).
+  const dashboard = pageForAdmin(path);
 
   return (
     <button

@@ -15,7 +15,7 @@ export default async function DeviceAdminPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/settings", label: "Settings" }} />
 
       <header className="mb-8 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
         <div>

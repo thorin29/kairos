@@ -1,17 +1,8 @@
 "use client";
 
+import { pageForAdmin } from "@/lib/admin-sections";
 import { useRouter, usePathname } from "next/navigation";
 
-// Admin sub-pages map back to their own dashboard; the hub goes home.
-const DASHBOARDS = new Set([
-  "chores",
-  "calendar",
-  "exercise",
-  "bible",
-  "games",
-  "groceries",
-  "money",
-]);
 
 /** Leaves the admin panel for the matching dashboard without locking, so the
  *  admin stays unlocked (unlike the Lock button). */
@@ -19,8 +10,7 @@ export function CloseAdminButton() {
   const router = useRouter();
   const path = usePathname();
 
-  const section = path.split("/")[2] ?? "";
-  const dashboard = DASHBOARDS.has(section) ? `/${section}` : "/";
+  const dashboard = pageForAdmin(path);
 
   return (
     <button

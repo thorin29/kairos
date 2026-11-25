@@ -298,6 +298,11 @@ const ISOMETRIC: Short[] = [
   ["Mid-thigh pull hold", "FULL_BODY", "HINGE", "barbell", "T", "Bar set on the rack pins at mid-thigh, under them if needed. Pull up as hard as you can without it moving, flat back."],
   ["Farmer hold", "FULL_BODY", "CARRY", "dumbbells", "T", "Heavy dumbbell or kettlebell in each hand, stand tall and hold. Log the weight and the time."],
   ["Overhead kettlebell hold", "SHOULDERS", "PUSH", "kettlebells", "T", "One bell locked out overhead, ribs down, hold. One arm per set, switching each set."],
+  // v0.796: four more holds asked for by name.
+  ["Hamstring press hold", "LEGS", "HINGE", "", "T", "On your back, heels on a bench or box, knees slightly bent. Press the heels down hard, lift the hips a little and hold."],
+  ["Arm lift-off hold", "SHOULDERS", "PULL", "", "T", "Back of the hand on the low back, elbow bent. Lift the hand just off the back without leaning, and hold. One arm per set, switching each set."],
+  ["Knee to wall hold", "LEGS", "SQUAT", "", "T", "Half-kneeling facing a wall, front foot a few inches back. Drive the knee forward to touch the wall with the heel flat, and hold. One side per set, switching each set."],
+  ["Reverse Nordic hold", "LEGS", "SQUAT", "", "T", "Kneel tall, shins down, hips straight. Lean back from the knees as one straight line to a point you can hold, and hold it. Come up before the hips bend."],
   ["Plate pinch hold", "ARMS", "PULL", "barbell", "T", "Pinch two plates together smooth sides out and hold at your side."],
 ];
 

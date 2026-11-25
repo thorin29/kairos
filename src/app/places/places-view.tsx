@@ -407,7 +407,9 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          zoomControl: true,
+          // Fingers only (v0.796): no +/− buttons and no arrow pad.
+          zoomControl: false,
+          cameraControl: false,
         });
         map.addListener("dragstart", () => setFollow(null));
         map.addListener("click", () => setExpanded(null));

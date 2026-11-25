@@ -18,7 +18,7 @@ export default async function PersonWorkoutsPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/exercise", label: "Workouts" }} />
 
       <Link
         href="/admin/exercise"

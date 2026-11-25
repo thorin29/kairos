@@ -202,7 +202,9 @@ function PinPicker({
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          zoomControl: true,
+          // Fingers only (v0.796): no +/− buttons and no arrow pad.
+          zoomControl: false,
+          cameraControl: false,
         });
       })
       .catch(() => !cancelled && setFailed(true));

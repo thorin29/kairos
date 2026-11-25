@@ -5,21 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LockIcon, UnlockIcon } from "@/components/icons";
 import { PinPad } from "@/components/pin-pad";
+import { ADMIN_FOR_PAGE } from "@/lib/admin-sections";
 
-// Each page's lock jumps straight to the matching admin section.
-const SECTION: Record<string, string> = {
-  "/": "/admin",
-  "/tasks": "/admin/tasks",
-  "/chores": "/admin/chores",
-  "/calendar": "/admin/calendar",
-  "/exercise": "/admin/exercise",
-  "/bible": "/admin/bible",
-  "/school": "/admin/school",
-  "/groceries": "/admin/groceries",
-  "/money": "/admin/money",
-  "/characters": "/admin",
-  "/summary": "/admin",
-};
+// Each page's lock jumps straight to the matching admin section (one table
+// for the lock and the admin's own buttons, v0.796).
 
 const FLOAT =
   "fixed bottom-4 right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border shadow-sm backdrop-blur transition-all";
@@ -59,7 +48,7 @@ export function AdminLock({
   }
 
   const base = "/" + (path.split("/")[1] ?? "");
-  const href = SECTION[base] ?? "/admin";
+  const href = ADMIN_FOR_PAGE[base] ?? "/admin";
   const needsPin = !unlocked && pinSet;
 
   const tone = unlocked

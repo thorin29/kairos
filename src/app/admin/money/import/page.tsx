@@ -19,7 +19,7 @@ export default async function MoneyImportPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <AdminBack />
+      <AdminBack parent={{ href: "/admin/money", label: "Money" }} />
 
       <header className="mb-6 mt-5 border-b border-hairline pb-5">
         <div className="flex items-center justify-between gap-4">
