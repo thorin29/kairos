@@ -1,4 +1,5 @@
 import { AdminBack } from "@/components/admin-back";
+import { AdminTabs, pickTab } from "@/components/admin-tabs";
 import {
   loadWorkoutAdmin,
   loadExercisePool,
@@ -22,7 +23,7 @@ import { SharedPlans } from "./shared-plans";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminWorkoutsPage() {
+export default async function AdminWorkoutsPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
   const [{ people }, pool, weightUnits, hiitWorkouts, pendingShares, overdueDays, library, equipment, wods, sharedPlans, garageFeet] =
     await Promise.all([
       loadWorkoutAdmin(),
@@ -38,34 +39,56 @@ export default async function AdminWorkoutsPage() {
       loadGarageFeet(),
     ]);
 
+  // Tabs (v0.797) instead of one long page.
+  const tabs = [
+    { key: "exercises", label: "Exercises" },
+    { key: "workouts", label: "Workouts", badge: pendingShares.length },
+    { key: "equipment", label: "Equipment" },
+    { key: "people", label: "People" },
+  ];
+  const tab = pickTab(tabs, (await searchParams).tab);
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
 
-      <header className="mb-8 mt-5 border-b border-hairline pb-5">
+      <header className="mb-4 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">
           Workouts
         </h1>
         <p className="mt-2 max-w-xl text-muted">
-          Build the shared exercise pool people choose from, set the weight unit
-          per muscle group, and open a person to manage their logged workouts.
+          The shared exercise pool, workouts, home gear, and each person&rsquo;s logged workouts.
         </p>
       </header>
 
+      <AdminTabs base="/admin/exercise" tabs={tabs} active={tab} />
+
       <div className="space-y-10">
-        <WorkoutExpiry days={overdueDays} />
-        <ExercisePool pool={pool} weightUnits={weightUnits} />
-        <MovementLibrary status={library} />
-        <HouseholdEquipment items={equipment} garageFeet={garageFeet} />
-        <WorkoutsLibrary status={wods} />
-        {pendingShares.length > 0 && <PendingShares shares={pendingShares} />}
-        {sharedPlans.length > 0 && <SharedPlans plans={sharedPlans} />}
-        <HiitWorkouts
-          movements={pool.filter((p) => p.category === "HIIT")}
-          workouts={hiitWorkouts}
-        />
-        <WorkoutAdmin people={people} />
-        <WorkoutExport />
+        {tab === "exercises" && (
+          <>
+            <ExercisePool pool={pool} weightUnits={weightUnits} />
+            <MovementLibrary status={library} />
+          </>
+        )}
+        {tab === "workouts" && (
+          <>
+            {pendingShares.length > 0 && <PendingShares shares={pendingShares} />}
+            <WorkoutsLibrary status={wods} />
+            <HiitWorkouts
+              movements={pool.filter((p) => p.category === "HIIT")}
+              workouts={hiitWorkouts}
+            />
+            {sharedPlans.length > 0 && <SharedPlans plans={sharedPlans} />}
+          </>
+        )}
+        {tab === "equipment" && <HouseholdEquipment items={equipment} garageFeet={garageFeet} />}
+        {tab === "people" && (
+          <>
+            <WorkoutAdmin people={people} />
+            <WorkoutExpiry days={overdueDays} />
+            <WorkoutExport />
+          </>
+        )}
       </div>
     </main>
   );

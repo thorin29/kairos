@@ -110,7 +110,7 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.796.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.797.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   183_place_visits, all registered in `MIGRATIONS`.
 - App 0.573.0 (versionCode 645, CLIENT_BUILD 645).
 - ice-time 0.1.3.
@@ -423,6 +423,8 @@ Kept here so they don't come back as open items.
 
 ### Places
 
+- One map-settings button (v0.797): full screen, everyone, traffic and map
+  style roll down under it; search stays on its own.
 - Fingers-only maps (v0.796): no zoom buttons or arrow pad.
 - Places page (v0.795): every stop kept as a visit; search by place, family
   name, street or zone, person and range; All places to confirm once (home or

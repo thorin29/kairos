@@ -3,6 +3,7 @@ import { dayLabel } from "@/lib/bible/plan-edit";
 import { listPlans } from "@/lib/actions/reading";
 import { fromDateColumn, formatShort, todayISO } from "@/lib/dates";
 import { AdminBack } from "@/components/admin-back";
+import { AdminTabs, pickTab } from "@/components/admin-tabs";
 import { Card, SectionHeading, ButtonLink } from "@/components/ui";
 import { PlanImport } from "@/components/plan-import";
 import { StartOverButton } from "@/components/bible-tracker";
@@ -10,7 +11,7 @@ import { PlanActions } from "./plan-actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminBiblePage() {
+export default async function AdminBiblePage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
   const today = todayISO();
   const plans = await listPlans();
 
@@ -37,11 +38,19 @@ export default async function AdminBiblePage() {
   const remaining = upcoming.filter((d) => fromDateColumn(d.day) >= today);
   const planDaysLeft = remaining.filter((d) => !d.isExtra).length;
 
+  // Tabs (v0.797) instead of one long page.
+  const tabs = [
+    { key: "plans", label: "Plans" },
+    { key: "progress", label: "Progress" },
+    { key: "new", label: "New plan" },
+  ];
+  const tab = pickTab(tabs, (await searchParams).tab);
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
 
-      <header className="mb-8 mt-5 border-b border-hairline pb-5">
+      <header className="mb-4 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">
           Bible reading
         </h1>
@@ -52,11 +61,15 @@ export default async function AdminBiblePage() {
         </p>
       </header>
 
+      <AdminTabs base="/admin/bible" tabs={tabs} active={tab} />
+
+      {tab === "plans" && (
+        <>
       <section className="mb-10">
         <SectionHeading>Plans</SectionHeading>
         {plans.length === 0 ? (
           <Card className="p-6 text-sm text-muted">
-            No plans yet. Import one below.
+            No plans yet. Build or import one under New plan.
           </Card>
         ) : (
           <Card className="divide-y divide-hairline">
@@ -118,6 +131,10 @@ export default async function AdminBiblePage() {
         </section>
       )}
 
+        </>
+      )}
+      {tab === "progress" && (
+        <>
       <section className="mb-10">
         <SectionHeading>Manually update family progress</SectionHeading>
         <p className="mb-3 max-w-xl text-sm text-muted">
@@ -130,6 +147,21 @@ export default async function AdminBiblePage() {
         </ButtonLink>
       </section>
 
+      <section className="mb-10">
+        <SectionHeading>Start over</SectionHeading>
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <p className="max-w-md text-sm text-muted">Reset the family&rsquo;s progress bars to 0%. The plan keeps going.</p>
+          <StartOverButton
+            ownerId={null}
+            allowNewPlan={false}
+            className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium hover:border-accent hover:text-accent"
+          />
+        </Card>
+      </section>
+        </>
+      )}
+      {tab === "new" && (
+        <>
       <section className="mb-10">
         <SectionHeading>Build a new plan</SectionHeading>
         <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
@@ -149,17 +181,8 @@ export default async function AdminBiblePage() {
         <PlanImport target={{ scope: "family" }} plans={plans.map((p) => ({ id: p.id, name: p.name }))} />
       </section>
 
-      <section className="mt-10">
-        <SectionHeading>Start over</SectionHeading>
-        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
-          <p className="max-w-md text-sm text-muted">Reset the family&rsquo;s progress bars to 0%. The plan keeps going.</p>
-          <StartOverButton
-            ownerId={null}
-            allowNewPlan={false}
-            className="inline-flex h-10 items-center rounded-full border border-hairline px-5 text-sm font-medium hover:border-accent hover:text-accent"
-          />
-        </Card>
-      </section>
+        </>
+      )}
     </main>
   );
 }

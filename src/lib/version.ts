@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.796.0";
+export const APP_VERSION = "0.797.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -201,6 +201,15 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.797.0",
+    summary: [
+      "Family map: one map-settings button holds full screen, everyone, traffic and map style; search stays on its own.",
+      "Admin: Workouts, Chores, Family map and Bible reading are split into tabs. The exercise pool shows one type at a time, with search.",
+      "Isometric: a new workout, Knees, hamstrings and shoulders. Knee to wall and arm lift-off holds switch sides each set.",
+      "Places: a day that fails to write no longer holds up the days after it; the error shows on Admin → Family map.",
+    ],
+  },
   {
     version: "0.796.0",
     summary: [

@@ -142,7 +142,7 @@ export type PlacesAdmin = {
   totalPoints: number;
   storageBytes: number;
   /** The Places page's visit records (v0.795). */
-  visitStore: { visits: number; places: number; bytes: number };
+  visitStore: { visits: number; places: number; bytes: number; error: { day: string; message: string } | null };
   people: PlacesPersonRow[];
   named: { id: string; name: string; address: string | null; who: string | null; lat: number; lng: number; createdAt: string }[];
   rules: { id: string; tell: string[]; about: string | null; place: string; onArrive: boolean; onLeave: boolean }[];

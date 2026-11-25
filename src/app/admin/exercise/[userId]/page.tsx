@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { AdminBack } from "@/components/admin-back";
-import { ArrowLeftIcon } from "@/components/icons";
 import { loadPersonWorkoutRecords } from "@/lib/queries/workouts";
 import { PersonRecords } from "./person-records";
 
@@ -18,17 +16,9 @@ export default async function PersonWorkoutsPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
-      <AdminBack parent={{ href: "/admin/exercise", label: "Workouts" }} />
+      <AdminBack parent={{ href: "/admin/exercise?tab=people", label: "Workouts" }} />
 
-      <Link
-        href="/admin/exercise"
-        className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
-      >
-        <ArrowLeftIcon className="h-4 w-4" />
-        Workouts
-      </Link>
-
-      <header className="mb-8 mt-3 flex items-center gap-3 border-b border-hairline pb-5">
+      <header className="mb-8 mt-5 flex items-center gap-3 border-b border-hairline pb-5">
         <span
           aria-hidden
           className="h-8 w-1.5 rounded-full"

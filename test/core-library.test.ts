@@ -185,7 +185,7 @@ import { LIBRARY as ALL_MOVES, nameKey as moveKey } from "@/lib/workouts/library
 
 describe("isometric days (v0.661)", () => {
   it("has its own workouts, every move a hold the library knows", () => {
-    expect(ISO_LIBRARY.length).toBe(6);
+    expect(ISO_LIBRARY.length).toBe(7);
     for (const w of ISO_LIBRARY) {
       expect(w.kind).toBe("iso");
       for (const m of w.moves) {

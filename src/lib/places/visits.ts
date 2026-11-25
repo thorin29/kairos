@@ -187,6 +187,13 @@ async function tidy(): Promise<void> {
   await prisma.placeSpot.deleteMany({ where: { visits: { none: {} }, createdAt: { lt: new Date(Date.now() - 60 * 60_000) } } });
 }
 
+/** Days that failed to write (v0.797): skipped until the server restarts, so
+ *  one bad day can't hold up every day after it. The newest error shows on
+ *  Admin → Family map. */
+const failed = new Set<string>();
+let lastError: { day: string; message: string; at: string } | null = null;
+export const visitError = () => lastError;
+
 /** The background timer's share: a few unwritten finished days per run. */
 export async function snapshotTick(): Promise<void> {
   await tidy();
@@ -207,9 +214,15 @@ export async function snapshotTick(): Promise<void> {
       ),
     );
     for (let d = todayISO(first.at); d < today && budget > 0; d = addDays(d, 1)) {
-      if (done.has(d)) continue;
+      if (done.has(d) || failed.has(`${userId}:${d}`)) continue;
       budget--;
-      await snapshotDay(userId, d);
+      try {
+        await snapshotDay(userId, d);
+      } catch (e) {
+        failed.add(`${userId}:${d}`);
+        lastError = { day: d, message: (e as Error).message.slice(0, 300), at: new Date().toISOString() };
+        console.warn(`[visits] ${d} failed: ${lastError.message}`);
+      }
     }
   }
 }
@@ -480,7 +493,7 @@ export function cleanKind(k: unknown): string | null {
 }
 
 /** Sizes of the visit tables, for Admin → Family map → Status. */
-export async function visitStorage(): Promise<{ visits: number; places: number; bytes: number }> {
+export async function visitStorage(): Promise<{ visits: number; places: number; bytes: number; error: { day: string; message: string } | null }> {
   const [visits, places, size] = await Promise.all([
     prisma.placeVisit.count(),
     prisma.placeSpot.count(),
@@ -489,5 +502,5 @@ export async function visitStorage(): Promise<{ visits: number; places: number; 
     >,
   ]);
   const named = await prisma.placeName.count();
-  return { visits, places: places + named, bytes: Number(size[0]?.bytes ?? 0) };
+  return { visits, places: places + named, bytes: Number(size[0]?.bytes ?? 0), error: lastError ? { day: lastError.day, message: lastError.message } : null };
 }

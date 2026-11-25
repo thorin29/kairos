@@ -203,6 +203,18 @@ export const ISO_LIBRARY: readonly CoreWorkout[] = ([
     ["Overhead kettlebell hold", "TIME", 4, 20, 40],
     ["Plate pinch hold", "TIME", 3, 20, 40],
   ]),
+  // v0.797: built from the four holds added in v0.796. Doses follow the
+  // sources: wall ankle stretches (3 × 20–30 s), heel-press bridge holds
+  // (2–3 × 10–30 s), the Copenhagen programme (2 sets a side), subscapularis
+  // lift-off holds (about 10 s). Reverse Nordics are studied as reps, not
+  // holds, so that one is kept short.
+  lib("iso-knee", "Knees, hamstrings and shoulders", 15, "Wall, bench", [
+    ["Knee to wall hold", "TIME", 6, 20, 30],
+    ["Hamstring press hold", "TIME", 3, 10, 30],
+    ["Reverse Nordic hold", "TIME", 3, 10, 20],
+    ["Copenhagen plank", "TIME", 4, 15, 30],
+    ["Arm lift-off hold", "TIME", 6, 10, 15],
+  ]),
   lib("iso-full", "Full-body holds", 15, "Wall, pull-up bar", [
     ["Wall sit", "TIME", 2, 45, 90],
     ["Push-up hold", "TIME", 2, 30, 60],
@@ -335,7 +347,7 @@ const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padSt
  * work, and its timer switches sides.
  */
 export const switchesSides = (name: string) =>
-  /side plank|suitcase|overhead carry|overhead kettlebell hold|waiter|single[- ]arm|one[- ]arm|copenhagen|split squat hold|lateral lunge hold|single[- ]leg glute bridge hold/i.test(
+  /side plank|suitcase|overhead carry|overhead kettlebell hold|waiter|single[- ]arm|one[- ]arm|copenhagen|split squat hold|lateral lunge hold|single[- ]leg glute bridge hold|knee to wall hold|arm lift-off hold/i.test(
     name,
   );
 

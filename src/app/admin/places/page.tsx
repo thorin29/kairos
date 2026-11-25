@@ -1,5 +1,5 @@
 import { AdminBack } from "@/components/admin-back";
-import { LockButton } from "../lock-button";
+import { AdminTabs, pickTab } from "@/components/admin-tabs";
 import { loadPlacesAdmin } from "@/lib/places/config";
 import { usageSummary } from "@/lib/places/usage";
 import { householdTz } from "@/lib/dates";
@@ -18,7 +18,7 @@ function ago(iso: string, now: number): string {
   return `${Math.floor(h / 24)} days ago`;
 }
 
-export default async function PlacesAdminPage() {
+export default async function PlacesAdminPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
   const [data, usage, zones] = await Promise.all([loadPlacesAdmin(), usageSummary(), zonesForAdmin()]);
   const now = Date.now();
   const tz = householdTz();
@@ -49,11 +49,20 @@ export default async function PlacesAdminPage() {
       : null,
   }));
 
+  // Tabs (v0.797) instead of one long page.
+  const tabs = [
+    { key: "status", label: "Status" },
+    { key: "people", label: "People", badge: data.unlinked ? 1 : 0 },
+    { key: "places", label: "Places" },
+    { key: "setup", label: "Setup" },
+  ];
+  const tab = pickTab(tabs, (await searchParams).tab) as "status" | "people" | "places" | "setup";
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-8">
       <AdminBack />
 
-      <header className="mb-8 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
+      <header className="mb-4 mt-5 flex flex-wrap items-end justify-between gap-4 border-b border-hairline pb-5">
         <div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Family map</h1>
           <p className="mt-1 max-w-xl text-sm text-muted">
@@ -61,10 +70,12 @@ export default async function PlacesAdminPage() {
             docs/places-home-assistant.md.
           </p>
         </div>
-        <LockButton />
       </header>
 
+      <AdminTabs base="/admin/places" tabs={tabs} active={tab} />
+
       <PlacesAdminForm
+        tab={tab}
         people={people}
         mapKeySet={data.mapKeySet}
         lookupKeySet={data.lookupKeySet}
@@ -82,9 +93,11 @@ export default async function PlacesAdminPage() {
         storageBytes={data.storageBytes}
         visitStore={data.visitStore}
       />
-      <div className="mt-6">
-        <ZoneColors zones={zones} />
-      </div>
+      {tab === "places" && (
+        <div className="mt-6">
+          <ZoneColors zones={zones} />
+        </div>
+      )}
     </main>
   );
 }

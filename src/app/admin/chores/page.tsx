@@ -13,13 +13,14 @@ import { EffortTable, type BalanceRow } from "./effort-table";
 import { MasterEffortLock } from "./master-effort-lock";
 import { CollaborativeForm } from "./collaborative-form";
 import { AnytimeForm } from "./anytime-form";
+import { AdminTabs, pickTab } from "@/components/admin-tabs";
 import { AdminBack } from "@/components/admin-back";
 import { Card, SectionHeading } from "@/components/ui";
 import { AlertIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChoresPage() {
+export default async function ChoresPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
   const [summary, poolChores, people] = await Promise.all([
     loadChoreSummary(),
     loadPoolChores(),
@@ -97,21 +98,30 @@ export default async function ChoresPage() {
     .filter((r) => r.weekCount > 0)
     .sort((a, b) => b.weekEffort - a.weekEffort);
 
+  // Tabs (v0.797) instead of one long page.
+  const tabs = [
+    { key: "assign", label: "Assign" },
+    { key: "assigned", label: "Assigned" },
+    { key: "list", label: "Master list", badge: unassigned.length },
+    { key: "effort", label: "Effort" },
+  ];
+  const tab = pickTab(tabs, (await searchParams).tab);
+
   return (
     <main className="mx-auto max-w-5xl px-6 py-8">
       <AdminBack />
 
-      <header className="mb-8 mt-5 border-b border-hairline pb-5">
+      <header className="mb-4 mt-5 border-b border-hairline pb-5">
         <h1 className="font-display text-3xl font-semibold tracking-tight">
           Chores
         </h1>
         <p className="mt-2 max-w-2xl text-muted">
           Assign each chore to a person and a day &mdash; assignments repeat
-          every week. Drag a card to reorder people, or use the move button on a
-          chore to shift it to someone else. The master list of jobs is at the
-          bottom.
+          every week.
         </p>
       </header>
+
+      {people.length > 0 && <AdminTabs base="/admin/chores" tabs={tabs} active={tab} />}
 
       {people.length === 0 ? (
         <Card className="p-6 text-sm text-muted">
@@ -119,7 +129,9 @@ export default async function ChoresPage() {
         </Card>
       ) : (
         <div className="space-y-10">
-          {summary.length > 0 && (
+          {tab === "assign" && (
+<>
+{summary.length > 0 && (
             <section>
               <SectionHeading>Assign a chore</SectionHeading>
               <Card className="p-5">
@@ -153,7 +165,10 @@ export default async function ChoresPage() {
             />
           </section>
 
-          {unassigned.length > 0 && (
+          </>
+)}
+
+          {tab === "list" && unassigned.length > 0 && (
             <Card className="flex items-start gap-3 border-amber-300 bg-amber-50 p-5">
               <AlertIcon className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
               <div>
@@ -169,7 +184,9 @@ export default async function ChoresPage() {
             </Card>
           )}
 
-          <section>
+          {tab === "effort" && (
+<>
+<section>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <SectionHeading>Effort balance</SectionHeading>
               <MasterEffortLock allLocked={allEffortLocked} />
@@ -183,11 +200,17 @@ export default async function ChoresPage() {
             <EffortTable rows={balanceRows} />
           </section>
 
-          <section>
-            <SectionHeading>Assigned chores</SectionHeading>
-            <ChoreCards cards={byPerson} people={people} />
-          </section>
+          </>
+)}
 
+          {tab === "assigned" && (
+            <section>
+              <SectionHeading>Assigned chores</SectionHeading>
+              <ChoreCards cards={byPerson} people={people} />
+            </section>
+          )}
+
+          {tab === "list" && (
           <section>
             <SectionHeading>Master chore list</SectionHeading>
             <Card className="p-5">
@@ -209,6 +232,9 @@ export default async function ChoresPage() {
             </Card>
           </section>
 
+          )}
+
+          {tab === "assigned" && (
           <section>
             <SectionHeading>Time to catch up</SectionHeading>
             <Card className="divide-y divide-hairline">
@@ -247,6 +273,7 @@ export default async function ChoresPage() {
               again. The number after each slot is how many days until it does.
             </p>
           </section>
+          )}
         </div>
       )}
     </main>

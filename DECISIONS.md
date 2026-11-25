@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-11 — Admin tabs; one map-settings button (v0.797.0)
+
+- `components/admin-tabs.tsx`: `AdminTabs` + `pickTab`. The tab is `?tab=`
+  (the first tab has no param), read on the server, so only that tab's
+  sections render and Back, the lock and a refresh return to it. Used on
+  Workouts (Exercises / Workouts / Equipment / People), Chores (Assign /
+  Assigned / Master list / Effort), Family map (Status / People / Places /
+  Setup) and Bible reading (Plans / Progress / New plan). Shorter admin
+  pages stay one page. Sub-pages go back to their tab.
+- Exercise pool: one type at a time (chips with counts), muscle groups
+  folded with the lb/kg toggle on the row, a search box that searches every
+  type, and the add form behind "+ Add".
+- Family map: full screen, everyone, traffic and map style moved into one
+  layers button that rolls a pill down (like Tracks rolls out); a tap on the
+  map folds it. Search stays its own button. Web only; the app shows it.
+- Visits: `snapshotTick` catches per day. A failed day is skipped until the
+  server restarts (it used to fail the whole run, so the same day was
+  retried every 5 minutes and nothing after it was written); the newest
+  error shows in Admin → Family map → Status. Note the timer's first run is
+  5 minutes after start, so Places is empty right after a fresh deploy.
+- `ISO_LIBRARY` gains "Knees, hamstrings and shoulders" from the v0.796
+  holds; doses taken from published guidance (see the code comment).
+  `switchesSides` now includes knee to wall and arm lift-off holds.
+- Removed the duplicate lock button in the Family map admin header and the
+  duplicate "Workouts" back link on a person's workouts page.
+
 ## 2026-11 — Fingers-only maps; admin navigation tidy (v0.796.0)
 
 - All three Google maps set `zoomControl: false` and `cameraControl: false`

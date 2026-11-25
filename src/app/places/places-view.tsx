@@ -145,6 +145,9 @@ const btnOn =
   "inline-flex h-10 items-center gap-2 rounded-full border border-accent bg-accent px-4 text-sm font-medium text-on-accent shadow-sm";
 export const iconBtn =
   "flex h-10 w-10 items-center justify-center rounded-full border border-hairline bg-surface text-ink shadow-md hover:border-accent disabled:opacity-50";
+/** A button inside the map-settings pill (v0.797): flat, round. */
+const tool = "flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-black/5 disabled:opacity-40";
+const toolOn = "flex h-9 w-9 items-center justify-center rounded-full bg-accent text-on-accent";
 export const iconBtnOn =
   "flex h-10 w-10 items-center justify-center rounded-full border border-accent bg-accent text-on-accent shadow-md";
 
@@ -297,6 +300,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const [tracksOn, setTracksOn] = useState<string[]>([]);
   // The tracks row folds under its icon (v0.790); open when tracks are on.
   const [tracksOpen, setTracksOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [tracks, setTracks] = useState<Record<string, DayData>>({});
   const [zoom, setZoom] = useState<number | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -412,7 +416,10 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           cameraControl: false,
         });
         map.addListener("dragstart", () => setFollow(null));
-        map.addListener("click", () => setExpanded(null));
+        map.addListener("click", () => {
+          setExpanded(null);
+          setToolsOpen(false);
+        });
         map.addListener("idle", () => setZoom(map.getZoom() ?? null));
         mapRef.current = map;
         info.current = new google.maps.InfoWindow();
@@ -862,47 +869,80 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
                 <SearchGlyph />
               </Link>
             )}
-            <button
-              type="button"
-              onClick={() => setFull((v) => !v)}
-              className={iconBtn}
-              aria-label={full ? "Close full screen" : "Full screen"}
-              title={full ? "Close full screen" : "Full screen"}
-            >
-              {full ? <XIcon className="h-5 w-5" /> : <ExpandGlyph />}
-            </button>
-            <button type="button" onClick={fitEveryone} disabled={empty} className={iconBtn} aria-label="Everyone" title="Everyone">
-              <PeopleIcon className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setTraffic((v) => !v)}
-              className={traffic ? iconBtnOn : iconBtn}
-              aria-pressed={traffic}
-              aria-label="Traffic"
-              title="Traffic"
-            >
-              <TrafficGlyph />
-            </button>
-            {/* One button cycles map → satellite → terrain (v0.795). */}
-            <button
-              type="button"
-              onClick={() => {
-                if (satellite) {
-                  setSatellite(false);
-                  setTerrain(true);
-                } else if (terrain) {
-                  setTerrain(false);
-                } else {
-                  setSatellite(true);
-                }
-              }}
-              className={satellite || terrain ? iconBtnOn : iconBtn}
-              aria-label={`Map style: ${satellite ? "satellite" : terrain ? "terrain" : "map"}. Change`}
-              title={satellite ? "Satellite (tap for terrain)" : terrain ? "Terrain (tap for map)" : "Map (tap for satellite)"}
-            >
-              {terrain ? <TerrainGlyph /> : <LayersGlyph />}
-            </button>
+            {/* Map settings (v0.797): one button; full screen, everyone,
+                traffic and map style roll down under it, the way Tracks rolls
+                out. Tapping the map folds it back. */}
+            <div className={`flex flex-col items-center rounded-full ${toolsOpen ? "bg-surface/95 p-0.5 shadow-md" : ""}`}>
+              <button
+                type="button"
+                onClick={() => setToolsOpen((v) => !v)}
+                aria-expanded={toolsOpen}
+                className={toolsOpen ? iconBtnOn : iconBtn}
+                aria-label={toolsOpen ? "Close map settings" : "Map settings"}
+                title={toolsOpen ? "Close map settings" : "Map settings"}
+              >
+                {toolsOpen ? <XIcon className="h-5 w-5" /> : <LayersGlyph />}
+              </button>
+              <div
+                className={`flex flex-col items-center gap-1 overflow-hidden transition-[max-height,opacity,padding] duration-300 ease-out ${
+                  toolsOpen ? "max-h-64 pt-1 opacity-100" : "pointer-events-none max-h-0 opacity-0"
+                }`}
+                aria-hidden={!toolsOpen}
+              >
+                <button
+                  type="button"
+                  tabIndex={toolsOpen ? 0 : -1}
+                  onClick={() => setFull((v) => !v)}
+                  className={full ? toolOn : tool}
+                  aria-label={full ? "Close full screen" : "Full screen"}
+                  title={full ? "Close full screen" : "Full screen"}
+                >
+                  <ExpandGlyph />
+                </button>
+                <button
+                  type="button"
+                  tabIndex={toolsOpen ? 0 : -1}
+                  onClick={fitEveryone}
+                  disabled={empty}
+                  className={tool}
+                  aria-label="Everyone"
+                  title="Everyone"
+                >
+                  <PeopleIcon className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  tabIndex={toolsOpen ? 0 : -1}
+                  onClick={() => setTraffic((v) => !v)}
+                  className={traffic ? toolOn : tool}
+                  aria-pressed={traffic}
+                  aria-label="Traffic"
+                  title="Traffic"
+                >
+                  <TrafficGlyph />
+                </button>
+                {/* One button cycles map → satellite → terrain (v0.795). */}
+                <button
+                  type="button"
+                  tabIndex={toolsOpen ? 0 : -1}
+                  onClick={() => {
+                    if (satellite) {
+                      setSatellite(false);
+                      setTerrain(true);
+                    } else if (terrain) {
+                      setTerrain(false);
+                    } else {
+                      setSatellite(true);
+                    }
+                  }}
+                  className={satellite || terrain ? toolOn : tool}
+                  aria-label={`Map style: ${satellite ? "satellite" : terrain ? "terrain" : "map"}. Change`}
+                  title={satellite ? "Satellite (tap for terrain)" : terrain ? "Terrain (tap for map)" : "Map (tap for satellite)"}
+                >
+                  {terrain ? <TerrainGlyph /> : <LayersGlyph />}
+                </button>
+              </div>
+            </div>
           </div>
           {(mapError || !ready || empty) && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">

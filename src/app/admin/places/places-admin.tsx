@@ -59,6 +59,8 @@ function size(bytes: number): string {
 }
 
 export function PlacesAdminForm(props: {
+  /** The page tab (v0.797). */
+  tab: "status" | "people" | "places" | "setup";
   people: PersonView[];
   mapKeySet: boolean;
   lookupKeySet: boolean;
@@ -68,7 +70,7 @@ export function PlacesAdminForm(props: {
   unlinked: { entityId: string; when: string } | null;
   totalPoints: number;
   storageBytes: number;
-  visitStore: { visits: number; places: number; bytes: number };
+  visitStore: { visits: number; places: number; bytes: number; error: { day: string; message: string } | null };
   usage: UsageSummary;
   named: { id: string; name: string; address: string | null; who: string | null; lat: number; lng: number; createdAt: string }[];
   rules: { id: string; tell: string[]; about: string | null; place: string; onArrive: boolean; onLeave: boolean }[];
@@ -191,6 +193,7 @@ export function PlacesAdminForm(props: {
 
   return (
     <div className="space-y-6">
+      {props.tab === "status" && (
       <section className={card}>
         <h2 className={label}>Status</h2>
         <p className="flex items-center gap-2 text-sm">
@@ -203,7 +206,7 @@ export function PlacesAdminForm(props: {
         {props.unlinked && (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
             <span className="font-mono">{props.unlinked.entityId}</span> sent a location ({props.unlinked.when})
-            but isn&rsquo;t linked to anyone below.
+            but isn&rsquo;t linked to anyone. Link it under People.
           </p>
         )}
         <p className="text-sm text-muted">
@@ -213,8 +216,15 @@ export function PlacesAdminForm(props: {
           {props.visitStore.visits.toLocaleString()} visit{props.visitStore.visits === 1 ? "" : "s"} at{" "}
           {props.visitStore.places.toLocaleString()} place{props.visitStore.places === 1 ? "" : "s"} · {size(props.visitStore.bytes)}
         </p>
+        {props.visitStore.error && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Couldn&rsquo;t write visits for {props.visitStore.error.day}: {props.visitStore.error.message}
+          </p>
+        )}
       </section>
+      )}
 
+      {props.tab === "status" && (
       <section className={card}>
         <h2 className={label}>Google usage</h2>
         <div className="overflow-x-auto">
@@ -267,7 +277,9 @@ export function PlacesAdminForm(props: {
           </a>
         </p>
       </section>
+      )}
 
+      {props.tab === "setup" && (
       <section className={card}>
         <h2 className={label}>Home Assistant token</h2>
         {token ? (
@@ -293,7 +305,9 @@ export function PlacesAdminForm(props: {
           {props.tokenMade ? "New token" : "Make token"}
         </button>
       </section>
+      )}
 
+      {props.tab === "people" && (
       <section className={card}>
         <h2 className={label}>People</h2>
         <ul className="space-y-4">
@@ -330,7 +344,9 @@ export function PlacesAdminForm(props: {
         </button>
         <Note msg={peopleMsg} />
       </section>
+      )}
 
+      {props.tab === "setup" && (
       <section className={card}>
         <h2 className={label}>Google Maps</h2>
         <div>
@@ -399,7 +415,9 @@ export function PlacesAdminForm(props: {
         </button>
         <Note msg={keysMsg} />
       </section>
+      )}
 
+      {props.tab === "setup" && (
       <section className={card}>
         <h2 className={label}>Notifications</h2>
         <p className="text-sm text-muted">Each person picks theirs in the app: Settings → Notifications.</p>
@@ -423,7 +441,9 @@ export function PlacesAdminForm(props: {
         </p>
         <Note msg={ruleMsg} />
       </section>
+      )}
 
+      {props.tab === "setup" && (
       <section className={card}>
         <h2 className={label}>Instant push (Firebase)</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -477,7 +497,9 @@ export function PlacesAdminForm(props: {
         </div>
         <Note msg={fbMsg} />
       </section>
+      )}
 
+      {props.tab === "places" && (
       <section className={card}>
         <h2 className={label}>Named places</h2>
         {props.named.length === 0 ? (
@@ -519,7 +541,9 @@ export function PlacesAdminForm(props: {
           </ul>
         )}
       </section>
+      )}
 
+      {props.tab === "setup" && (
       <section className={card}>
         <h2 className={label}>Delete history</h2>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -543,6 +567,7 @@ export function PlacesAdminForm(props: {
         </button>
         <Note msg={delMsg} />
       </section>
+      )}
     </div>
   );
 }
