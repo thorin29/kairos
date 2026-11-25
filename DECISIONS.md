@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — History top, locked maps, rtask guard (v0.793.0, app 0.572.0)
+
+- History (chosen from "Kairos: History page top", round 2, #2): back, avatar
+  and name in a chip on the map's top-left; under the map one row with a strip
+  of miles · top mph · stops (rectangular, rounded 10px) and the day picker.
+  Driving minutes left the top. In the app (`/places/embed`) `main` is
+  `h-[100dvh]` and only the timeline scrolls; on the web the map and row stick.
+- The Family map in the app does the same: map `h-[52dvh]`, the people list
+  scrolls under it.
+- `useMapEdge` (embed-context) reports the map's bottom (CSS px) to the app's
+  `KairosPlaces.mapBottom` bridge on mount/resize, so the app opens its menu
+  on a rightward swipe below the map. On the web there is no bridge.
+- History zoom: bounds under 400 m centre at zoom 15 (fitBounds on a
+  near-point went to max zoom, and a following setZoom was overridden);
+  otherwise fitBounds, capped at 17 on the first idle.
+- Migration `182_generated_once_rtask` dedupes `rtask:` rows and widens
+  `Task_generated_once` to them. `editTask` turns the unique violation
+  (moving a generated task onto a day that has it) into "That day already has
+  this task."
+
 ## 2026-11 — Generated tasks once per day; area colors (v0.792.0, app 0.571.0)
 
 - Bible and workout tasks are generated on page loads and API calls, each

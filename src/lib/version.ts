@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.792.0";
+export const APP_VERSION = "0.793.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -194,11 +194,21 @@ export const MIGRATIONS = [
   "179_track_elevation",
   "180_seventh_week",
   "181_generated_once",
+  "182_generated_once_rtask",
 ] as const;
 
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.793.0",
+    summary: [
+      "Family map history: name on the map, miles, top speed and stops in one strip with the day picker; only the timeline scrolls.",
+      "A day spent in one place opens at neighbourhood zoom instead of all the way in.",
+      "In the app, the Family map stays put and only the people list scrolls.",
+      "Recurring tasks can't show up twice on a day either.",
+    ],
+  },
   {
     version: "0.792.0",
     summary: [

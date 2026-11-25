@@ -6,7 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Avatar } from "@/components/avatar";
 import { CarIcon, MapIcon, MotionIcon, PeopleIcon, WalkIcon, XIcon } from "@/components/icons";
 import { metres } from "@/lib/places/geo";
-import { liveNow, mapLoaded, placesHref, tracksNow, useEmbed } from "./embed-context";
+import { liveNow, mapLoaded, placesHref, tracksNow, useEmbed, useMapEdge } from "./embed-context";
 import type { LiveData, LivePerson } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "./map-kit";
@@ -293,6 +293,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const mapDiv = useRef<HTMLDivElement>(null);
+  useMapEdge(embed, mapDiv);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markers = useRef(new Map<string, MarkerEntry>());
   const lines = useRef(new Map<string, google.maps.Polyline[]>());
@@ -760,16 +761,18 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
 
 
   return (
-    <main className={embed ? "px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
+    <main className={embed ? "flex h-[100dvh] flex-col px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
       {!embed && <h1 className="mb-4 font-display text-3xl font-semibold tracking-tight">Family map</h1>}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      {/* In the app (v0.793) the page itself doesn't scroll: the map stays put
+          and only the people list under it scrolls. */}
+      <div className={`flex flex-col gap-4 lg:flex-row lg:items-start ${embed ? "min-h-0 flex-1" : ""}`}>
         <section
           aria-label="Map"
           className={
             full
               ? "fixed inset-0 z-[70] bg-ground"
-              : "relative h-[56vh] min-h-[360px] overflow-hidden rounded-2xl border border-hairline bg-surface lg:h-[calc(100dvh-8.5rem)] lg:min-w-0 lg:flex-1"
+              : `relative ${embed ? "h-[52dvh] min-h-[300px] shrink-0" : "h-[56vh] min-h-[360px]"} overflow-hidden rounded-2xl border border-hairline bg-surface lg:h-[calc(100dvh-8.5rem)] lg:min-w-0 lg:flex-1`
           }
         >
           <div ref={mapDiv} className="h-full w-full" />
@@ -906,7 +909,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           )}
         </section>
 
-        <aside aria-label="People" className="space-y-2 lg:w-80 lg:shrink-0">
+        <aside aria-label="People" className={`space-y-2 lg:w-80 lg:shrink-0 ${embed ? "min-h-0 flex-1 overflow-y-auto pb-1" : ""}`}>
           {data.people.map((p) => {
             const isSel = p.id === selected;
             const lowBattery = p.battery != null && p.battery < 20;

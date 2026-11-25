@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, type RefObject } from "react";
 import {
   addStopAction,
   namePlace,
@@ -126,4 +126,28 @@ export async function changeStopNow(embed: boolean, c: StopChange): Promise<{ er
   });
   if (!res.ok) return { error: res.status === 403 ? "Only parents can change history." : "Couldn't save. Try again." };
   return (await res.json()) as { error: string | null };
+}
+
+/**
+ * In the phone app (v0.793): tell the app where the map ends on screen, in CSS
+ * pixels from the top, so a sideways swipe below it (on the list) can open the
+ * app's menu while swipes on the map still pan it. The app adds the
+ * `KairosPlaces` bridge; on the web it isn't there and this does nothing.
+ */
+export function useMapEdge(embed: boolean, map: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    if (!embed) return;
+    const bridge = (window as unknown as { KairosPlaces?: { mapBottom?: (px: number) => void } }).KairosPlaces;
+    const el = map.current;
+    if (!bridge?.mapBottom || !el) return;
+    const send = () => bridge.mapBottom?.(Math.round(el.getBoundingClientRect().bottom));
+    send();
+    const ro = new ResizeObserver(send);
+    ro.observe(el);
+    window.addEventListener("resize", send);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", send);
+    };
+  }, [embed, map]);
 }

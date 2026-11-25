@@ -1941,6 +1941,9 @@ map. Web sign-in is for parents, so the device hands itself over:
   `/places/embed` pages, GET only, never a server action (proxy.ts), and stops working when the
   device is revoked or the person turned off. An expired session answers the page with 401; the
   app asks for a new ticket.
+- Page → app bridge (v0.793): the embed pages call `window.KairosPlaces.mapBottom(px)` with the
+  map's bottom edge in CSS px (on load and resize) when the app provides that object; the app opens
+  its menu on a rightward swipe below it.
 - "Not right?" in the app (v0.768): `GET /api/v1/places/view/choices?lat=&lng=&acc=` (nearby
   businesses), `GET /api/v1/places/view/search?lat=&lng=&q=` (Text Search near the spot, 40 a day →
   `{ choices: [{ name, address, placeId, lat, lng, distanceM }], error }`), and

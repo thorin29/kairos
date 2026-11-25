@@ -110,9 +110,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.792.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  181_generated_once, all registered in `MIGRATIONS`.
-- App 0.571.0 (versionCode 643, CLIENT_BUILD 643).
+- Web 0.793.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  182_generated_once_rtask, all registered in `MIGRATIONS`.
+- App 0.572.0 (versionCode 644, CLIENT_BUILD 644).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -177,6 +177,7 @@ Kept here so they don't come back as open items.
 
 ### Home dashboard and Summary
 
+- Recurring tasks guarded the same way (v0.793).
 - No doubled readings or workouts (v0.792): a generated Bible or workout task
   exists once per person per day (unique index); area colors made distinct.
 - A card per person with per-category completion; neutral when nothing is
@@ -422,6 +423,10 @@ Kept here so they don't come back as open items.
 
 ### Places
 
+- History's compact top and locked maps (v0.793): name on the map, a facts
+  strip (miles · top mph · stops) with the day picker; in the app only the
+  list/timeline scrolls and a swipe below the map opens the menu. A day in
+  one place opens at neighbourhood zoom.
 - Quiet drives (v0.790): a trip with a 5-minute gap between reports that
   averages past a fast walk over 1.5 km is a drive (so it's put on roads), and
   two far-apart stops with nothing between still get a trip. A phone that only

@@ -172,10 +172,20 @@ export async function editTask(input: {
     userId = input.userId;
   }
 
-  await prisma.task.update({
-    where: { id: input.id },
-    data: { title, dueDate: toDateColumn(input.dueDate), userId },
-  });
+  try {
+    await prisma.task.update({
+      where: { id: input.id },
+      data: { title, dueDate: toDateColumn(input.dueDate), userId },
+    });
+  } catch (e) {
+    // A generated task (a day's reading, workout or recurring task) exists
+    // once per person per day (v0.793): moving it onto a day that already has
+    // it is refused by the database.
+    if ((e as { code?: string })?.code === "P2002") {
+      return { error: "That day already has this task." };
+    }
+    throw e;
+  }
 
   revalidatePath("/");
   revalidatePath("/tasks");

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { CarIcon, DumbbellIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
-import { changeStopNow, mapLoaded, placesHref, useEmbed, type StopChange } from "../embed-context";
+import { changeStopNow, mapLoaded, placesHref, useEmbed, useMapEdge, type StopChange } from "../embed-context";
 import type { DayData, DayItem, DayLegItem, DayStopItem } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "../map-kit";
 import { PlaceFix } from "../place-fix";
@@ -114,6 +114,7 @@ export function HistoryView({
   const [replayAt, setReplayAt] = useState<number | null>(null);
 
   const mapDiv = useRef<HTMLDivElement>(null);
+  useMapEdge(embed, mapDiv);
   const mapRef = useRef<google.maps.Map | null>(null);
   const lines = useRef<google.maps.Polyline[]>([]);
   const pins = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -222,8 +223,22 @@ export function HistoryView({
       }
     }
     if (any) {
-      map.fitBounds(b, 56);
-      if (stops.length === 1 && !hasTrips) map.setZoom(15);
+      // A day that stays within a few hundred metres (at home all day, with
+      // the phone's jitter) opens at neighbourhood zoom (v0.793). fitBounds
+      // on a near-point zoomed in as far as Google goes, and a setZoom right
+      // after it was overridden once the fit applied.
+      const ne = b.getNorthEast();
+      const sw = b.getSouthWest();
+      if (metres({ lat: ne.lat(), lng: ne.lng() }, { lat: sw.lat(), lng: sw.lng() }) < 400) {
+        map.setCenter(b.getCenter());
+        map.setZoom(15);
+      } else {
+        map.fitBounds(b, 56);
+        const once = map.addListener("idle", () => {
+          once.remove();
+          if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
+        });
+      }
     } else if (day.lastSeen) {
       // Nothing that day (v0.790): open where they were last seen.
       map.setCenter(day.lastSeen);
@@ -298,58 +313,33 @@ export function HistoryView({
   const t = day.totals;
 
   return (
-    <main className={embed ? "px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            href={placesHref(embed)}
-            aria-label="Back to Family map"
-            className="flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-surface text-xl hover:border-accent"
-          >
-            ‹
-          </Link>
-          <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} avatarPosition={person.avatarPosition} size="md" />
-          <div className="min-w-0">
-            <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{person.name}</h1>
-            {/* The day's totals in one line (they were four tiles). */}
-            <p className="font-mono text-xs text-muted sm:text-sm">
-              {[
-                `${t.miles} mi`,
-                `${t.driveMin < 60 ? `${t.driveMin} min` : `${Math.floor(t.driveMin / 60)} h ${t.driveMin % 60} min`} driving`,
-                t.topMph != null ? `top ${t.topMph} mph` : null,
-                `${t.stops} stop${t.stops === 1 ? "" : "s"}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 rounded-full border border-hairline bg-surface p-1">
-          <Link href={placesHref(embed, person.id, prev)} aria-label="Previous day" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-ground">
-            ‹
-          </Link>
-          <span className="min-w-28 px-2 text-center text-sm font-semibold">{dateLabel(day.date, today)}</span>
-          {day.date < today ? (
-            <Link href={placesHref(embed, person.id, next)} aria-label="Next day" className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-ground">
-              ›
-            </Link>
-          ) : (
-            <span aria-hidden className="flex h-9 w-9 items-center justify-center rounded-full text-hairline">
-              ›
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* The map stays put; only the timeline scrolls — beside it on a wide
-          screen (both fill the window), under it on a phone (the map sticks
-          to the top while the page scrolls the timeline). */}
-      <div className={`flex flex-col gap-4 lg:flex-row lg:items-stretch ${embed ? "lg:h-[calc(100dvh-5.5rem)]" : "lg:h-[calc(100dvh-9rem)]"}`}>
+    <main className={embed ? "flex h-[100dvh] flex-col px-3 py-3" : "mx-auto max-w-[96rem] px-4 py-6 sm:px-6"}>
+      {/* v0.793: the name sits on the map; the day's facts and the day picker
+          sit in one row under it. The map and that row stay put — in the app
+          the page doesn't scroll at all, only the timeline does (beside them
+          on a wide screen). */}
+      <div
+        className={`flex flex-col gap-3 lg:flex-row lg:items-stretch ${
+          embed ? "min-h-0 flex-1" : "lg:h-[calc(100dvh-6rem)]"
+        }`}
+      >
+        <div className={`flex shrink-0 flex-col gap-2 lg:min-w-0 lg:flex-1 ${embed ? "" : "sticky top-0 z-10 bg-ground pb-1 lg:static"}`}>
         <section
           aria-label="Map"
-          className="sticky top-0 z-10 h-[42vh] min-h-[280px] shrink-0 overflow-hidden rounded-2xl border border-hairline bg-surface lg:relative lg:h-full lg:min-w-0 lg:flex-1"
+          className="relative h-[46vh] min-h-[280px] shrink-0 overflow-hidden rounded-2xl border border-hairline bg-surface lg:h-auto lg:flex-1"
         >
           <div ref={mapDiv} className="h-full w-full" />
+          <div className="absolute left-3 top-3 flex max-w-[calc(100%-5rem)] items-center gap-1.5 rounded-full bg-surface/95 py-1 pl-1 pr-3 shadow-md">
+            <Link
+              href={placesHref(embed)}
+              aria-label="Back to Family map"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg hover:bg-black/5"
+            >
+              ‹
+            </Link>
+            <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} avatarPosition={person.avatarPosition} size="xs" />
+            <h1 className="truncate text-sm font-semibold">{person.name}</h1>
+          </div>
           <div className="absolute right-3 top-3 flex flex-col gap-2">
             <button
               type="button"
@@ -409,7 +399,47 @@ export function HistoryView({
           )}
         </section>
 
-        <aside aria-label="Timeline" className="rounded-2xl border border-hairline bg-surface py-2 lg:h-full lg:w-96 lg:shrink-0 lg:overflow-y-auto">
+        <div className="flex items-center gap-2">
+          {/* The day's facts in one strip (v0.793): miles driven, top speed, stops. */}
+          <div aria-label="Day totals" className="flex h-10 min-w-0 flex-1 items-center rounded-[10px] border border-hairline bg-surface">
+            {[
+              [t.miles, "mi"],
+              [t.topMph != null ? t.topMph : "–", "mph top"],
+              [t.stops, t.stops === 1 ? "stop" : "stops"],
+            ].map(([v, l], i) => (
+              <div
+                key={l}
+                className={`flex min-w-0 flex-1 items-baseline justify-center gap-1 ${i > 0 ? "border-l border-hairline" : ""}`}
+              >
+                <span className="text-sm font-bold">{v}</span>
+                <span className="truncate text-xs text-muted">{l}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex h-10 shrink-0 items-center rounded-[10px] border border-hairline bg-surface">
+            <Link href={placesHref(embed, person.id, prev)} aria-label="Previous day" className="flex h-full w-8 items-center justify-center hover:bg-ground">
+              ‹
+            </Link>
+            <span className="px-1 text-center text-[0.8rem] font-semibold">{dateLabel(day.date, today)}</span>
+            {day.date < today ? (
+              <Link href={placesHref(embed, person.id, next)} aria-label="Next day" className="flex h-full w-8 items-center justify-center hover:bg-ground">
+                ›
+              </Link>
+            ) : (
+              <span aria-hidden className="flex h-full w-8 items-center justify-center text-hairline">
+                ›
+              </span>
+            )}
+          </div>
+        </div>
+        </div>
+
+        <aside
+          aria-label="Timeline"
+          className={`rounded-2xl border border-hairline bg-surface py-2 lg:h-full lg:w-96 lg:shrink-0 lg:overflow-y-auto ${
+            embed ? "min-h-0 flex-1 overflow-y-auto" : ""
+          }`}
+        >
           {day.items.length === 0 && <p className="px-4 py-3 text-sm text-muted">Nothing recorded.</p>}
           {day.items.map((it, idx) => {
             if (it.kind === "stop") {
