@@ -165,6 +165,22 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
       <div className={embed ? "min-h-0 flex-1 overflow-y-auto pb-4" : ""}>
         {view === "search" ? (
           <div className="space-y-2.5">
+            {/* All places first (v0.797.1): where places get confirmed. */}
+            <button
+              type="button"
+              onClick={() => setView("all")}
+              className="flex w-full items-center justify-between rounded-2xl border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
+            >
+              <span>
+                <span className="block text-sm font-semibold">All places</span>
+                <span className="block text-xs text-muted">
+                  {list ? `${list.rows.length} places · ${list.toConfirm} to confirm` : "Every place anyone stopped at"}
+                </span>
+              </span>
+              {list && list.toConfirm > 0 && (
+                <span className="rounded-lg bg-amber-700 px-2 py-0.5 text-xs font-semibold text-white">{list.toConfirm}</span>
+              )}
+            </button>
             <div className="flex h-11 items-center gap-2 rounded-[10px] border-[1.5px] border-ink bg-surface px-3">
               <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                 <circle cx="11" cy="11" r="7" />
@@ -249,22 +265,6 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
             )}
             {visits && visits.length === 0 && <p className="px-0.5 py-3 text-sm text-muted">No visits found.</p>}
 
-            <button
-              type="button"
-              onClick={() => setView("all")}
-              className="flex w-full items-center justify-between rounded-2xl border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
-            >
-              <span>
-                <span className="block text-sm font-semibold">All places</span>
-                <span className="block text-xs text-muted">
-                  {list ? `${list.rows.length} places · ${list.toConfirm} to confirm` : "Every place anyone stopped at"}
-                </span>
-              </span>
-              {list && list.toConfirm > 0 && (
-                <span className="rounded-lg bg-amber-700 px-2 py-0.5 text-xs font-semibold text-white">{list.toConfirm}</span>
-              )}
-            </button>
-            <p className="px-0.5 text-xs text-muted">Finished days are added overnight; today shows up tomorrow.</p>
           </div>
         ) : (
           <AllPlaces

@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-11 — All places first (v0.797.1)
+
+- On the Places page the All places tile (where spots get confirmed) moved
+  above the search box; the "finished days are added overnight" line is gone.
+
 ## 2026-11 — Admin tabs; one map-settings button (v0.797.0)
 
 - `components/admin-tabs.tsx`: `AdminTabs` + `pickTab`. The tab is `?tab=`
