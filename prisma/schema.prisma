@@ -79,6 +79,7 @@ model User {
   playerCard      PlayerCard?
   placesPerson    PlacesPerson?
   placeNames      PlaceName[]
+  placeVisits     PlaceVisit[]
   placesStopEdits PlacesStopEdit[] @relation("PlacesStopEdits")
   placesAboutRules PlacesNotifyRule[] @relation("PlacesNotifyAbout")
   pushMessages    PushMessage[]
@@ -2332,8 +2333,71 @@ model PlaceName {
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   notifyRules PlacesNotifyRule[]
+  // Places page (v0.795): "home" or "business" when the family said which.
+  kind      String?
+  visits    PlaceVisit[] @relation("VisitPlace")
+  altVisits PlaceVisit[] @relation("VisitAltPlace")
 
   @@index([lat, lng])
+}
+
+// Places page (v0.795): a spot people stopped at that nobody has confirmed
+// yet. Confirming makes it a PlaceName and its visits move there. `label`,
+// `address` are Google's answer at the time (PlaceLookup), so they're cleared
+// 30 days after `labelAt`; the place id may be kept. `labelAt` null = the
+// family typed it (an added stop), kept.
+model PlaceSpot {
+  id            String       @id @default(cuid())
+  lat           Float
+  lng           Float
+  label         String?
+  address       String?
+  googlePlaceId String?
+  labelAt       DateTime?
+  createdAt     DateTime     @default(now())
+  visits        PlaceVisit[]
+
+  @@index([lat, lng])
+}
+
+// Places page (v0.795): one person's stop on one day, kept for good (search
+// reads these, never Google). Points at a confirmed place (PlaceName), a Home
+// Assistant zone, or an unconfirmed spot. `altPlaceNameId` set = the stop fell
+// inside two places' circles ("Which one?"). `pinned` = moved by hand, so
+// re-matching leaves it.
+model PlaceVisit {
+  id             String     @id @default(cuid())
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day            DateTime   @db.Date
+  arrivedAt      DateTime
+  leftAt         DateTime
+  lat            Float
+  lng            Float
+  zone           String?
+  placeNameId    String?
+  placeName      PlaceName? @relation("VisitPlace", fields: [placeNameId], references: [id], onDelete: SetNull)
+  altPlaceNameId String?
+  altPlaceName   PlaceName? @relation("VisitAltPlace", fields: [altPlaceNameId], references: [id], onDelete: SetNull)
+  spotId         String?
+  spot           PlaceSpot? @relation(fields: [spotId], references: [id], onDelete: SetNull)
+  pinned         Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+
+  @@index([userId, day])
+  @@index([placeNameId, arrivedAt])
+  @@index([spotId])
+  @@index([zone])
+  @@index([arrivedAt])
+}
+
+// Places page (v0.795): which finished days have been written as visits.
+model PlaceSnapshot {
+  userId  String
+  day     DateTime @db.Date
+  takenAt DateTime @default(now())
+
+  @@id([userId, day])
 }
 
 // Places (v0.758): a finished drive snapped to roads by Google's Roads API, so

@@ -80,6 +80,7 @@ export default async function PlacesAdminPage() {
         firebase={data.firebase}
         push={data.push}
         storageBytes={data.storageBytes}
+        visitStore={data.visitStore}
       />
       <div className="mt-6">
         <ZoneColors zones={zones} />

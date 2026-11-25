@@ -110,9 +110,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.794.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  182_generated_once_rtask, all registered in `MIGRATIONS`.
-- App 0.572.0 (versionCode 644, CLIENT_BUILD 644).
+- Web 0.795.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  183_place_visits, all registered in `MIGRATIONS`.
+- App 0.573.0 (versionCode 645, CLIENT_BUILD 645).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -423,6 +423,11 @@ Kept here so they don't come back as open items.
 
 ### Places
 
+- Places page (v0.795): every stop kept as a visit; search by place, family
+  name, street or zone, person and range; All places to confirm once (home or
+  business, size), “Which one?”, move a visit; history fills in from the
+  first point; map-style button cycles. Route keeping waits for the Dec 16
+  test (plan: `claude/places-visits-plan.md`).
 - History focus (v0.794): tap a stop to frame the trip leaving it with the
   rest faded; fixed-size facts strip; edit/remove on the right, remove asks
   and keeps the route; one-finger maps in the app.

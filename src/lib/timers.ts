@@ -33,6 +33,13 @@ export function startTimers(): void {
       console.warn(`[timers] backpacking failed: ${(e as Error).message}`);
     }
     try {
+      // Places page (v0.795): write finished days as visits, a few per run.
+      const { snapshotTick } = await import("@/lib/places/visits");
+      await snapshotTick();
+    } catch (e) {
+      console.warn(`[timers] visit snapshot failed: ${(e as Error).message}`);
+    }
+    try {
       const { pingDue } = await import("@/lib/push");
       await pingDue(since);
     } catch (e) {

@@ -7,6 +7,7 @@ import { loadDay } from "@/lib/places/history";
 import { PlacesView } from "./places-view";
 import { HistoryView } from "./[personId]/history-view";
 import { EmbedProvider } from "./embed-context";
+import { PlacesSearch } from "./search-view";
 import { cookies } from "next/headers";
 import { PLACES_COOKIE, placesSessionUser } from "@/lib/places/embed-session";
 import { canEditHistory } from "@/lib/places/stop-edits";
@@ -91,4 +92,24 @@ export async function renderHistory(personId: string, rawDate: string | undefine
       canEdit={canEdit}
     />,
   );
+}
+
+/** The Places page (v0.795): search the family's visits and confirm places. */
+export async function renderSearch(embed: boolean) {
+  const [cfg, tracked, canEdit] = await Promise.all([
+    mapConfig(),
+    prisma.placesPerson.findMany({
+      select: {
+        user: { select: { id: true, name: true, displayName: true, color: true, avatarPath: true, avatarPosition: true } },
+      },
+    }) as Promise<
+      { user: { id: string; name: string; displayName: string | null; color: string; avatarPath: string | null; avatarPosition: string } }[]
+    >,
+    viewerCanEdit(embed),
+  ]);
+  if (!cfg || tracked.length === 0) return <NotSetUp embed={embed} />;
+  const people = tracked
+    .map(({ user: u }) => ({ id: u.id, name: u.displayName || u.name, color: u.color, avatarPath: u.avatarPath, avatarPosition: u.avatarPosition }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return wrap(embed, <PlacesSearch people={people} today={todayISO()} canEdit={canEdit} />);
 }

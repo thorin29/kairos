@@ -62,6 +62,8 @@ export async function namePlace(input: {
   placeLat: number | null;
   placeLng: number | null;
   forUserId: string | null;
+  kind?: string | null;
+  size?: "small" | "normal" | "large" | null;
 }): Promise<{ error: string | null }> {
   return saveFamilyName(input);
 }

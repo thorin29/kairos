@@ -141,6 +141,8 @@ export type PlacesAdmin = {
   unlinked: { entityId: string; at: string } | null;
   totalPoints: number;
   storageBytes: number;
+  /** The Places page's visit records (v0.795). */
+  visitStore: { visits: number; places: number; bytes: number };
   people: PlacesPersonRow[];
   named: { id: string; name: string; address: string | null; who: string | null; lat: number; lng: number; createdAt: string }[];
   rules: { id: string; tell: string[]; about: string | null; place: string; onArrive: boolean; onLeave: boolean }[];
@@ -318,6 +320,8 @@ export async function loadPlacesAdmin(): Promise<PlacesAdmin> {
     unlinked,
     totalPoints: counts.reduce((sum, c) => sum + c.n, 0),
     storageBytes: Number(sizeRows[0]?.bytes ?? 0),
+    // Imported here, not at the top: visits → history → config would loop.
+    visitStore: await (await import("@/lib/places/visits")).visitStorage(),
     people,
   };
 }

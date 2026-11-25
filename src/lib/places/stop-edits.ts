@@ -1,4 +1,5 @@
 import "server-only";
+import { resnapshotAt } from "@/lib/places/visits";
 import { prisma } from "@/lib/prisma";
 import { nearestTime } from "@/lib/places/day-edits";
 import { trackedIds } from "@/lib/places/tracks";
@@ -28,12 +29,18 @@ export async function removeStop(personId: string, startISO: string, byId: strin
   const at = when(startISO);
   if (!at || (await trackedIds([personId])).length === 0) return { error: "That stop isn't there." };
   await prisma.placesStopEdit.create({ data: { userId: personId, kind: "remove", at, createdById: byId } });
+  await resnapshotAt(personId, at);
   return { error: null };
 }
 
 /** Undo a correction: put a removed stop back, or take an added one away. */
 export async function undoStopEdit(editId: string): Promise<{ error: string | null }> {
+  const e = (await prisma.placesStopEdit.findUnique({ where: { id: editId }, select: { userId: true, at: true } })) as {
+    userId: string;
+    at: Date;
+  } | null;
   await prisma.placesStopEdit.deleteMany({ where: { id: editId } });
+  if (e) await resnapshotAt(e.userId, e.at);
   return { error: null };
 }
 
@@ -73,5 +80,6 @@ export async function addStop(input: {
       createdById: input.byId,
     },
   });
+  await resnapshotAt(input.personId, at);
   return { error: null };
 }

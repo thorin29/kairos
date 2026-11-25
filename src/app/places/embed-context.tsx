@@ -15,6 +15,7 @@ import {
 import type { PlaceChoice } from "@/lib/places/naming-types";
 import type { LiveData } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
+import type { PlacesList, VisitSearch } from "@/lib/places/visits-types";
 
 /**
  * Places inside the phone app (v0.762): the same pages under /places/embed,
@@ -150,4 +151,45 @@ export function useMapEdge(embed: boolean, map: RefObject<HTMLElement | null>): 
       window.removeEventListener("resize", send);
     };
   }, [embed, map]);
+}
+
+// ---------- Places page (v0.795) ----------
+// The page reads and writes through the API on the web too: the API takes the
+// web's signed-in parent as well as the app's Places cookie.
+
+export function searchHref(embed: boolean): string {
+  return embed ? "/places/embed/search" : "/places/search";
+}
+
+/** A history day, with the stop that starts at `stopISO` selected. */
+export function dayHref(embed: boolean, personId: string, date: string, stopISO?: string): string {
+  return `${placesHref(embed, personId, date)}${stopISO ? `&stop=${encodeURIComponent(stopISO)}` : ""}`;
+}
+
+export async function visitsNow(p: { q: string; users: string[]; since: string | null; place?: string | null; offset: number }): Promise<VisitSearch> {
+  const u = new URLSearchParams({ q: p.q, users: p.users.join(","), offset: String(p.offset) });
+  if (p.since) u.set("since", p.since);
+  if (p.place) u.set("place", p.place);
+  return getJson(`/api/v1/places/view/visits?${u.toString()}`);
+}
+
+export async function placesListNow(): Promise<PlacesList> {
+  return getJson("/api/v1/places/view/places");
+}
+
+export type PlaceChange =
+  | { op: "confirm"; spotId: string; kind: string | null; size: "small" | "normal" | "large" }
+  | { op: "choose"; visitId: string; placeNameId: string }
+  | { op: "move"; visitId: string; name: string; address: string | null; placeId: string | null; lat: number | null; lng: number | null }
+  | { op: "update"; placeNameId: string; name?: string; kind?: string | null; size?: "small" | "normal" | "large" };
+
+export async function changePlaceNow(c: PlaceChange): Promise<{ error: string | null }> {
+  const res = await fetch("/api/v1/places/view/visits", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "x-kairos-embed": "1" },
+    body: JSON.stringify(c),
+  });
+  if (!res.ok) return { error: res.status === 403 ? "Only parents can change places." : "Couldn't save. Try again." };
+  return (await res.json()) as { error: string | null };
 }

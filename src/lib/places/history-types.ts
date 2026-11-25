@@ -15,6 +15,8 @@ export type DayStopItem = {
   editId?: string | null;
   /** The phone went quiet here mid-trip (v0.777): last seen, not a visit. */
   lastSeen?: boolean;
+  /** The Home Assistant zone it was in (v0.795), for the visit records. */
+  zone?: string | null;
 };
 
 /** A recorded stop the family removed (v0.769), so it can be put back. */

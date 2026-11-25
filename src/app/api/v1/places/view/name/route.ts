@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
       placeLat: num(b.placeLat),
       placeLng: num(b.placeLng),
       forUserId: str(b.forUserId),
+      kind: str(b.kind),
+      size: b.size === "small" || b.size === "normal" || b.size === "large" ? b.size : null,
     }),
   );
 }

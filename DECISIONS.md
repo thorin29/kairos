@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-11 — Places page: visits kept for good (v0.795.0, app 0.573.0)
+
+- Plan: project doc `claude/places-visits-plan.md`. Confirmed places stay in
+  `PlaceName` (it already held the family's names, with `kind` added) rather
+  than a new Place table, so naming, notify rules and history labels keep
+  working unchanged. New: `PlaceSpot` (a spot nobody has confirmed),
+  `PlaceVisit` (a person's stop on a day → PlaceName, a zone, or a spot),
+  `PlaceSnapshot` (days written). Migration `183_place_visits`.
+- Matching (`pickPlace`): the nearest PlaceName (everyone's or this person's)
+  whose radius covers the stop; a second one within 25 m of the same distance
+  makes it "Which one?" (`altPlaceNameId`). Zones win, as in history labels.
+  Otherwise the nearest spot within 50 m, or a new spot.
+- Google content: a spot's `label`/`address` come from `PlaceLookup` (≤30 days)
+  with `labelAt` = the lookup time; `tidy()` clears them after 30 days and the
+  place id stays. A name the family typed on an added stop has `labelAt` null
+  and is kept. Confirming makes a PlaceName (the family's choice, kept).
+  No OpenStreetMap for now.
+- Snapshots: the 5-minute timer writes up to 6 unwritten finished days per run,
+  oldest first per person, from that person's first point; so all history
+  fills in. `loadDay(…, { names: false, snap: false })` — no Google calls at
+  all. A day correction (`removeStop`/`undoStopEdit`/`addStop`) rewrites that
+  day; naming a place (`saveFamilyName`, `confirmSpot`, `updatePlace` size)
+  re-matches visits around it (`rematchAround`). Visits moved by hand
+  (`pinned`) are left alone. Today isn't written until it's over.
+- The Places page (`/places/search`, `/places/embed/search`) reads and writes
+  through the API on the web too (`requirePlacesViewer` takes the parent's
+  web session), one code path for both. Confirming follows naming (anyone);
+  "Which one?", moving a visit and editing a place are parents only.
+  Confirm and "Not right?" reuse `PlaceFix` (new props: title, kind/size,
+  everyone-only, no "Just add the stop").
+- Search button: first in the map's right-hand column (hidden in full screen).
+  One map-style button cycles map → satellite → terrain on both maps.
+  History opens with `?stop=<arrival ISO>` selected (within 15 min).
+- Admin → Family map → Status adds "N visits at M places · size".
+
 ## 2026-11 — History focus, fixed strip, stop actions (v0.794.0)
 
 - Maps in the app (`/places/embed`) use `gestureHandling: "greedy"`: the page

@@ -96,6 +96,11 @@ export function PlaceFix({
   onPick,
   onClose,
   onSaved,
+  title,
+  extra,
+  controls,
+  everyoneOnly,
+  noNone,
 }: {
   personId: string;
   personName: string;
@@ -107,6 +112,14 @@ export function PlaceFix({
   onPick?: (c: PlaceChoice | null) => Promise<string | null>;
   onClose: () => void;
   onSaved: () => void;
+  /** From the Places page (v0.795): its own title, home/business and size sent
+   *  with the name, the controls for them, no "just this person", and (moving
+   *  a visit) no "Just add the stop". */
+  title?: string;
+  extra?: { kind?: string | null; size?: "small" | "normal" | "large" | null };
+  controls?: React.ReactNode;
+  everyoneOnly?: boolean;
+  noNone?: boolean;
 }) {
   const embed = useEmbed();
   const [nearby, setNearby] = useState<PlaceChoice[] | null>(null);
@@ -161,7 +174,8 @@ export function PlaceFix({
         placeId: c.placeId,
         placeLat: c.lat,
         placeLng: c.lng,
-        forUserId: forOne ? personId : null,
+        forUserId: forOne && !everyoneOnly ? personId : null,
+        ...(extra ?? {}),
       });
       if (res.error) setError(res.error);
       else {
@@ -174,7 +188,7 @@ export function PlaceFix({
   const list = found ?? nearby;
 
   return (
-    <Shell title={onPick ? `Where did ${personName} stop?` : `Where was ${personName}?`} onClose={onClose} full>
+    <Shell title={title ?? (onPick ? `Where did ${personName} stop?` : `Where was ${personName}?`)} onClose={onClose} full>
       {current && (
         <p className="text-sm text-muted">
           Showing <span className="font-medium text-ink">{current}</span>
@@ -205,7 +219,9 @@ export function PlaceFix({
         </button>
       </form>
 
-      {!onPick && (
+      {controls}
+
+      {!onPick && !everyoneOnly && (
       <fieldset className="flex flex-wrap gap-x-5">
         <legend className="sr-only">Who sees this name</legend>
         <label className="flex min-h-11 items-center gap-2 text-sm">
@@ -247,7 +263,7 @@ export function PlaceFix({
             {found && found.length === 0 && <p className="py-1 text-sm text-muted">Nothing found near here.</p>}
           </>
         )}
-        {onPick && !typed && (
+        {onPick && !typed && !noNone && (
           <button
             type="button"
             disabled={pending}

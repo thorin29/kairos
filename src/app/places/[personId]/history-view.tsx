@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { CarIcon, DumbbellIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
@@ -315,6 +315,16 @@ export function HistoryView({
     };
   }, [playing, speed, frames, ready, person.color]);
 
+  // From the Places page (v0.795): ?stop=<arrival time> opens with that stop selected.
+  const wantStop = useSearchParams().get("stop");
+  useEffect(() => {
+    if (!wantStop || !ready) return;
+    const t = Date.parse(wantStop);
+    if (Number.isNaN(t)) return;
+    const hit = stops.find((s) => Math.abs(Date.parse(s.start) - t) < 15 * 60_000) ?? stops.find((s) => Date.parse(s.start) <= t && t <= Date.parse(s.end));
+    if (hit) setSelected(hit.n);
+  }, [wantStop, ready, stops]);
+
   // A new day resets replay.
   useEffect(() => {
     setPlaying(false);
@@ -409,25 +419,15 @@ export function HistoryView({
             <h1 className="truncate text-sm font-semibold">{person.name}</h1>
           </div>
           <div className="absolute right-3 top-3 flex flex-col gap-2">
+            {/* One button cycles map → satellite → terrain (v0.795). */}
             <button
               type="button"
-              onClick={() => setLayer(layer === "satellite" ? "map" : "satellite")}
-              className={layer === "satellite" ? iconBtnOn : iconBtn}
-              aria-pressed={layer === "satellite"}
-              aria-label="Satellite"
-              title="Satellite"
+              onClick={() => setLayer(layer === "map" ? "satellite" : layer === "satellite" ? "terrain" : "map")}
+              className={layer === "map" ? iconBtn : iconBtnOn}
+              aria-label={`Map style: ${layer}. Change`}
+              title={layer === "satellite" ? "Satellite (tap for terrain)" : layer === "terrain" ? "Terrain (tap for map)" : "Map (tap for satellite)"}
             >
-              <LayersGlyph />
-            </button>
-            <button
-              type="button"
-              onClick={() => setLayer(layer === "terrain" ? "map" : "terrain")}
-              className={layer === "terrain" ? iconBtnOn : iconBtn}
-              aria-pressed={layer === "terrain"}
-              aria-label="Terrain"
-              title="Terrain"
-            >
-              <TerrainGlyph />
+              {layer === "terrain" ? <TerrainGlyph /> : <LayersGlyph />}
             </button>
           </div>
           {hasTrips && (

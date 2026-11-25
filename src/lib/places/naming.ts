@@ -1,4 +1,5 @@
 import "server-only";
+import { SIZES, cleanKind, rematchAround } from "@/lib/places/visits";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { PLACES_LOOKUP_KEY } from "@/lib/places/config";
@@ -65,6 +66,9 @@ export async function saveFamilyName(input: {
   placeLat: number | null;
   placeLng: number | null;
   forUserId: string | null;
+  /** From the Places page (v0.795): home or business, and the place's size. */
+  kind?: string | null;
+  size?: keyof typeof SIZES | null;
 }): Promise<{ error: string | null }> {
   const name = input.name.trim().slice(0, 80);
   if (!name) return { error: "Type a name." };
@@ -75,6 +79,7 @@ export async function saveFamilyName(input: {
     const d = metres({ lat: input.lat, lng: input.lng }, { lat: input.placeLat, lng: input.placeLng });
     radiusM = Math.round(Math.min(250, Math.max(100, d + 75)));
   }
+  if (input.size && SIZES[input.size]) radiusM = SIZES[input.size];
   await prisma.placeName.create({
     data: {
       lat: input.lat,
@@ -84,8 +89,13 @@ export async function saveFamilyName(input: {
       googlePlaceId: input.placeId?.slice(0, 300) || null,
       userId: input.forUserId,
       radiusM,
+      kind: cleanKind(input.kind),
     },
   });
   bustPlaceMemo();
+  // Visits around it now belong to it (v0.795).
+  await rematchAround({ lat: input.lat, lng: input.lng }, radiusM).catch((e) =>
+    console.warn(`[visits] rematch failed: ${(e as Error).message}`),
+  );
   return { error: null };
 }

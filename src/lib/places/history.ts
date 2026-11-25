@@ -46,7 +46,8 @@ async function knownPlaces(userId: string): Promise<KnownPlace[]> {
   ];
 }
 
-export async function loadDay(userId: string, dateISO: string, opts: { names: boolean }): Promise<DayData> {
+/** `snap: false` (v0.795, the visit snapshot) skips Google road-snapping. */
+export async function loadDay(userId: string, dateISO: string, opts: { names: boolean; snap?: boolean }): Promise<DayData> {
   const tz = householdTz();
   const start = dayStart(dateISO, tz);
   const end = dayEnd(dateISO, tz);
@@ -112,6 +113,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
             ? await placeFor(lat, lng, 30, userId, it.zone)
             : null,
         editId: added?.editId ?? null,
+        zone: it.zone ?? null,
         ...("lastSeen" in it && it.lastSeen ? { lastSeen: true } : {}),
       });
       continue;
@@ -119,7 +121,7 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     const leg = it as Leg;
     const settled = i < plan.items.length - 1 && now - leg.end.getTime() > SETTLE_MS;
     const track =
-      leg.kind === "drive" && settled
+      leg.kind === "drive" && settled && opts.snap !== false
         ? await snappedDrive(key, userId, leg.points)
         : { path: leg.points.map((p) => [p.lat, p.lng] as [number, number]), snapped: false };
     const secs = Math.max(1, (leg.end.getTime() - leg.start.getTime()) / 1000);

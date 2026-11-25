@@ -68,6 +68,7 @@ export function PlacesAdminForm(props: {
   unlinked: { entityId: string; when: string } | null;
   totalPoints: number;
   storageBytes: number;
+  visitStore: { visits: number; places: number; bytes: number };
   usage: UsageSummary;
   named: { id: string; name: string; address: string | null; who: string | null; lat: number; lng: number; createdAt: string }[];
   rules: { id: string; tell: string[]; about: string | null; place: string; onArrive: boolean; onLeave: boolean }[];
@@ -207,6 +208,10 @@ export function PlacesAdminForm(props: {
         )}
         <p className="text-sm text-muted">
           {props.totalPoints.toLocaleString()} point{props.totalPoints === 1 ? "" : "s"} stored · {size(props.storageBytes)}
+        </p>
+        <p className="text-sm text-muted">
+          {props.visitStore.visits.toLocaleString()} visit{props.visitStore.visits === 1 ? "" : "s"} at{" "}
+          {props.visitStore.places.toLocaleString()} place{props.visitStore.places === 1 ? "" : "s"} · {size(props.visitStore.bytes)}
         </p>
       </section>
 

@@ -6,7 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { Avatar } from "@/components/avatar";
 import { CarIcon, MapIcon, MotionIcon, PeopleIcon, WalkIcon, XIcon } from "@/components/icons";
 import { metres } from "@/lib/places/geo";
-import { liveNow, mapLoaded, placesHref, tracksNow, useEmbed, useMapEdge } from "./embed-context";
+import { liveNow, mapLoaded, placesHref, searchHref, tracksNow, useEmbed, useMapEdge } from "./embed-context";
 import type { LiveData, LivePerson } from "@/lib/places/live-types";
 import type { DayData } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "./map-kit";
@@ -242,6 +242,15 @@ export function TerrainGlyph() {
     <svg {...glyph}>
       <path d="M3 20h18l-6.921-14.612a2.3 2.3 0 0 0-4.158 0L3 20Z" />
       <path d="m7.5 11 2 2.5 2.5-2.5 2 3 2.5-2" />
+    </svg>
+  );
+}
+
+export function SearchGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
     </svg>
   );
 }
@@ -845,6 +854,12 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           )}
 
           <div className="absolute right-3 top-3 flex flex-col gap-2">
+            {/* Places (v0.795): search where everyone has been. */}
+            {!full && (
+              <Link href={searchHref(embed)} className={iconBtn} aria-label="Search places" title="Search places">
+                <SearchGlyph />
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setFull((v) => !v)}
@@ -867,31 +882,24 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
             >
               <TrafficGlyph />
             </button>
+            {/* One button cycles map → satellite → terrain (v0.795). */}
             <button
               type="button"
               onClick={() => {
-                setSatellite((v) => !v);
-                setTerrain(false);
+                if (satellite) {
+                  setSatellite(false);
+                  setTerrain(true);
+                } else if (terrain) {
+                  setTerrain(false);
+                } else {
+                  setSatellite(true);
+                }
               }}
-              className={satellite ? iconBtnOn : iconBtn}
-              aria-pressed={satellite}
-              aria-label="Satellite"
-              title="Satellite"
+              className={satellite || terrain ? iconBtnOn : iconBtn}
+              aria-label={`Map style: ${satellite ? "satellite" : terrain ? "terrain" : "map"}. Change`}
+              title={satellite ? "Satellite (tap for terrain)" : terrain ? "Terrain (tap for map)" : "Map (tap for satellite)"}
             >
-              <LayersGlyph />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTerrain((v) => !v);
-                setSatellite(false);
-              }}
-              className={terrain ? iconBtnOn : iconBtn}
-              aria-pressed={terrain}
-              aria-label="Terrain"
-              title="Terrain"
-            >
-              <TerrainGlyph />
+              {terrain ? <TerrainGlyph /> : <LayersGlyph />}
             </button>
           </div>
           {(mapError || !ready || empty) && (
