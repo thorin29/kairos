@@ -2108,6 +2108,9 @@ function MovementLogger({
   // A program that fixes each set's weight (5/3/1): no removing sets and no
   // moving the remaining weights (v0.619).
   const strict = rows.some((r) => r.pct != null);
+  // A lift on a bar offers its plates in place of remove too (v0.791): a set
+  // not done just isn't logged, and Log asks about it.
+  const plates = strict || (metric === "WEIGHT" && !!log?.bar);
   const groupOf = (r: Row) => (r.warmup ? "warm" : r.supplemental ? "supp" : "main");
   const grouped = rows.some((r) => r.warmup || r.supplemental);
   // "5 × 10" (Boring But Big) or "5 × 5" (First Set Last).
@@ -2296,9 +2299,9 @@ function MovementLogger({
                       >
                         <CheckIcon className="h-4 w-4" />
                       </button>
-                      {strict ? (
-                        // A set the program fixed isn't removed: a set left blank
-                        // simply isn't logged. Its plates instead (v0.619).
+                      {plates ? (
+                        // A set the program fixed, or any set on a bar, isn't
+                        // removed: one left undone isn't logged. Its plates instead.
                         <button
                           type="button"
                           onClick={() => setCalcKey(r.key)}
@@ -2424,11 +2427,11 @@ function MovementLogger({
           </div>
           )}
           {confirmLeave && (
-            <Modal small title="Finish early?" onClose={() => setConfirmLeave(false)}>
+            <Modal small title="Log with missed sets?" onClose={() => setConfirmLeave(false)}>
               <p className="text-sm">
                 {(() => {
                   const left = rows.filter((r) => !r.saved && !(typed(r) && complete(r))).length;
-                  return `${left} ${left === 1 ? "set isn't" : "sets aren't"} logged yet. They'll still be here when you come back.`;
+                  return `${left} ${left === 1 ? "set isn't" : "sets aren't"} done. ${left === 1 ? "It won't" : "They won't"} be logged, and this movement will be finished.`;
                 })()}
               </p>
               <div className="mt-4 flex flex-col gap-2">
@@ -2443,7 +2446,7 @@ function MovementLogger({
                   }}
                   className={SECONDARY_BTN}
                 >
-                  Finish for now
+                  Log
                 </button>
               </div>
             </Modal>

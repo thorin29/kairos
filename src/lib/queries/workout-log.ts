@@ -2038,7 +2038,18 @@ export type MovementLog = {
   holdUnit?: string | null;
   /** Done a side at a time, a set per side (v0.642): its timer switches sides. */
   sides?: boolean;
+  /** Loaded on a bar (v0.791), from the movement's equipment: "barbell" or
+   *  "ez". Its set rows offer the plate calculator in place of remove. */
+  bar?: "barbell" | "ez" | null;
 };
+
+/** The bar a movement is loaded on, from its equipment keys (v0.791). */
+export function barOf(equipment: string | null | undefined): "barbell" | "ez" | null {
+  const keys = (equipment ?? "").split(",").map((k) => k.trim().toLowerCase());
+  if (keys.includes("ez_bar")) return "ez";
+  if (keys.includes("barbell")) return "barbell";
+  return null;
+}
 
 const setRow = (s: { weight: number | null; reps: number | null; seconds: number | null }): MovementSetRow => ({
   weight: s.weight,
@@ -2207,6 +2218,7 @@ export async function loadMovementLog(
     sizes: poolRow ? await bellSizesFor(poolRow.name, poolRow.equipment, unit) : null,
   });
   return {
+    bar: barOf(poolRow?.equipment),
     sets: daySets.map(setRow),
     loggedAs,
     last,

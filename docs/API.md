@@ -875,7 +875,8 @@ GET  /api/v1/workouts/sets?date=YYYY-MM-DD&slot=<planned poolExerciseId>[&doing=
                   "sets":[ { "weight":num|null,"reps","top":bool } ] }|null,
        "suggestion": Suggestion|null,            // one card for this movement (v0.612)
        "recentTop":num|null,                     // heaviest in the last 14 days (big-jump note)
-       "name":str, "about":str|null }            // the movement being done and its how-to (v0.613)
+       "name":str, "about":str|null,             // the movement being done and its how-to (v0.613)
+       "bar":"barbell"|"ez"|null }              // loaded on a bar (v0.791): plates on each set
 Set: { "weight":num|null, "reps":int|null, "seconds":int|null }
 v0.707: `test=1` (opened from the month's test card) makes `last` the last
 TEST: the most recent earlier day every hold in the test was logged with one

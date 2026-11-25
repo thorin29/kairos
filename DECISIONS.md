@@ -1,9 +1,28 @@
 # Decisions
 
+## 2026-11 — Plates on every bar lift; Log with missed sets (v0.791.0, app 0.569.0)
+
+- `GET /workouts/sets` adds `bar` ("barbell" / "ez" / null) from the pool
+  movement's equipment keys (`barOf` in `queries/workout-log.ts`: `ez_bar`
+  wins over `barbell`). A WEIGHT movement on a bar shows the plate calculator
+  on each set in place of remove, like a program's fixed sets (5/3/1); the
+  program's `strict` (no moving weights) is unchanged.
+- Removing a set is replaced by leaving it undone: Log with sets not done asks
+  "Log with missed sets?" and Log saves only the done sets and finishes the
+  movement (the app's Core/multi-movement screen asks the same for the
+  workout). A movement with nothing done at all still isn't marked finished.
+- Correction to 0.790's note: the 15-minute gaps weren't Home Assistant going
+  quiet while driving. Android throttles a background app's location to every
+  30 minutes; HA's 15-minute sensor check was the only thing getting a fix.
+  Setting HA as each phone's digital assistant app keeps it foreground and
+  gives a point a minute (household fix, not code).
+
 ## 2026-11 — Quiet drives on Family map (v0.790.0)
 
-- Home Assistant often sends nothing while someone drives, so a 3.9-mile
-  drive arrived as two points 32 minutes apart: under the 8 mph average a
+- Some phones sent a location only every ~15 minutes, so a 3.9-mile drive
+  arrived as two points 32 minutes apart (corrected after 0.790: it wasn't
+  driving — Android throttled HA's background location on those phones; see
+  0.791): under the 8 mph average a
   drive needs, and "top 0 mph" (the phone's 0 counted as a speed). Now a trip
   with a gap of 5 minutes or more between reports, 1.5 km or longer, averaging
   1.9 m/s (≈ 4.3 mph, past a fast walk) is a drive; the gap includes the wait
