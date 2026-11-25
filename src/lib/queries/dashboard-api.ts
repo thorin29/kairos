@@ -6,6 +6,7 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutDayExtras, loadWorkoutPlanNames } from "@/lib/queries/workouts";
 import { sportLabels } from "@/lib/workouts/history-run";
+import { workoutCard as buildWorkoutCard, type WorkoutCard } from "@/lib/workouts/day-card";
 import { loadDayPlanProgress, loadOverdueWorkoutDates,
   workoutBlocksFor, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress, type ReadingProgress } from "@/lib/queries/reading";
@@ -114,7 +115,7 @@ export type ApiDashboard = {
   /** The home tile (v0.798): each workout by name with its done state, and
    *  the kinds the plan covers ("Core · Cardio · Isometric"). Null with
    *  fewer than two workouts. */
-  workoutCard: { items: { name: string; done: boolean }[]; kinds: string[] } | null;
+  workoutCard: WorkoutCard | null;
   /** Per-book reading-goal progress for the Book reading home section. */
   reading: ReadingProgress[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
@@ -414,16 +415,7 @@ export async function loadApiDashboard(
   let workoutCard: ApiDashboard["workoutCard"] = null;
   if (blocks) {
     const title = rows.find((r) => r.isWorkout && r.dueDate === dayISO)?.title ?? null;
-    const split = (t: string) => (t.includes(" \u00b7 ") ? [t.slice(0, t.indexOf(" \u00b7 ")), t.slice(t.indexOf(" \u00b7 ") + 3)] : [null, t]);
-    const [titleKind, mainName] = title ? split(title) : [null, null];
-    const kinds: string[] = [];
-    for (const k of [titleKind, ...(workoutExtras.get(planWeekday(swaps, dayISO)) ?? []).map((x) => split(x)[0] ?? x)]) {
-      if (k && !kinds.some((o) => o.toLowerCase() === k.toLowerCase())) kinds.push(k);
-    }
-    workoutCard = {
-      items: blocks.items.map((i) => ({ name: i.name ?? mainName ?? "Workout", done: i.done })),
-      kinds,
-    };
+    workoutCard = buildWorkoutCard(blocks.items, title, workoutExtras.get(planWeekday(swaps, dayISO)) ?? []);
   }
 
   return {

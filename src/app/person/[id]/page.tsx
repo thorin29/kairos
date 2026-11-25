@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { planWeekday } from "@/lib/workouts/day-swap";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +12,7 @@ import { SchoolCard } from "@/components/school-card";
 import { ChoresCard } from "@/components/chores-card";
 import {
   loadWorkoutPlanNames,
+  loadWorkoutDayExtras,
   loadWorkoutsBoard,
   loadExercisePool,
   loadHiitWorkoutsForBoard,
@@ -25,9 +25,9 @@ import { inviteFor } from "@/lib/workouts/program-run";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { SCHOOL_TYPE_LABEL } from "@/lib/school";
 import { loadClassOptions, loadSubjectNames } from "@/lib/queries/school";
-import { CATEGORY_LABELS } from "@/lib/colors";
+import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/colors";
 import {
-  dayOfWeek,
+  formatLong,
   formatShort,
   fromDateColumn,
   todayISO,
@@ -39,17 +39,11 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
-import { PersonalDayReading } from "@/app/bible/personal-plan-section";
-import { TaskRow } from "@/components/task-row";
 import { AddTaskForm } from "@/components/add-task-form";
-import { AddSchoolWork } from "@/components/add-school-work";
 import { Card } from "@/components/ui";
 import { Companion } from "@/components/companion";
 import { HatchControls } from "@/components/hatch-controls";
 import { deviceMode } from "@/lib/device";
-import { CompletionBar } from "@/components/completion-bar";
-import { OpenTasks } from "@/components/open-tasks";
-import { AlwaysOpenChores } from "@/components/always-open-chores";
 import { DaySchedule } from "@/components/day-schedule";
 import { ShoppingReminder } from "@/components/shopping-reminder";
 import { SportPrompts } from "@/components/sport-prompts";
@@ -64,8 +58,13 @@ import { pendingClassPrompts, loadRolloverState } from "@/lib/queries/school";
 import { pendingMoneyCount } from "@/lib/queries/money";
 import { pendingBibleRewards } from "@/lib/bible-rewards";
 import { loadDashboardTrips } from "@/lib/queries/groceries";
-import { Avatar } from "@/components/avatar";
-import { LockIcon, MoonIcon, FlameIcon, StarIcon, BookIcon } from "@/components/icons";
+import { Suspense } from "react";
+import { GreetingCard } from "@/components/greeting-card";
+import { HomeTile } from "@/components/home-tile";
+import { ListTile } from "@/components/list-tile";
+import { FamilyGoalBanner } from "@/components/family-goal-banner";
+import { workoutCard } from "@/lib/workouts/day-card";
+import { MoonIcon, FlameIcon, StarIcon, BookIcon } from "@/components/icons";
 import {
   ChoresIcon,
   BibleIcon,
@@ -86,20 +85,6 @@ const CAT_ICON: Record<string, { Icon: typeof ChoresIcon; color: string }> = {
   APPOINTMENT: { Icon: CalendarIcon, color: "#2563eb" },
   OTHER: { Icon: TasksIcon, color: "#64748b" },
 };
-function CategoryHeader({ category }: { category: string }) {
-  const cfg = CAT_ICON[category] ?? CAT_ICON.OTHER;
-  const Icon = cfg.Icon;
-  return (
-    <div className="mb-3 flex items-center gap-2">
-      <span aria-hidden style={{ color: cfg.color }} className="flex">
-        <Icon className="h-5 w-5" />
-      </span>
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
-        {CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]}
-      </h2>
-    </div>
-  );
-}
 
 export const dynamic = "force-dynamic";
 
@@ -122,7 +107,7 @@ export default async function PersonPage({
   searchParams: Promise<{ week?: string }>;
 }) {
   const { id } = await params;
-  const { week } = await searchParams;
+  await searchParams;
   const today = todayISO();
 
   // On a personal device the character lives on the Character page, so it comes
@@ -181,6 +166,7 @@ export default async function PersonPage({
     progressToday && progressToday.logged && !progressToday.done ? progressToday.remaining : [];
   // Two or more workouts today (v0.745): "1 of 2 workouts"; a skipped one counts.
   const blocksToday = restToday.rest === "planned" ? null : await workoutBlocksFor(id, today);
+  const dayExtras = blocksToday ? ((await loadWorkoutDayExtras(id)).get(planWeekday(boardPerson?.swaps, today)) ?? []) : [];
   const restDayToday = !blocksToday && restToday.rest != null && !(restToday.rest === "skipped" && restToday.extraLogged);
   // "Start a workout program?" for someone with no plan and nothing logged lately.
   const showInvite = await inviteFor(id);
@@ -269,15 +255,6 @@ export default async function PersonPage({
     };
   });
 
-  // School is tracked but not scored yet — keep it out of the header percent.
-  const counted = rows.filter(
-    (r) => r.status !== "SKIPPED" && !r.stale && r.category !== "SCHOOL",
-  );
-  const done = counted.filter((r) => r.status === "COMPLETE").length;
-  const percent = counted.length
-    ? Math.round((done / counted.length) * 100)
-    : null;
-
   const overdue = rows.filter((r) => r.isOverdue);
   const todayRows = rows.filter((r) => !r.isOverdue && !r.stale);
 
@@ -286,11 +263,8 @@ export default async function PersonPage({
   const schoolOverdue = overdue.filter((r) => r.category === "SCHOOL");
   const schoolToday = todayRows.filter((r) => r.category === "SCHOOL");
 
-  // Per-category completeness bars for the top of the personal home. Mirrors the
-  // dashboard card's bars, computed from the same rows (school excluded, like
-  // the header percent).
-  const catBars = onPersonalDevice
-    ? ORDER.map((category) => {
+  // The greeting card's chips and ring (v0.799; school left out, as before).
+  const catBars = ORDER.map((category) => {
         const items = rows.filter(
           (r) =>
             r.category === category &&
@@ -308,8 +282,7 @@ export default async function PersonPage({
           overdue: overdueN,
           percent: total ? Math.round((complete / total) * 100) : 0,
         };
-      }).filter((c) => c.total > 0)
-    : [];
+      }).filter((c) => c.total > 0 || c.overdue > 0);
 
   // This page is the home on a personal device, so it also carries the
   // up-for-grabs / always-open chores, the reminder lines, and the schedule
@@ -359,401 +332,246 @@ export default async function PersonPage({
     };
   }
 
-  // Workout prompts open the log step; everything else is a plain checklist row.
-  const renderRow = (t: (typeof rows)[number]) => {
-    if (t.isWorkout) {
-      const wd = workoutDay(t.dueDateISO);
-      return (
-        <WorkoutLauncher
-          key={t.id}
-          userId={id}
-          dateISO={t.dueDateISO}
-          title={t.title}
-          done={t.status === "COMPLETE"}
-          overdue={t.isOverdue}
-          workouts={wd.workouts}
-          doneLabels={wd.doneLabels}
-          rested={wd.rested}
-          paused={wd.paused}
-          pool={pool}
-          hiitWorkouts={hiitWorkouts}
-          unitSystem={unitSystem}
-          weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
-          swaps={boardPerson?.swaps ?? []}
-          todayISO={today}
-          person={boardPerson}
-        />
-      );
-    }
-    return <TaskRow key={t.id} task={t} />;
-  };
+  const byDate = (a: (typeof rows)[number], b: (typeof rows)[number]) => a.dueDateISO.localeCompare(b.dueDateISO);
+  // Overdue work sits with its own area, oldest first, ahead of today's.
+  const catOverdue = (c: string) => overdue.filter((r) => r.category === c).sort(byDate);
+  const catToday = (c: string) => todayRows.filter((r) => r.category === c);
+  const catRows = (c: string) => [...catOverdue(c), ...catToday(c)];
+  const lines = (c: string) =>
+    catRows(c).map((r) => ({
+      id: r.id,
+      title: r.title,
+      sub: r.subtitle ?? null,
+      done: r.status === "COMPLETE",
+      late: r.isOverdue,
+      dueISO: r.dueDateISO,
+    }));
+
+  const todayEx = catToday("EXERCISE");
+  const overdueEx = catOverdue("EXERCISE");
+  const wdToday = workoutDay(today);
+  const exCard = blocksToday ? workoutCard(blocksToday.items, todayEx[0]?.title ?? null, dayExtras) : null;
+
+  // The areas as tiles (v0.799), in the app's order: Bible, Reading, Chores,
+  // School, Workouts, then Tasks and the rest.
+  const tiles: React.ReactNode[] = [];
+  if (catRows("BIBLE").length > 0 || personalToday) {
+    tiles.push(
+      <ListTile
+        key="bible"
+        icon={<BibleIcon className="h-[18px] w-[18px]" />}
+        color={CATEGORY_COLORS.BIBLE}
+        label="Bible"
+        lines={lines("BIBLE")}
+        personal={personalToday ? { userId: id, passage: personalToday.passage, dayISO: personalToday.iso, read: personalToday.read } : null}
+      />,
+    );
+  }
+  if (readingProgress.length > 0) {
+    tiles.push(
+      <HomeTile key="reading" icon={<BookIcon className="h-[18px] w-[18px]" />} color="#0891b2" label="Reading" href="/reading">
+        {readingProgress.slice(0, 3).map((r) => (
+          <span key={r.bookId} className="block">
+            <span className="block truncate text-sm font-medium">{r.title}</span>
+            <span className="mt-1 flex items-center gap-2">
+              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline">
+                <span
+                  className="block h-full rounded-full"
+                  style={{ width: `${Math.max(0, Math.min(100, r.pct))}%`, backgroundColor: r.behind ? "#b91c1c" : "#0891b2" }}
+                />
+              </span>
+              <span className={`tabular w-9 shrink-0 text-right text-xs ${r.behind ? "font-medium text-red-700" : "text-muted"}`}>{r.pct}%</span>
+            </span>
+          </span>
+        ))}
+      </HomeTile>,
+    );
+  }
+  if (catRows("CHORE").length > 0 || getAhead.length > 0 || choreOpenTasks.length > 0 || choreAlwaysOpen.length > 0) {
+    tiles.push(
+      <ChoresCard
+        key="chore"
+        overdue={catOverdue("CHORE")}
+        today={catToday("CHORE")}
+        getAhead={getAhead}
+        alwaysOpen={choreAlwaysOpen}
+        openTasks={choreOpenTasks}
+        owner={{ id: person.id, name: person.name, color: person.color }}
+        badges={choreBadges}
+      />,
+    );
+  }
+  if (schoolOverdue.length > 0 || schoolToday.length > 0 || schoolProgress.progress.length > 0 || schoolAhead.length > 0) {
+    tiles.push(
+      <SchoolCard
+        key="school"
+        overdue={[...schoolOverdue].sort(byDate)}
+        today={schoolToday}
+        progress={schoolProgress.progress}
+        targetISO={schoolProgress.targetISO}
+        ahead={schoolAhead}
+        addWork={{ userId: person.id, classesByUser: classOptions, subjects: subjectNames, defaultDate: today }}
+      />,
+    );
+  }
+  if (todayEx.length > 0 || overdueEx.length > 0 || restToday.rest != null || blocksToday) {
+    tiles.push(
+      <WorkoutLauncher
+        key="exercise"
+        asTile
+        card={exCard}
+        userId={id}
+        dateISO={today}
+        title="Workouts"
+        done={false}
+        overdue={false}
+        workouts={wdToday.workouts}
+        doneLabels={wdToday.doneLabels}
+        rested={wdToday.rested}
+        paused={wdToday.paused}
+        pool={pool}
+        hiitWorkouts={hiitWorkouts}
+        unitSystem={unitSystem}
+        weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
+        swaps={boardPerson?.swaps ?? []}
+        todayISO={today}
+        person={boardPerson}
+        summaryNames={restToday.rest ? [] : todayEx.map((r) => r.title)}
+        remaining={workoutLeft}
+        restDay={restDayToday}
+        blocks={blocksToday}
+        overdueCount={overdueWorkoutDays.length}
+        // Same rule as the phone's tile: today's workout is complete (or
+        // something else logged on a skipped day) and nothing is overdue.
+        completeForToday={
+          !restDayToday &&
+          overdueWorkoutDays.length === 0 &&
+          (blocksToday
+            ? blocksToday.done === blocksToday.total
+            : (restToday.rest === "skipped" && restToday.extraLogged) ||
+              (todayEx.length > 0 && todayEx.every((r) => r.status === "COMPLETE")))
+        }
+      />,
+    );
+  }
+  for (const c of ["WORK", "APPOINTMENT", "OTHER"] as const) {
+    if (catRows(c).length === 0) continue;
+    const cfg = CAT_ICON[c];
+    tiles.push(
+      <ListTile
+        key={c}
+        icon={<cfg.Icon className="h-[18px] w-[18px]" />}
+        color={CATEGORY_COLORS[c]}
+        label={c === "WORK" ? "Tasks" : CATEGORY_LABELS[c]}
+        lines={lines(c)}
+      />,
+    );
+  }
+
+  const levelChips = progress ? (
+    <>
+      <span className="tabular inline-flex items-center gap-1 rounded-full border border-hairline px-2.5 py-1 text-xs font-semibold">
+        <StarIcon className="h-3.5 w-3.5 text-accent" />
+        Level {progress.level.level} &middot; {fmtGrowth(progress.monthlyCredit)}/{monthTarget} days
+      </span>
+      {progress.currentStreak > 0 && (
+        <span
+          className="tabular inline-flex items-center gap-1 rounded-full border border-hairline px-2.5 py-1 text-xs font-semibold text-orange-600"
+          title={progress.longestStreak > progress.currentStreak ? `Best streak: ${progress.longestStreak} days` : "Days in a row with everything done"}
+        >
+          <FlameIcon className="h-3.5 w-3.5" />
+          {progress.currentStreak}
+        </span>
+      )}
+    </>
+  ) : null;
+
+  const hasReminders =
+    home &&
+    (home.trips.length > 0 ||
+      home.sport.length > 0 ||
+      home.classPrompts.length > 0 ||
+      home.moneyPending > 0 ||
+      home.bibleReady > 0 ||
+      home.rolloverName !== null);
 
   return (
-    <>
-      
-
-      <main className="mx-auto max-w-3xl px-6 py-6">
-
-      {home && catBars.length > 0 && (
-        <section className="mb-6">
-          <ul className="space-y-3">
-            {catBars.map((c) => (
-              <li key={c.category}>
-                <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                  <span>{CATEGORY_LABELS[c.category]}</span>
-                  <span className="tabular text-xs text-muted">
-                    {c.complete}/{c.total}
-                    {c.overdue > 0 && (
-                      <span className="ml-2 font-medium text-red-700">
-                        {c.overdue} late
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <CompletionBar
-                  percent={c.percent}
-                  overdue={c.overdue}
-                  total={c.total}
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {home &&
-        (home.trips.length > 0 ||
-          home.sport.length > 0 ||
-          home.classPrompts.length > 0 ||
-          home.moneyPending > 0 ||
-          home.bibleReady > 0 ||
-          home.rolloverName !== null) && (
-          <div className="mb-6 space-y-3">
-            {home.trips.length > 0 && <ShoppingReminder trips={home.trips} />}
-            {home.rolloverName !== null && (
-              <RolloverReminder fromTermName={home.rolloverName} />
-            )}
-            {(home.moneyPending > 0 || home.bibleReady > 0) && (
-              <MoneyReminder
-                count={home.moneyPending}
-                bibleRewards={home.bibleReady}
-              />
-            )}
-            {home.classPrompts.length > 0 && (
-              <ClassPrompts prompts={home.classPrompts} today={today} />
-            )}
-            {home.sport.length > 0 && (
-              <SportPrompts prompts={home.sport} dateISO={today} />
-            )}
-          </div>
-        )}
-
-
-      <div className="mb-8 flex flex-wrap items-center gap-4 border-b border-hairline pb-5">
-        <Link
-          href={`/person/${person.id}/profile`}
-          title="Edit profile"
-          aria-label={`Edit ${person.displayName ?? person.name}'s profile`}
-          className="group relative rounded-full transition-transform hover:scale-105"
-        >
-          <Avatar
-            name={person.displayName ?? person.name}
-            color={person.color}
-            avatarPath={person.avatarPath} avatarPosition={person.avatarPosition}
-            size="lg"
+    <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="min-w-0 space-y-4">
+          <GreetingCard
+            person={{
+              id: person.id,
+              name: person.displayName ?? person.name,
+              color: person.color,
+              avatarPath: person.avatarPath,
+              avatarPosition: person.avatarPosition,
+            }}
+            dateLabel={formatLong(today).replace(/, \d{4}$/, "")}
+            bars={catBars}
+            extra={levelChips}
           />
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-ink/45 text-[0.6rem] font-semibold uppercase tracking-wide text-white opacity-0 transition-opacity group-hover:opacity-100">
-            Edit
-          </span>
-        </Link>
 
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
-          {person.displayName ?? person.name}
-        </h1>
+          {home && hasReminders && (
+            <div className="space-y-3">
+              {home.trips.length > 0 && <ShoppingReminder trips={home.trips} />}
+              {home.rolloverName !== null && <RolloverReminder fromTermName={home.rolloverName} />}
+              {(home.moneyPending > 0 || home.bibleReady > 0) && (
+                <MoneyReminder count={home.moneyPending} bibleRewards={home.bibleReady} />
+              )}
+              {home.classPrompts.length > 0 && <ClassPrompts prompts={home.classPrompts} today={today} />}
+              {home.sport.length > 0 && <SportPrompts prompts={home.sport} dateISO={today} />}
+            </div>
+          )}
 
-        {person.role === "ADMIN" && (
-          <Link
-            href="/admin"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-          >
-            <LockIcon className="h-4 w-4" />
-            Admin
-          </Link>
-        )}
+          {activePause && (
+            <div className="flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-5 py-4">
+              <MoonIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+              <div>
+                <p className="font-display text-sm font-semibold text-accent">Paused for {activePause.name}</p>
+                <p className="mt-0.5 text-sm text-muted">
+                  Chores and workouts are off while you&rsquo;re away. They pick back up the day after the break ends.
+                </p>
+              </div>
+            </div>
+          )}
 
-        {progress && (
-          <span className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-sm">
-            <StarIcon className="h-4 w-4 text-accent" />
-            <span className="font-medium">Level {progress.level.level}</span>
-            <span className="text-muted">{progress.className}</span>
-            <span className="tabular text-muted">
-              &middot; This month {fmtGrowth(progress.monthlyCredit)}/{monthTarget} days
-            </span>
-            {progress.currentStreak > 0 && (
-              <span
-                className="tabular inline-flex items-center gap-1 font-medium text-orange-600"
-                title={
-                  progress.longestStreak > progress.currentStreak
-                    ? `Best streak: ${progress.longestStreak} days`
-                    : "Days in a row with everything done"
-                }
-              >
-                <FlameIcon className="h-4 w-4" />
-                {progress.currentStreak}
-              </span>
-            )}
-          </span>
-        )}
+          {tiles.length === 0 ? (
+            <Card className="p-6 text-sm text-muted">Nothing scheduled today.</Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-3">{tiles}</div>
+          )}
 
-        <div className="ml-auto text-right">
-          <p className="tabular text-3xl font-medium leading-none">
-            {percent === null ? (
-              <span className="text-base text-muted">Nothing today</span>
-            ) : (
-              `${percent}%`
-            )}
-          </p>
-          {counted.length > 0 && (
-            <p className="tabular mt-1 text-xs text-muted">
-              {done} of {counted.length} done
-            </p>
+          <Suspense fallback={null}>
+            <FamilyGoalBanner />
+          </Suspense>
+
+          {showInvite && <ProgramCard userId={id} inviteOnly />}
+
+          {progress && !onPersonalDevice && (
+            <div className="flex flex-col items-center">
+              <Companion companion={progress.companion} colorHex={progress.companionColor} />
+              {progress.companion.eggReady && <HatchControls userId={person.id} phase={progress.companion.phase} />}
+            </div>
           )}
         </div>
-      </div>
 
-      {progress && !onPersonalDevice && (
-        <div className="mb-8 flex flex-col items-center">
-          <Companion
-            companion={progress.companion}
-            colorHex={progress.companionColor}
-          />
-          {progress.companion.eggReady && (
-            <HatchControls userId={person.id} phase={progress.companion.phase} />
-          )}
-        </div>
-      )}
-
-      {activePause && (
-        <div className="mb-8 flex items-start gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-5 py-4">
-          <MoonIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
-          <div>
-            <p className="font-display text-sm font-semibold text-accent">
-              Paused for {activePause.name}
-            </p>
-            <p className="mt-0.5 text-sm text-muted">
-              Chores and workouts are off while you&rsquo;re away. They pick
-              back up the day after the break ends.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {(() => {
-        const DAY_ORDER = ["BIBLE", "READING", "CHORE", "SCHOOL", "EXERCISE", "WORK", "APPOINTMENT", "OTHER"] as const;
-        const byDate = (a: (typeof rows)[number], b: (typeof rows)[number]) =>
-          a.dueDateISO.localeCompare(b.dueDateISO);
-        // Overdue ("carried over") work now sits under its own category, oldest
-        // first, above today's items — rather than one lumped list.
-        const catOverdue = (c: string) => overdue.filter((r) => r.category === c).sort(byDate);
-        const catToday = (c: string) => todayRows.filter((r) => r.category === c);
-        const catRows = (c: string) => [...catOverdue(c), ...catToday(c)];
-
-        const schoolHasContent =
-          schoolOverdue.length > 0 ||
-          schoolToday.length > 0 ||
-          schoolProgress.progress.length > 0 ||
-          schoolAhead.length > 0;
-        const choreHasContent =
-          catOverdue("CHORE").length > 0 ||
-          catToday("CHORE").length > 0 ||
-          getAhead.length > 0 ||
-          choreOpenTasks.length > 0 ||
-          choreAlwaysOpen.length > 0;
-        const anyBlock = DAY_ORDER.some((c) =>
-          c === "SCHOOL"
-            ? schoolHasContent
-            : c === "CHORE"
-              ? choreHasContent
-              : c === "READING"
-                ? readingProgress.length > 0
-                : catRows(c).length > 0 ||
-                  (c === "BIBLE" && Boolean(personalToday)) ||
-                  (c === "EXERCISE" && restToday.rest != null),
-        );
-        if (!anyBlock) {
-          return <Card className="p-6 text-sm text-muted">Nothing scheduled today.</Card>;
-        }
-        return (
-          <div className="space-y-8">
-            {DAY_ORDER.map((c) => {
-              if (c === "READING") {
-                if (readingProgress.length === 0) return null;
-                return (
-                  <section key="reading">
-                    <div className="mb-3 flex items-center gap-2">
-                      {/* Reading's side-menu color (v0.789). */}
-                      <span aria-hidden style={{ color: "#0891b2" }} className="flex">
-                        <BookIcon className="h-5 w-5" />
-                      </span>
-                      <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">
-                        Book reading
-                      </h2>
-                    </div>
-                    <Card className="divide-y divide-hairline">
-                      {readingProgress.map((r) => (
-                        <div key={r.bookId} className="px-4 py-3">
-                          <div className="mb-1.5 flex items-baseline justify-between text-sm">
-                            <span className="min-w-0 truncate pr-2">{r.title}</span>
-                            <span
-                              className={`tabular shrink-0 text-xs ${r.behind ? "font-medium text-red-700" : "text-muted"}`}
-                            >
-                              {r.pct}%
-                            </span>
-                          </div>
-                          <CompletionBar
-                            percent={r.pct >= 0 ? r.pct : 0}
-                            overdue={r.pct < 0 ? Math.abs(r.pct) : 0}
-                            total={100}
-                          />
-                        </div>
-                      ))}
-                    </Card>
-                  </section>
-                );
-              }
-              if (c === "SCHOOL") {
-                return (
-                  <SchoolCard
-                    key="school"
-                    overdue={[...schoolOverdue].sort(byDate)}
-                    today={schoolToday}
-                    progress={schoolProgress.progress}
-                    targetISO={schoolProgress.targetISO}
-                    ahead={schoolAhead}
-                    addWork={{
-                      userId: person.id,
-                      classesByUser: classOptions,
-                      subjects: subjectNames,
-                      defaultDate: today,
-                    }}
-                  />
-                );
-              }
-              if (c === "CHORE") {
-                if (!choreHasContent) return null;
-                return (
-                  <ChoresCard
-                    key="chore"
-                    overdue={catOverdue("CHORE")}
-                    today={catToday("CHORE")}
-                    getAhead={getAhead}
-                    alwaysOpen={choreAlwaysOpen}
-                    openTasks={choreOpenTasks}
-                    owner={{ id: person.id, name: person.name, color: person.color }}
-                    badges={choreBadges}
-                  />
-                );
-              }
-              if (c === "EXERCISE") {
-                const todayEx = catToday("EXERCISE");
-                const overdueEx = catOverdue("EXERCISE");
-                if (todayEx.length === 0 && overdueEx.length === 0 && restToday.rest == null) return null;
-                const wdToday = workoutDay(today);
-                return (
-                  <section key="exercise">
-                    <CategoryHeader category="EXERCISE" />
-                    <Card>
-                      <WorkoutLauncher
-                        userId={id}
-                        dateISO={today}
-                        title="Workouts"
-                        done={false}
-                        overdue={false}
-                        workouts={wdToday.workouts}
-                        doneLabels={wdToday.doneLabels}
-                        rested={wdToday.rested}
-                        paused={wdToday.paused}
-                        pool={pool}
-                        hiitWorkouts={hiitWorkouts}
-                        unitSystem={unitSystem}
-                        weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
-          swaps={boardPerson?.swaps ?? []}
-                        todayISO={today}
-                        person={boardPerson}
-                        summaryNames={restToday.rest ? [] : todayEx.map((r: { title: string }) => r.title)}
-                        remaining={workoutLeft}
-                        restDay={restDayToday}
-                        blocks={blocksToday}
-                        overdueCount={overdueWorkoutDays.length}
-                        // Same rule as the phone's home row: today's workout
-                        // task is complete (every movement logged or skipped,
-                        // or something else logged) and nothing is overdue.
-                        completeForToday={
-                          !restDayToday &&
-                          overdueWorkoutDays.length === 0 &&
-                          (blocksToday
-                            ? blocksToday.done === blocksToday.total
-                            : (restToday.rest === "skipped" && restToday.extraLogged) ||
-                              (todayEx.length > 0 &&
-                                todayEx.every((r: { status: string }) => r.status === "COMPLETE")))
-                        }
-                      />
-                    </Card>
-                  </section>
-                );
-              }
-              const items = catRows(c);
-              const showBible = c === "BIBLE" && Boolean(personalToday);
-              if (items.length === 0 && !showBible) return null;
-              return (
-                <section key={c}>
-                  <CategoryHeader category={c} />
-                  <Card className="divide-y divide-hairline">
-                    {items.map(renderRow)}
-                    {c === "BIBLE" && personalToday && (
-                      <PersonalDayReading
-                        userId={id}
-                        passage={personalToday.passage}
-                        dayISO={personalToday.iso}
-                        read={personalToday.read}
-                      />
-                    )}
-                  </Card>
-                </section>
-              );
-            })}
-          </div>
-        );
-      })()}
-
-
-      {showInvite && (
-        <div className="mt-6">
-          <ProgramCard userId={id} inviteOnly />
-        </div>
-      )}
-
-      <div className="mt-8 flex flex-wrap gap-3">
-        <AddTaskForm
-          people={[{ id: person.id, name: person.name, color: person.color }]}
-          defaultUserId={person.id}
-          defaultDate={today}
-        />
-      </div>
-
-      {home && (
-        <>
-          <div className="mt-10">
+        <aside className="min-w-0 space-y-4">
+          {home && (
             <DaySchedule
               events={[...home.schedule.allDay, ...home.schedule.timed]}
               title="Today's schedule"
               emptyText="Nothing scheduled."
               href={`/calendar?view=day&date=${today}`}
             />
-          </div>
-        </>
-      )}
+          )}
+          <AddTaskForm
+            people={[{ id: person.id, name: person.name, color: person.color }]}
+            defaultUserId={person.id}
+            defaultDate={today}
+          />
+        </aside>
+      </div>
     </main>
-    </>
   );
 }

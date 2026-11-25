@@ -3,6 +3,8 @@
 import { planWeekday, type DaySwap } from "@/lib/workouts/day-swap";
 import { useEffect, useMemo, useState } from "react";
 import { CheckIcon, DumbbellIcon } from "@/components/icons";
+import { HomeTile, TileNote, TileTitle } from "@/components/home-tile";
+import type { WorkoutCard } from "@/lib/workouts/day-card";
 import { formatShort, addDays, dayOfWeek } from "@/lib/dates";
 import { DateField } from "@/components/date-field";
 import {
@@ -50,6 +52,8 @@ export function WorkoutLauncher({
   restDay = false,
   blocks = null,
   person = null,
+  asTile = false,
+  card = null,
 }: {
   userId: string;
   dateISO: string;
@@ -86,6 +90,10 @@ export function WorkoutLauncher({
   /** The person's workout card data: when given, the overlay is the day page
    *  (sections, every-set logging), the same as Exercise → Log workout. */
   person?: PersonWorkout | null;
+  /** The home page's tile (v0.799) in place of the summary row. */
+  asTile?: boolean;
+  /** Two or more workouts (v0.799): each by name, done or not, and the kinds. */
+  card?: WorkoutCard | null;
 }) {
   // Two plans for the same muscle group are two rows upstream, but this strip
   // names the group, so they arrived as "Core \u00b7 Core \u00b7 Legs". Collapse
@@ -151,9 +159,72 @@ export function WorkoutLauncher({
   const onOriginal = logDate === dateISO;
   const dayWorkouts = onOriginal ? workouts : weekPlan[planWeekday(swaps, logDate)] ?? [];
 
+  const openLog = () => {
+    setLogDate(dateISO);
+    setOpen(true);
+  };
+  const one = names.length === 1 && names[0].includes(" \u00b7 ") ? names[0] : null;
+
   return (
-    <div className="px-4 py-3">
-      {summaryNames ? (
+    <div className={asTile ? "contents" : "px-4 py-3"}>
+      {asTile ? (
+        // The home tile (v0.799), the same as the app's.
+        <HomeTile
+          icon={<DumbbellIcon className="h-[18px] w-[18px]" />}
+          color="#9f1239"
+          label="Workouts"
+          state={completeForToday ? "done" : overdueCount > 0 ? "overdue" : "normal"}
+          badge={overdueCount > 0 ? String(overdueCount) : null}
+          onClick={openLog}
+        >
+          {restDay ? (
+            <TileTitle muted>Rest day</TileTitle>
+          ) : completeForToday ? (
+            <TileTitle>
+              <span className="text-emerald-600">Complete for today!</span>
+            </TileTitle>
+          ) : remaining.length > 0 ? (
+            <>
+              {blocks && <TileNote>{blocks.done} of {blocks.total} workouts</TileNote>}
+              <TileNote>Remaining</TileNote>
+              <TileTitle>{remaining.slice(0, 3).join(" \u00b7 ")}</TileTitle>
+            </>
+          ) : card && card.items.length >= 2 ? (
+            <>
+              {blocks && (
+                <span className="text-xs font-semibold text-muted">
+                  {blocks.done} of {blocks.total} workouts
+                </span>
+              )}
+              {/* Three fit; past that, two and "+N more" (v0.799). */}
+              {(card.items.length > 3 ? card.items.slice(0, 2) : card.items).map((it, i) => (
+                <span key={`${it.name}-${i}`} className="flex min-w-0 items-center gap-1.5">
+                  {it.done ? (
+                    <span className="flex h-3 w-3 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[8px] font-bold text-white">
+                      &#10003;
+                    </span>
+                  ) : (
+                    <span className="h-3 w-3 shrink-0 rounded-full border-[1.5px] border-muted/60" />
+                  )}
+                  <span className={`truncate text-[15px] font-semibold ${it.done ? "text-muted" : ""}`}>{it.name}</span>
+                </span>
+              ))}
+              {card.items.length > 3 && <span className="text-xs font-semibold text-muted">+{card.items.length - 2} more</span>}
+              {card.kinds.length > 0 && <TileNote>{card.kinds.join(" \u00b7 ")}</TileNote>}
+            </>
+          ) : one ? (
+            <>
+              <TileTitle>{one.slice(one.indexOf(" \u00b7 ") + 3)}</TileTitle>
+              <TileNote>{one.slice(0, one.indexOf(" \u00b7 "))}</TileNote>
+            </>
+          ) : names.length > 0 ? (
+            names.slice(0, 3).map((n) => <TileTitle key={n}>{n}</TileTitle>)
+          ) : (
+            overdueCount === 0 && <TileTitle muted>No workout today</TileTitle>
+          )}
+          {overdueCount > 0 && !completeForToday && <TileNote tone="late">{overdueCount} overdue</TileNote>}
+        </HomeTile>
+      ) : summaryNames ? (
         <button
           type="button"
           onClick={() => {

@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — Web home as tiles (v0.799.0)
+
+- `/person/[id]` (the home on a personal device, and a person's page on the
+  shared screen) now matches the app's home: `GreetingCard` (date, greeting
+  by household time, a chip per area, the ring; the web keeps the avatar to
+  the profile and level/streak as chips), a tile grid (`HomeTile`), the family
+  goal, then the companion on shared screens. Schedule and Add a task sit in
+  a right column at `lg`. The category bars, header row and long lists are
+  gone; the admin button there too (the layout's lock covers it).
+- Tiles: Bible and Tasks are `ListTile` (one item and the tile checks it off;
+  several and each line does), Chores and School are their existing cards
+  with a tile in place of the summary row (the pop-up is unchanged), Workouts
+  is `WorkoutLauncher asTile` using the same `workoutCard` as the app
+  (`src/lib/workouts/day-card.ts`, now shared with the dashboard API), and
+  Reading links to /reading.
+- `FamilyGoalBanner` restyled to the app's card (trophy, gold outline with a
+  soft inner glow, a gold Pick/Vote pill); the shared dashboard gets it too.
+- The pop-ups' own layout (late on the left, today on the right) is mocked
+  up separately and waits for a yes.
+
 ## 2026-11 — Dashboard workoutCard (v0.798.0, app 0.574.0)
 
 - `workoutBlocksFor` also returns `items` (each workout: a program block,

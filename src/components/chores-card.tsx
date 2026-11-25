@@ -6,6 +6,7 @@ import { GetAheadRow } from "@/components/get-ahead-row";
 import { AlwaysOpenChores } from "@/components/always-open-chores";
 import { OpenTasks } from "@/components/open-tasks";
 import { ChoresIcon, XIcon } from "@/components/icons";
+import { HomeTile, TileNote, TileTitle } from "@/components/home-tile";
 import { ChoreBadges, type ChoreBadge } from "@/lib/chore-icons";
 import type { GetAheadChore } from "@/lib/queries/get-ahead";
 
@@ -81,27 +82,23 @@ export function ChoresCard({
     <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{t}</p>
   );
 
+  // A tile (v0.799), the same as the app's.
   return (
-    <section>
-      <div className="mb-3 flex items-center gap-2">
-        <span aria-hidden style={{ color: CHORE_COLOR }} className="flex">
-          <ChoresIcon className="h-5 w-5" />
-        </span>
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">Chores</h2>
-      </div>
-      <button
+    <>
+      <HomeTile
+        icon={<ChoresIcon className="h-[18px] w-[18px]" />}
+        color={CHORE_COLOR}
+        label="Chores"
+        state={completeForToday ? "done" : pendingOverdue.length ? "overdue" : "normal"}
+        badge={pendingOverdue.length ? String(pendingOverdue.length) : null}
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between rounded-lg border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
       >
-        <span className="flex min-w-0 flex-col">
-          <span className={`flex items-center gap-2 text-sm ${completeForToday ? "font-medium text-emerald-600" : ""}`}>
-            <span>{completeForToday ? "Complete for today!" : summary}</span>
-            <ChoreBadges badges={badges} />
-          </span>
-          {poolText && <span className="truncate text-xs text-muted">{poolText}</span>}
+        <span className="flex items-center gap-2">
+          <TileTitle>{completeForToday || summary === "Nothing due today" ? "All caught up" : summary}</TileTitle>
+          <ChoreBadges badges={badges} />
         </span>
-        <span className="text-xs font-medium text-accent">Open</span>
-      </button>
+        {poolText && <TileNote>{poolText}</TileNote>}
+      </HomeTile>
 
       {open && (
         <div
@@ -177,6 +174,6 @@ export function ChoresCard({
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }

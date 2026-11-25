@@ -44,17 +44,16 @@ export async function FamilyGoalBanner() {
     const n = data.proposals.length;
     return (
       <Shell>
-        <div className="min-w-0">
+        <TrophyIcon className="h-6 w-6 shrink-0 text-[#ca8a04]" />
+        <div className="min-w-0 flex-1">
           <p className="font-display text-base font-semibold">Family goal</p>
           <p className="mt-0.5 text-sm text-muted">
             {n} idea{n === 1 ? "" : "s"} waiting
-            {" — "}
-            {nudge === "pick" ? "pick this month\u2019s goal." : "vote for the one you want."}
           </p>
         </div>
         <Link
           href="/coop"
-          className="shrink-0 rounded-full border border-hairline bg-surface px-3 py-1.5 text-sm font-medium hover:border-accent"
+          className="shrink-0 rounded-full bg-[#ca8a04] px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
         >
           {nudge === "pick" ? "Pick" : "Vote"}
         </Link>
@@ -73,6 +72,7 @@ export async function FamilyGoalBanner() {
 
   return (
     <Shell>
+      <TrophyIcon className={`h-6 w-6 shrink-0 ${done ? "text-emerald-600" : "text-[#ca8a04]"}`} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2">
           <p className="font-display text-base font-semibold">
@@ -84,7 +84,6 @@ export async function FamilyGoalBanner() {
         </div>
 
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm font-medium">
-          {done && <TrophyIcon className="h-4 w-4 shrink-0 text-emerald-600" />}
           {goal.title}
         </p>
 
@@ -122,8 +121,9 @@ export async function FamilyGoalBanner() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    // Outlined in Summary's gold (v0.789), where the goal's progress lives.
-    <div className="mb-4 flex items-center gap-4 rounded-2xl border border-[#ca8a04]/45 bg-surface p-4">
+    // White with a light gold outline and a soft gold glow inside (v0.799),
+    // the same as the app's — Summary's gold, where the goal's progress lives.
+    <div className="mb-4 flex items-center gap-3 rounded-[18px] border-[1.5px] border-[#ca8a04]/35 bg-surface px-4 py-3 shadow-[inset_0_0_0_5px_rgba(202,138,4,0.05),inset_0_0_0_10px_rgba(202,138,4,0.04),inset_0_0_0_15px_rgba(202,138,4,0.03)]">
       {children}
     </div>
   );

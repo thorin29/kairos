@@ -7,6 +7,7 @@ import { formatShort } from "@/lib/dates";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { XIcon, SchoolIcon } from "@/components/icons";
 import { AddSchoolWork } from "@/components/add-school-work";
+import { HomeTile, TileNote, TileTitle } from "@/components/home-tile";
 import type { SchoolAheadSubject } from "@/lib/queries/school-get-ahead";
 import type { SchoolProgress } from "@/lib/queries/school-card";
 
@@ -71,23 +72,21 @@ export function SchoolCard({
     <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{t}</p>
   );
 
+  // A tile (v0.799), the same as the app's: green when done, red with a count
+  // when something's overdue. It opens the full list.
   return (
-    <section>
-      <div className="mb-3 flex items-center gap-2">
-        <span aria-hidden style={{ color: CATEGORY_COLORS.SCHOOL }} className="flex">
-          <SchoolIcon className="h-5 w-5" />
-        </span>
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted">School</h2>
-      </div>
-      <button
+    <>
+      <HomeTile
+        icon={<SchoolIcon className="h-[18px] w-[18px]" />}
+        color={CATEGORY_COLORS.SCHOOL}
+        label="School"
+        state={completeForToday ? "done" : pendingOverdue.length ? "overdue" : "normal"}
+        badge={pendingOverdue.length ? String(pendingOverdue.length) : null}
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between rounded-lg border border-hairline bg-surface px-4 py-3 text-left hover:border-accent"
       >
-        <span className={`text-sm ${completeForToday ? "font-medium text-emerald-600" : ""}`}>
-          {completeForToday ? "Complete for today!" : summary}
-        </span>
-        <span className="text-xs font-medium text-accent">Open</span>
-      </button>
+        <TileTitle>{completeForToday ? "All caught up" : summary === "Nothing due today" ? "Nothing due today" : summary}</TileTitle>
+        {!completeForToday && pendingToday[0] && <TileNote>{pendingToday[0].title}</TileNote>}
+      </HomeTile>
 
       {open && (
         <div
@@ -271,6 +270,6 @@ export function SchoolCard({
             </div>
           );
         })()}
-    </section>
+    </>
   );
 }
