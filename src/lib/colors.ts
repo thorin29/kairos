@@ -13,10 +13,10 @@ import type { Category } from "@/generated/prisma/client";
  */
 export const CATEGORY_COLORS: Record<Category, string> = {
   SCHOOL:      "#4f46e5",
-  WORK:        "#7c3aed",
+  WORK:        "#57534e", // stone: was Bible's violet (v0.792)
   APPOINTMENT: "#2563eb",
-  CHORE:       "#d97706",
-  EXERCISE:    "#dc2626",
+  CHORE:       "#ea580c",
+  EXERCISE:    "#9f1239", // deep crimson, apart from late red (v0.792)
   BIBLE:       "#7c3aed",
   OTHER:       "#64748b",
 };

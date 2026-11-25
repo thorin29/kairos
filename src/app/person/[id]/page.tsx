@@ -79,9 +79,9 @@ import {
 // sections read consistently with the nav.
 const CAT_ICON: Record<string, { Icon: typeof ChoresIcon; color: string }> = {
   BIBLE: { Icon: BibleIcon, color: "#7c3aed" },
-  CHORE: { Icon: ChoresIcon, color: "#d97706" },
+  CHORE: { Icon: ChoresIcon, color: "#ea580c" },
   SCHOOL: { Icon: SchoolIcon, color: "#4f46e5" },
-  EXERCISE: { Icon: DumbbellIcon, color: "#dc2626" },
+  EXERCISE: { Icon: DumbbellIcon, color: "#9f1239" },
   WORK: { Icon: TasksIcon, color: "#334155" },
   APPOINTMENT: { Icon: CalendarIcon, color: "#2563eb" },
   OTHER: { Icon: TasksIcon, color: "#64748b" },

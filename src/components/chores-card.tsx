@@ -9,7 +9,7 @@ import { ChoresIcon, XIcon } from "@/components/icons";
 import { ChoreBadges, type ChoreBadge } from "@/lib/chore-icons";
 import type { GetAheadChore } from "@/lib/queries/get-ahead";
 
-const CHORE_COLOR = "#d97706";
+const CHORE_COLOR = "#ea580c";
 
 /** Chores pop-up: carried-over (overdue) work at the top, then today's chores,
  *  then get-ahead — mirroring the School card so the home screen stays tidy.

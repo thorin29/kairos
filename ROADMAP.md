@@ -110,9 +110,9 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.791.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
-  180_seventh_week, all registered in `MIGRATIONS`.
-- App 0.569.0 (versionCode 641, CLIENT_BUILD 641).
+- Web 0.792.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+  181_generated_once, all registered in `MIGRATIONS`.
+- App 0.571.0 (versionCode 643, CLIENT_BUILD 643).
 - ice-time 0.1.3.
 - Game-time collector 5.0.0.
 
@@ -177,6 +177,8 @@ Kept here so they don't come back as open items.
 
 ### Home dashboard and Summary
 
+- No doubled readings or workouts (v0.792): a generated Bible or workout task
+  exists once per person per day (unique index); area colors made distinct.
 - A card per person with per-category completion; neutral when nothing is
   assigned; overdue work carried forward; today's schedule strip with day
   paging; "Up for grabs" for released and shared chores.

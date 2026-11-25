@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-11 — Generated tasks once per day; area colors (v0.792.0, app 0.571.0)
+
+- Bible and workout tasks are generated on page loads and API calls, each
+  run reading what exists and creating what's missing. Two runs at the same
+  moment both created the day's rows (pairs 10 ms apart at 00:02 on 11-12 and
+  11-23, for every person). Migration `181_generated_once` deletes the extra
+  copies (keeps a done one, then the oldest) and adds a partial unique index
+  `Task_generated_once` on (userId, generatedFrom, dueDate) for `plan:%` and
+  `workout:%` rows. The generators already use
+  `createMany({ skipDuplicates: true })`, which becomes `ON CONFLICT DO
+  NOTHING`, so a racing run now skips instead of duplicating. Chores already
+  had their own unique key.
+- Area colors: no two alike and none the late red. Workouts `#9f1239`,
+  Game time `#a21caf` (was nearly School's indigo), Ice time `#1e3a8a` (was
+  nearly Reading's cyan), Chores `#ea580c` (was close to Summary's gold).
+  Category `WORK` was Bible's violet; now stone `#57534e`.
+
 ## 2026-11 — Plates on every bar lift; Log with missed sets (v0.791.0, app 0.569.0)
 
 - `GET /workouts/sets` adds `bar` ("barbell" / "ez" / null) from the pool
