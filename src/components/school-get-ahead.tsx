@@ -5,6 +5,7 @@ import { addSchoolWorkToToday } from "@/lib/actions/class-plans";
 import { formatShort } from "@/lib/dates";
 import { CheckIcon, ChevronLeftIcon } from "@/components/icons";
 import type { SchoolAheadSubject } from "@/lib/queries/school-get-ahead";
+import { Popup } from "@/components/popup";
 
 export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] }) {
   const [picked, setPicked] = useState<string | null>(null);
@@ -117,5 +118,78 @@ export function SchoolGetAhead({ subjects }: { subjects: SchoolAheadSubject[] })
       )}
 
     </div>
+  );
+}
+
+/**
+ * Get ahead as a button and a pop-up (v0.803; it was a card at the bottom of
+ * the School page, cut off below the fold). Every subject on one fixed-size
+ * list with its next lesson and its own Add to today, so nothing changes size
+ * as you work through it.
+ */
+export function SchoolGetAheadButton({ subjects }: { subjects: SchoolAheadSubject[] }) {
+  const [open, setOpen] = useState(false);
+  const [added, setAdded] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [, start] = useTransition();
+  if (subjects.length === 0) return null;
+  const add = (subject: string, taskId: string, label: string) => {
+    setBusy(subject);
+    start(async () => {
+      await addSchoolWorkToToday(taskId);
+      setAdded((a) => ({ ...a, [subject]: label }));
+      setBusy(null);
+    });
+  };
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-10 items-center gap-1.5 rounded-full border border-accent bg-accent/10 px-4 text-sm font-semibold text-accent hover:bg-accent/15"
+      >
+        Get ahead
+      </button>
+      {open && (
+        <Popup title="Get ahead" onClose={() => setOpen(false)}>
+          <p className="mb-3 text-sm text-muted">Pull a subject&rsquo;s next lesson into today.</p>
+          <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline">
+            {subjects.map((s) => {
+              const item = s.items[0] ?? null;
+              const done = added[s.subject];
+              return (
+                <li key={s.subject} className="flex min-h-[4.25rem] items-center gap-3 px-3 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{s.subject}</p>
+                    {done ? (
+                      <p className="flex items-center gap-1 truncate text-xs font-medium text-emerald-700">
+                        <CheckIcon className="h-3.5 w-3.5 shrink-0" />
+                        Added: {done}
+                      </p>
+                    ) : item ? (
+                      <p className="truncate text-xs text-muted">
+                        {item.label} &middot; <span className="tabular">due {formatShort(item.dueISO)}</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted">Nothing more queued</p>
+                    )}
+                  </div>
+                  {item && !done && (
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      onClick={() => add(s.subject, item.taskId, item.label)}
+                      className="h-9 w-[7.5rem] shrink-0 rounded-full bg-accent text-sm font-semibold text-on-accent disabled:opacity-50"
+                    >
+                      {busy === s.subject ? "Adding…" : "Add to today"}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Popup>
+      )}
+    </>
   );
 }

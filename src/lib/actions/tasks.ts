@@ -209,3 +209,56 @@ export async function assignTask(input: {
   revalidatePath("/");
   return r;
 }
+
+/**
+ * Add a task from the web's + button (v0.803): the same choices as the app's
+ * Add task — who, a due date, repeating, a reminder time. A repeat makes a
+ * recurring template, the same as the device endpoint.
+ */
+export async function addTaskFull(input: {
+  userId: string;
+  title: string;
+  dueDate: string | null;
+  notifyMinutes: number | null;
+  recur: {
+    freq: string;
+    interval: number;
+    byday: string[];
+    endMode: string;
+    maxCount: number | null;
+    until: string;
+  } | null;
+}): Promise<{ error: string | null }> {
+  await requireInteractive();
+  if (!input.userId) return { error: "Pick who this is for." };
+  await requireCanActFor(input.userId);
+  const me = (await currentUser())?.id ?? null;
+  const title = String(input.title ?? "").trim().slice(0, 120);
+  const notify =
+    typeof input.notifyMinutes === "number" && input.notifyMinutes >= 0 && input.notifyMinutes < 1440 ? Math.round(input.notifyMinutes) : null;
+  if (input.recur) {
+    const { createRecurringTask } = await import("@/lib/tasks/recurring");
+    const res = await createRecurringTask({
+      userId: input.userId,
+      title,
+      freq: input.recur.freq,
+      interval: Number(input.recur.interval) || 1,
+      byday: Array.isArray(input.recur.byday) ? input.recur.byday.map(String) : [],
+      startDate: input.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) ? input.dueDate : todayISO(),
+      endMode: input.recur.endMode,
+      maxCount: input.recur.maxCount,
+      until: input.recur.until ?? "",
+      notifyMinutes: notify,
+      createdById: me,
+    });
+    if (res.error) return res;
+  } else {
+    const r = await addTaskCore({ userId: input.userId, title, dueDate: input.dueDate, notifyMinutes: notify });
+    if (r.error) return { error: r.error };
+  }
+  await tellAssigned(input.userId, me, title);
+  revalidatePath("/");
+  revalidatePath("/tasks");
+  revalidatePath(`/person/${input.userId}`, "layout");
+  return { error: null };
+}

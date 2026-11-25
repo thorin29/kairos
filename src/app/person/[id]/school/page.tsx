@@ -9,7 +9,7 @@ import { loadClassOptions, loadSubjectNames } from "@/lib/queries/school";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { AreaCard, AreaPage } from "@/components/area-page";
 import { TaskRow } from "@/components/task-row";
-import { SchoolGetAhead } from "@/components/school-get-ahead";
+import { SchoolGetAheadButton } from "@/components/school-get-ahead";
 import { SchoolProgressList } from "@/components/school-card";
 import { AddSchoolWork } from "@/components/add-school-work";
 import { SchoolIcon } from "@/components/icons";
@@ -38,7 +38,12 @@ export default async function PersonSchoolPage({ params }: { params: Promise<{ i
       icon={<SchoolIcon className="h-5 w-5" />}
       color={CATEGORY_COLORS.SCHOOL}
       title="School"
-      actions={<AddSchoolWork userId={id} classesByUser={classes} subjects={subjects} defaultDate={today} />}
+      actions={
+        <>
+          <SchoolGetAheadButton subjects={ahead} />
+          <AddSchoolWork userId={id} classesByUser={classes} subjects={subjects} defaultDate={today} />
+        </>
+      }
       lateCount={late.filter((r) => r.status !== "COMPLETE").length}
       late={
         <ul className="divide-y divide-hairline">
@@ -64,15 +69,6 @@ export default async function PersonSchoolPage({ params }: { params: Promise<{ i
         progress.progress.length > 0 ? (
           <AreaCard title="Progress">
             <SchoolProgressList progress={progress.progress} targetISO={progress.targetISO} />
-          </AreaCard>
-        ) : null
-      }
-      extra={
-        ahead.length > 0 ? (
-          <AreaCard title="Get ahead">
-            <div className="p-3">
-              <SchoolGetAhead subjects={ahead} />
-            </div>
           </AreaCard>
         ) : null
       }

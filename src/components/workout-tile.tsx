@@ -6,7 +6,7 @@ const DOT = " · ";
 
 /**
  * Workouts' home tile (v0.799), the same as the app's. Two or more workouts
- * read one per line with a ring (a check once done), then the kinds; three
+ * read one per line with a small bullet (green once done), then the kinds; three
  * fit, past that two and "+N more". It opens the Workouts page (v0.800).
  */
 export function WorkoutTile({
@@ -56,14 +56,9 @@ export function WorkoutTile({
           {blocks && <span className="text-xs font-semibold text-muted">{blocks.done} of {blocks.total} workouts</span>}
           {(card.items.length > 3 ? card.items.slice(0, 2) : card.items).map((it, i) => (
             <span key={`${it.name}-${i}`} className="flex min-w-0 items-center gap-1.5">
-              {it.done ? (
-                <span className="flex h-3 w-3 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[8px] font-bold text-white">
-                  &#10003;
-                </span>
-              ) : (
-                <span className="h-3 w-3 shrink-0 rounded-full border-[1.5px] border-muted/60" />
-              )}
-              <span className={`truncate text-[15px] font-semibold ${it.done ? "text-muted" : ""}`}>{it.name}</span>
+              {/* A small bullet (v0.803), green once done. */}
+              <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${it.done ? "bg-emerald-600" : "bg-ink"}`} />
+              <span className={`truncate text-[15px] font-semibold lg:text-base ${it.done ? "text-muted" : ""}`}>{it.name}</span>
             </span>
           ))}
           {card.items.length > 3 && <span className="text-xs font-semibold text-muted">+{card.items.length - 2} more</span>}

@@ -39,15 +39,16 @@ export function Companion({
 }: {
   companion: CompanionView;
   colorHex: string;
-  size?: "sm" | "md";
+  /** "lg" (v0.803): the home page's right column. */
+  size?: "sm" | "md" | "lg";
 }) {
   const row = growthRow(companion);
   const sp = companion.species ? COMPANIONS[companion.species] : null;
   const asset =
     companion.active && sp ? stageAsset(sp.id, companion.stage) : MYSTERY_EGG;
 
-  const box = size === "sm" ? "h-14 w-24 shrink-0" : "min-h-[9rem] w-full max-w-[16rem]";
-  const imgBox = size === "sm" ? "h-9" : "h-24";
+  const box = size === "sm" ? "h-14 w-24 shrink-0" : size === "lg" ? "min-h-[17rem] w-full py-5" : "min-h-[9rem] w-full max-w-[16rem]";
+  const imgBox = size === "sm" ? "h-9" : size === "lg" ? "h-44" : "h-24";
   // Text-free odds cue: the egg meter glows in the rarity colour the current
   // streak is unlocking — plain slate, then blue, purple, gold as luck climbs.
   const luckColor =

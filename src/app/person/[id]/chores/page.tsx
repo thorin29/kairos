@@ -79,9 +79,6 @@ export default async function PersonChoresPage({ params }: { params: Promise<{ i
                       <GetAheadRow key={c.taskId} chore={c} />
                     ))}
                   </ul>
-                  <p className="mt-2 text-xs text-muted">
-                    Jump on an upcoming chore for a small bonus. It still counts toward its own week.
-                  </p>
                 </div>
               )}
             </div>

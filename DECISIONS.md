@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11 — Home right column, + button, Get ahead pop-up (v0.803.0, app 0.577.0)
+
+- `/person/[id]`: the right column is the character (`Companion size="lg"`),
+  `FamilyGoalTile`, and on a personal device `ScheduleCard` (its ‹ › move the
+  schedule with `?day=`). Tiles grow at `lg` (min height, padding, text).
+- `AddTaskFab` + `Popup` (fixed size, body scrolls, footer stays): who, due
+  date, repeat (every N days/weeks/months/years, weekdays, ends never/on/
+  after) and a reminder time, through the new `addTaskFull` action that uses
+  `addTaskCore` / `createRecurringTask` like the device endpoint. On the home,
+  the shared home and the Tasks page; the inline Add task form left those.
+- School's Get ahead is `SchoolGetAheadButton` in the header: every subject's
+  next lesson with its own Add to today, in the fixed-size pop-up.
+- `/reading?person=` shows one person; the Reading tile links there.
+- Workout tile lines: small bullets, green once done.
+
 ## 2026-11 — Goal tile and schedule card (v0.802.0)
 
 - `FamilyGoalTile` is a single link to /coop. Its ring and line use this

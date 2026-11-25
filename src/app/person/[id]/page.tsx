@@ -24,6 +24,7 @@ import { inviteFor } from "@/lib/workouts/program-run";
 import { loadActivePause } from "@/lib/queries/pauses";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/colors";
 import {
+  addDays,
   formatLong,
   todayISO,
 } from "@/lib/dates";
@@ -34,12 +35,10 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { loadPersonalPlan } from "@/lib/queries/personal-plan";
-import { AddTaskForm } from "@/components/add-task-form";
 import { Card } from "@/components/ui";
 import { Companion } from "@/components/companion";
 import { HatchControls } from "@/components/hatch-controls";
 import { deviceMode } from "@/lib/device";
-import { DaySchedule } from "@/components/day-schedule";
 import { ShoppingReminder } from "@/components/shopping-reminder";
 import { SportPrompts } from "@/components/sport-prompts";
 import { ClassPrompts } from "@/components/class-prompts";
@@ -57,7 +56,9 @@ import { Suspense } from "react";
 import { GreetingCard } from "@/components/greeting-card";
 import { HomeTile } from "@/components/home-tile";
 import { ListTile } from "@/components/list-tile";
-import { FamilyGoalBanner } from "@/components/family-goal-banner";
+import { FamilyGoalTile } from "@/components/family-goal-banner";
+import { ScheduleCard } from "@/components/day-schedule";
+import { AddTaskFab } from "@/components/add-task-fab";
 import { workoutCard } from "@/lib/workouts/day-card";
 import { personRows } from "@/lib/queries/person-rows";
 import { MoonIcon, FlameIcon, StarIcon, BookIcon } from "@/components/icons";
@@ -100,11 +101,13 @@ export default async function PersonPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; day?: string }>;
 }) {
   const { id } = await params;
-  await searchParams;
+  const { day } = await searchParams;
   const today = todayISO();
+  // The schedule card's ‹ › (v0.803) move only the schedule.
+  const scheduleDay = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : today;
 
   // On a personal device the character lives on the Character page, so it comes
   // off the card here.
@@ -218,7 +221,7 @@ export default async function PersonPage({
           orderBy: { sortOrder: "asc" },
           select: { id: true, name: true, color: true },
         }),
-        loadDaySchedule(today),
+        loadDaySchedule(scheduleDay),
         loadDashboardTrips(),
         pendingSportPrompts(today),
         pendingClassPrompts(today),
@@ -278,7 +281,7 @@ export default async function PersonPage({
   }
   if (readingProgress.length > 0) {
     tiles.push(
-      <HomeTile key="reading" icon={<BookIcon className="h-[18px] w-[18px]" />} color="#0891b2" label="Reading" href="/reading">
+      <HomeTile key="reading" icon={<BookIcon className="h-[18px] w-[18px]" />} color="#0891b2" label="Reading" href={`/reading?person=${id}`}>
         {readingProgress.slice(0, 3).map((r) => (
           <span key={r.bookId} className="block">
             <span className="block truncate text-sm font-medium">{r.title}</span>
@@ -381,7 +384,7 @@ export default async function PersonPage({
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="min-w-0 space-y-4">
           <GreetingCard
             person={{
@@ -426,36 +429,36 @@ export default async function PersonPage({
             <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-3">{tiles}</div>
           )}
 
-          <Suspense fallback={null}>
-            <FamilyGoalBanner />
-          </Suspense>
-
           {showInvite && <ProgramCard userId={id} inviteOnly />}
+        </div>
 
+        {/* The right column (v0.803): the character, large; the family goal as
+            a small tile; today's schedule on a personal device. */}
+        <aside className="min-w-0 space-y-4">
           {progress && !onPersonalDevice && (
             <div className="flex flex-col items-center">
-              <Companion companion={progress.companion} colorHex={progress.companionColor} />
+              <Companion companion={progress.companion} colorHex={progress.companionColor} size="lg" />
               {progress.companion.eggReady && <HatchControls userId={person.id} phase={progress.companion.phase} />}
             </div>
           )}
-        </div>
-
-        <aside className="min-w-0 space-y-4">
+          <Suspense fallback={null}>
+            <FamilyGoalTile />
+          </Suspense>
           {home && (
-            <DaySchedule
-              events={[...home.schedule.allDay, ...home.schedule.timed]}
-              title="Today's schedule"
-              emptyText="Nothing scheduled."
-              href={`/calendar?view=day&date=${today}`}
-            />
+            <div className="lg:h-[28rem]">
+              <ScheduleCard
+                events={[...home.schedule.allDay, ...home.schedule.timed]}
+                title={scheduleDay === today ? "Today's schedule" : "Schedule"}
+                dateLabel={formatLong(scheduleDay).replace(/, \d{4}$/, "")}
+                prevHref={`/person/${id}?day=${addDays(scheduleDay, -1)}`}
+                nextHref={`/person/${id}?day=${addDays(scheduleDay, 1)}`}
+                todayHref={scheduleDay === today ? undefined : `/person/${id}`}
+              />
+            </div>
           )}
-          <AddTaskForm
-            people={[{ id: person.id, name: person.name, color: person.color }]}
-            defaultUserId={person.id}
-            defaultDate={today}
-          />
         </aside>
       </div>
+      <AddTaskFab people={[{ id: person.id, name: person.name, color: person.color }]} defaultUserId={person.id} defaultDate={today} />
     </main>
   );
 }

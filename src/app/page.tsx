@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { loadDay } from "@/lib/queries/overview";
 import { addDays, formatLong, todayISO } from "@/lib/dates";
 import { PersonCard } from "@/components/person-card";
-import { AddTaskForm } from "@/components/add-task-form";
+import { AddTaskFab } from "@/components/add-task-fab";
 import { generateChores } from "@/lib/chores/generate";
 import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
@@ -172,11 +172,6 @@ export default async function Home({
               ))}
             </div>
 
-            {!personal && (
-              <div className="mt-8">
-                <AddTaskForm people={roster} defaultDate={today} />
-              </div>
-            )}
           </div>
 
           <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-7rem)]">
@@ -199,6 +194,7 @@ export default async function Home({
             </div>
           </aside>
         </div>
+        {!personal && <AddTaskFab people={roster} defaultDate={today} />}
     </main>
     </>
   );

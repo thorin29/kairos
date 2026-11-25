@@ -6,7 +6,7 @@ import { personRows, splitRows } from "@/lib/queries/person-rows";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { AreaCard, AreaPage } from "@/components/area-page";
 import { TaskRow } from "@/components/task-row";
-import { AddTaskForm } from "@/components/add-task-form";
+import { AddTaskFab } from "@/components/add-task-fab";
 import { TasksIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -21,12 +21,12 @@ export default async function PersonTasksPage({ params }: { params: Promise<{ id
   const { late, today: due } = splitRows(personRows(tasks, today), ["WORK", "APPOINTMENT", "OTHER"]);
 
   return (
+    <>
     <AreaPage
       backHref={`/person/${id}`}
       icon={<TasksIcon className="h-5 w-5" />}
       color={CATEGORY_COLORS.WORK}
       title="Tasks"
-      actions={<AddTaskForm people={[person]} defaultUserId={id} defaultDate={today} />}
       lateCount={late.filter((r) => r.status !== "COMPLETE").length}
       late={
         <ul className="divide-y divide-hairline">
@@ -49,5 +49,7 @@ export default async function PersonTasksPage({ params }: { params: Promise<{ id
         </AreaCard>
       }
     />
+    <AddTaskFab people={[person]} defaultUserId={id} defaultDate={today} />
+    </>
   );
 }
