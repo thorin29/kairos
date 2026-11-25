@@ -106,3 +106,76 @@ export function DaySchedule({
     </section>
   );
 }
+
+/**
+ * Today's schedule as one card (v0.802, the shared home): its name and the
+ * date in the card's own header with small ‹ › arrows for another day; the
+ * header stays put and only the events scroll when the day is long. Not a way
+ * into the calendar.
+ */
+export function ScheduleCard({
+  events,
+  title,
+  dateLabel,
+  prevHref,
+  nextHref,
+  todayHref,
+}: {
+  events: GridEvent[];
+  title: string;
+  dateLabel: string;
+  prevHref: string;
+  nextHref: string;
+  /** Set when showing another day: the title goes back to today. */
+  todayHref?: string;
+}) {
+  const sorted = [...events].sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin);
+  const arrow =
+    "flex h-7 w-7 items-center justify-center rounded-full text-base leading-none text-muted transition-colors hover:bg-ground hover:text-ink";
+  return (
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-hairline bg-surface">
+      <div className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-3">
+        <CalendarIcon className="h-4 w-4 shrink-0 text-[#2563eb]" />
+        <div className="min-w-0 flex-1">
+          {todayHref ? (
+            <Link href={todayHref} className="block truncate font-display text-[15px] font-semibold hover:text-accent" title="Back to today">
+              {title}
+            </Link>
+          ) : (
+            <p className="truncate font-display text-[15px] font-semibold">{title}</p>
+          )}
+          <p className="truncate text-xs text-muted">{dateLabel}</p>
+        </div>
+        <Link href={prevHref} aria-label="Previous day" className={arrow}>
+          &lsaquo;
+        </Link>
+        <Link href={nextHref} aria-label="Next day" className={arrow}>
+          &rsaquo;
+        </Link>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {sorted.length === 0 ? (
+          <p className="px-4 py-4 text-sm text-muted">Nothing scheduled.</p>
+        ) : (
+          <ul className="divide-y divide-hairline">
+            {sorted.map((e) => (
+              <li key={e.id} className="flex items-start gap-3 px-4 py-3">
+                <span aria-hidden className="mt-0.5 h-9 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: e.color }} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{e.title}</p>
+                  <p className="tabular truncate text-xs text-muted">
+                    {e.timeLabel}
+                    {e.location ? ` \u00b7 ${e.locationName ?? e.location}` : ""}
+                  </p>
+                </div>
+                <span className="shrink-0">
+                  <AttendeeList event={e} align="start" />
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}

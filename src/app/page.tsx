@@ -10,10 +10,9 @@ import { generateAnytimeChores } from "@/lib/chores/anytime";
 import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
-import { AlertIcon } from "@/components/icons";
 import { FamilyGoalTile } from "@/components/family-goal-banner";
 
-import { DaySchedule } from "@/components/day-schedule";
+import { ScheduleCard } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
 import { deviceMode } from "@/lib/device";
 import { currentUser } from "@/lib/user-session";
@@ -88,7 +87,6 @@ export default async function Home({
     select: { id: true, name: true, color: true },
   });
 
-  const totalOverdue = shown.reduce((n, p) => n + p.overdue, 0);
 
   const sportPrompts = await pendingSportPrompts(today);
   const promptsByUser = new Map<string, SportPrompt[]>();
@@ -157,12 +155,6 @@ export default async function Home({
             where only the schedule scrolls. */}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
           <div className="min-w-0">
-            {!personal && totalOverdue > 0 && (
-              <p className="tabular mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
-                <AlertIcon className="h-4 w-4" />
-                {totalOverdue} overdue
-              </p>
-            )}
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {shown.map((p) => (
@@ -196,17 +188,13 @@ export default async function Home({
               </div>
             </Suspense>
             <div className="min-h-0 flex-1">
-              <DaySchedule
-                fill
+              <ScheduleCard
                 events={[...todaySchedule.allDay, ...todaySchedule.timed]}
-                title={scheduleDay === today ? "Today's schedule" : formatLong(scheduleDay)}
-                emptyText="Nothing scheduled."
-                href={`/calendar?view=day&date=${scheduleDay}`}
-                nav={{
-                  prevHref: `/?day=${addDays(scheduleDay, -1)}`,
-                  todayHref: "/",
-                  nextHref: `/?day=${addDays(scheduleDay, 1)}`,
-                }}
+                title={scheduleDay === today ? "Today's schedule" : "Schedule"}
+                dateLabel={formatLong(scheduleDay).replace(/, \d{4}$/, "")}
+                prevHref={`/?day=${addDays(scheduleDay, -1)}`}
+                nextHref={`/?day=${addDays(scheduleDay, 1)}`}
+                todayHref={scheduleDay === today ? undefined : "/"}
               />
             </div>
           </aside>

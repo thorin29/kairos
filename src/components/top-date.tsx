@@ -11,6 +11,8 @@ import { usePathname } from "next/navigation";
 export function TopDate({ label }: { label: string }) {
   const path = usePathname();
   if (
+    // The shared home's schedule card shows the date (v0.802).
+    path === "/" ||
     path.startsWith("/calendar") ||
     path.startsWith("/bible") ||
     path.startsWith("/login") ||

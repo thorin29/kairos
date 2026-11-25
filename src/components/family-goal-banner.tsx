@@ -130,62 +130,56 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The family goal as a small tile (v0.801), for the top of the shared home's
+ * The family goal as a small tile (v0.801), at the top of the shared home's
  * schedule column: white with the gold outline and soft glow, and a gold ring
- * around the trophy that fills as the children finish their month.
+ * around the trophy that fills as the children finish their month. The whole
+ * tile opens the goal; a Vote badge sits on the right until a goal wins
+ * (v0.802).
  */
 export async function FamilyGoalTile() {
   const [data, admin, me] = await Promise.all([loadCoop(), isAdmin(), personalUserId()]);
   const goal: CoopProposalView | null = data.carried ?? data.selected ?? data.granted ?? null;
-  let pct = 0;
-  let lines: { title: string; sub: string; done?: boolean };
-  let action: React.ReactNode = null;
-  if (!goal) {
-    const isChild = (id: string) => data.children.some((c) => c.id === id);
-    const viewer = me ? { id: me, isParent: admin || !isChild(me) } : admin ? { id: "", isParent: true } : null;
-    const nudge = coopHomeNudge(data, viewer);
-    if (!nudge) return null;
-    const n = data.proposals.length;
-    lines = { title: "Family goal", sub: `${n} idea${n === 1 ? "" : "s"} waiting` };
-    action = (
-      <Link href="/coop" className="mt-1.5 inline-flex rounded-full bg-[#ca8a04] px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90">
-        {nudge === "pick" ? "Pick" : "Vote"}
-      </Link>
-    );
-  } else {
-    const done = goal.status === "GRANTED";
-    const carried = data.carried?.id === goal.id;
-    pct = done || goal.gateMet ? 100 : data.childrenTotal > 0 ? Math.round((goal.childrenMeeting / data.childrenTotal) * 100) : 0;
-    lines = {
-      title: goal.title,
-      sub: done
-        ? `Earned · ${goal.seasonLabel}`
-        : `${goal.childrenMeeting} of ${data.childrenTotal} finished ${carried ? goal.seasonLabel : "their month"}${goal.gateMet ? " · ready" : ""}`,
-      done,
-    };
-    if (!done && admin && goal.gateMet) action = <div className="mt-1.5"><GoalCheckOff proposalId={goal.id} /></div>;
-  }
-  const ring = lines.done ? "#059669" : "#ca8a04";
+  const done = goal?.status === "GRANTED";
+  const carried = !!goal && data.carried?.id === goal.id;
+  // A carried goal is judged on its own month; otherwise this month's count.
+  const meeting = carried && goal ? goal.childrenMeeting : data.childrenMeeting;
+  const total = data.childrenTotal;
+  const pct = done ? 100 : total > 0 ? Math.round((meeting / total) * 100) : 0;
+  const n = data.proposals.length;
+  const finished = total > 0 ? `${meeting} of ${total} finished ${carried && goal ? goal.seasonLabel : "their month"}` : "";
+  const title = goal ? goal.title : "Family goal";
+  const sub = done
+    ? `Earned \u00b7 ${goal!.seasonLabel}`
+    : goal
+      ? finished
+      : [`${n} idea${n === 1 ? "" : "s"} waiting`, finished].filter(Boolean).join(" \u00b7 ");
+  // Voting is open until a goal wins: a parent picks, everyone else votes.
+  const isChild = (id: string) => data.children.some((c) => c.id === id);
+  const viewer = me ? { id: me, isParent: admin || !isChild(me) } : admin ? { id: "", isParent: true } : null;
+  const badge = goal ? null : coopHomeNudge(data, viewer) === "pick" ? "Pick" : "Vote";
+  const ring = done ? "#059669" : "#ca8a04";
   return (
-    <div className="relative flex items-center gap-3 overflow-hidden rounded-[18px] border-[1.5px] border-[#ca8a04]/35 bg-surface p-3.5 shadow-[inset_0_0_0_5px_rgba(202,138,4,0.05),inset_0_0_0_10px_rgba(202,138,4,0.035)]">
+    <Link
+      href="/coop"
+      className="relative flex items-center gap-3 overflow-hidden rounded-[18px] border-[1.5px] border-[#ca8a04]/35 bg-surface p-3.5 shadow-[inset_0_0_0_5px_rgba(202,138,4,0.05),inset_0_0_0_10px_rgba(202,138,4,0.035)] transition-colors hover:border-[#ca8a04]/60"
+    >
       <span aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#ca8a04]/10 blur-xl" />
-      <Link href="/coop" aria-label="Family goal" className="relative shrink-0">
-        <span
-          className="flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ background: `conic-gradient(${ring} 0 ${pct}%, rgba(202,138,4,0.15) 0 100%)` }}
-        >
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface">
-            <TrophyIcon className={`h-6 w-6 ${lines.done ? "text-emerald-600" : "text-[#ca8a04]"}`} />
-          </span>
+      <span
+        className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full"
+        style={{ background: `conic-gradient(${ring} 0 ${pct}%, rgba(202,138,4,0.15) 0 100%)` }}
+        aria-label={finished || undefined}
+      >
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface">
+          <TrophyIcon className={`h-6 w-6 ${done ? "text-emerald-600" : "text-[#ca8a04]"}`} />
         </span>
-      </Link>
-      <div className="relative min-w-0 flex-1">
-        <Link href="/coop" className="block truncate font-display text-[15px] font-semibold hover:text-accent">
-          {lines.title}
-        </Link>
-        <p className="truncate text-xs text-muted">{lines.sub}</p>
-        {action}
-      </div>
-    </div>
+      </span>
+      <span className="relative min-w-0 flex-1">
+        <span className="block truncate font-display text-[15px] font-semibold">{title}</span>
+        <span className="block text-xs text-muted">{sub}</span>
+      </span>
+      {badge && (
+        <span className="relative shrink-0 rounded-full bg-[#ca8a04] px-3 py-1 text-xs font-bold text-white">{badge}</span>
+      )}
+    </Link>
   );
 }

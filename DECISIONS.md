@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — Goal tile and schedule card (v0.802.0)
+
+- `FamilyGoalTile` is a single link to /coop. Its ring and line use this
+  month's `childrenMeeting / childrenTotal` even before a goal is chosen
+  (it showed nothing then), or the carried goal's own month. A Vote badge
+  (Pick for a parent) shows until a goal wins; no buttons inside the tile.
+- `ScheduleCard` replaces the dashboard's `DaySchedule`: name and date in the
+  card's header with small ‹ › arrows (the name goes back to today on another
+  day), no Today or Full calendar buttons; the header stays, the list scrolls.
+  The fixed top-right date is hidden on `/`, where it sat over the goal tile.
+- The "N overdue" line above the cards is gone so the cards align with the
+  goal tile.
+
 ## 2026-11 — Shared home: uniform cards, goal over the schedule (v0.801.0)
 
 - `PersonCard` is a fixed `h-[21rem]`; the categories and prompts scroll
