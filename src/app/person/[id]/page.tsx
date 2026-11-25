@@ -8,28 +8,23 @@ import { fmtGrowth } from "@/lib/companions-growth";
 import { loadGetAhead } from "@/lib/queries/get-ahead";
 import { loadSchoolGetAhead } from "@/lib/queries/school-get-ahead";
 import { loadSchoolProgress } from "@/lib/queries/school-card";
-import { SchoolCard } from "@/components/school-card";
-import { ChoresCard } from "@/components/chores-card";
+import { SchoolTile } from "@/components/school-card";
+import { ChoresTile } from "@/components/chores-card";
 import {
   loadWorkoutPlanNames,
   loadWorkoutDayExtras,
-  loadWorkoutsBoard,
-  loadExercisePool,
-  loadHiitWorkoutsForBoard,
 } from "@/lib/queries/workouts";
 import { loadDayPlanProgress, loadOverdueWorkoutDates, workoutBlocksFor, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress } from "@/lib/queries/reading";
-import { WorkoutLauncher } from "./workout-launcher";
+import { WorkoutTile } from "@/components/workout-tile";
+import { syncCoreDays } from "@/lib/workouts/core-run";
+import { swapsFor } from "@/lib/workouts/day-swap-run";
 import { ProgramCard } from "@/app/exercise/program-card";
 import { inviteFor } from "@/lib/workouts/program-run";
 import { loadActivePause } from "@/lib/queries/pauses";
-import { SCHOOL_TYPE_LABEL } from "@/lib/school";
-import { loadClassOptions, loadSubjectNames } from "@/lib/queries/school";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/colors";
 import {
   formatLong,
-  formatShort,
-  fromDateColumn,
   todayISO,
 } from "@/lib/dates";
 
@@ -64,6 +59,7 @@ import { HomeTile } from "@/components/home-tile";
 import { ListTile } from "@/components/list-tile";
 import { FamilyGoalBanner } from "@/components/family-goal-banner";
 import { workoutCard } from "@/lib/workouts/day-card";
+import { personRows } from "@/lib/queries/person-rows";
 import { MoonIcon, FlameIcon, StarIcon, BookIcon } from "@/components/icons";
 import {
   ChoresIcon,
@@ -135,8 +131,6 @@ export default async function PersonPage({
   const tasks = await loadPersonDay(id, today);
   const workoutNames = await loadWorkoutPlanNames(id);
   const activePause = await loadActivePause(today);
-  const classOptions = await loadClassOptions();
-  const subjectNames = await loadSubjectNames();
   const [progress, monthTarget] = await Promise.all([loadPersonProgress(id), getMonthGoalDays()]);
   const getAhead = await loadGetAhead(id, today);
   const choreBadges = await loadChoreBadges(id, today);
@@ -147,16 +141,13 @@ export default async function PersonPage({
   const schoolAhead = await loadSchoolGetAhead(id, today);
   const schoolProgress = await loadSchoolProgress(id);
 
-  // Workout board data so a workout on the dashboard opens the same log step
-  // as the Workouts page, scoped to each prompt's own day.
-  const [board, pool, hiitWorkouts, overdueWorkoutDays, readingProgress] = await Promise.all([
-    loadWorkoutsBoard(today),
-    loadExercisePool(),
-    loadHiitWorkoutsForBoard(),
+  // Core days move on to the workout now due before the plan's names are read.
+  await syncCoreDays(id, today);
+  const [swaps, overdueWorkoutDays, readingProgress] = await Promise.all([
+    swapsFor(id),
     loadOverdueWorkoutDates(id, today),
     loadReadingProgress(id),
   ]);
-  const boardPerson = board.people.find((p) => p.user.id === id) ?? null;
   // A rest day (v0.650): the plan's Rest or Rest / skip pressed. The card reads
   // "Rest day!", or "Complete for today!" when a skipped day got something else.
   const restToday = await workoutRestFor(id, today);
@@ -166,94 +157,12 @@ export default async function PersonPage({
     progressToday && progressToday.logged && !progressToday.done ? progressToday.remaining : [];
   // Two or more workouts today (v0.745): "1 of 2 workouts"; a skipped one counts.
   const blocksToday = restToday.rest === "planned" ? null : await workoutBlocksFor(id, today);
-  const dayExtras = blocksToday ? ((await loadWorkoutDayExtras(id)).get(planWeekday(boardPerson?.swaps, today)) ?? []) : [];
+  const dayExtras = blocksToday ? ((await loadWorkoutDayExtras(id)).get(planWeekday(swaps, today)) ?? []) : [];
   const restDayToday = !blocksToday && restToday.rest != null && !(restToday.rest === "skipped" && restToday.extraLogged);
   // "Start a workout program?" for someone with no plan and nothing logged lately.
   const showInvite = await inviteFor(id);
-  const unitSystem = board.unitSystem;
 
-  // For a workout prompt on day D: the plan for D's weekday, plus what's already
-  // logged that day (today from live sessions, earlier days from history).
-  function workoutDay(dateISO: string) {
-    const dow = planWeekday(boardPerson?.swaps, dateISO);
-    const workouts = (boardPerson?.plan[dow]?.workouts ?? []).filter(
-      (w) => !w.isRest,
-    );
-    if (dateISO === today) {
-      return {
-        workouts,
-        doneLabels: boardPerson?.todayWorkouts.map((w) => w.label) ?? [],
-        rested: boardPerson?.today.rested ?? false,
-        paused: boardPerson?.today.paused ?? null,
-      };
-    }
-    const hist = boardPerson?.history.filter((h) => h.dateISO === dateISO) ?? [];
-    return {
-      workouts,
-      doneLabels: hist.filter((h) => !h.isRest).map((h) => h.label),
-      rested: hist.some((h) => h.isRest),
-      paused: null,
-    };
-  }
-
-
-  const rows = tasks.map((t) => {
-    const dueISO = fromDateColumn(t.dueDate);
-    // Name a workout prompt after the day's top planned workout; other tasks
-    // keep their own title, and a plan-less workout day stays "Workout".
-    const isWorkoutPrompt =
-      t.category === "EXERCISE" && (t.generatedFrom ?? "").startsWith("workout:");
-    const title = isWorkoutPrompt
-      ? (workoutNames.get(planWeekday(boardPerson?.swaps, dueISO)) ?? t.title)
-      : t.title;
-
-    // School items show their class or subject, type, and when they're due
-    // (e.g. "Biology · Test · due 5/9") — handy while a window item sits as a
-    // reminder before its due date.
-    const sw = t.schoolWork;
-    // School rows read subject-first: the class/subject is the headline, and the
-    // lesson + type + due date are the detail line underneath.
-    const schoolSubject = sw ? (sw.class?.name ?? sw.subject) : null;
-    // Where it was first scheduled, when that is not where it sits now. Says
-    // which direction it moved: pulling work in to get ahead and having it
-    // pushed back read very differently, and a bare second date says neither.
-    const originalISO = t.originalDueDate ? fromDateColumn(t.originalDueDate) : null;
-    const moved =
-      originalISO && originalISO !== dueISO
-        ? dueISO < originalISO
-          ? `ahead of ${formatShort(originalISO)}`
-          : `moved from ${formatShort(originalISO)}`
-        : null;
-    const subtitle =
-      t.category === "SCHOOL" && sw
-        ? [t.title, SCHOOL_TYPE_LABEL[sw.type], `due ${formatShort(dueISO)}`, moved]
-            .filter(Boolean)
-            .join(" \u00b7 ")
-        : undefined;
-
-    return {
-      id: t.id,
-      title: t.category === "SCHOOL" && schoolSubject ? schoolSubject : title,
-      category: t.category as keyof typeof CATEGORY_LABELS,
-      status: t.status as string,
-      dueDateISO: dueISO,
-      subtitle,
-      isOverdue:
-        (t.lateAfter
-          ? today > fromDateColumn(t.lateAfter)
-          : dueISO < today) &&
-        t.status === "PENDING" &&
-        !t.stale,
-      stale: t.stale,
-      originalDueISO: originalISO,
-      locked: Boolean(t.choreId),
-      isWorkout: isWorkoutPrompt,
-      test:
-        t.category === "SCHOOL" && sw?.type === "TEST"
-          ? { score: sw.score ?? null, scoreMax: sw.scoreMax ?? 100 }
-          : undefined,
-    };
-  });
+  const rows = personRows(tasks, today, (dueISO) => workoutNames.get(planWeekday(swaps, dueISO)));
 
   const overdue = rows.filter((r) => r.isOverdue);
   const todayRows = rows.filter((r) => !r.isOverdue && !r.stale);
@@ -349,7 +258,6 @@ export default async function PersonPage({
 
   const todayEx = catToday("EXERCISE");
   const overdueEx = catOverdue("EXERCISE");
-  const wdToday = workoutDay(today);
   const exCard = blocksToday ? workoutCard(blocksToday.items, todayEx[0]?.title ?? null, dayExtras) : null;
 
   // The areas as tiles (v0.799), in the app's order: Bible, Reading, Chores,
@@ -362,6 +270,7 @@ export default async function PersonPage({
         icon={<BibleIcon className="h-[18px] w-[18px]" />}
         color={CATEGORY_COLORS.BIBLE}
         label="Bible"
+        href={`/person/${id}/bible`}
         lines={lines("BIBLE")}
         personal={personalToday ? { userId: id, passage: personalToday.passage, dayISO: personalToday.iso, read: personalToday.read } : null}
       />,
@@ -389,57 +298,31 @@ export default async function PersonPage({
   }
   if (catRows("CHORE").length > 0 || getAhead.length > 0 || choreOpenTasks.length > 0 || choreAlwaysOpen.length > 0) {
     tiles.push(
-      <ChoresCard
+      <ChoresTile
         key="chore"
         overdue={catOverdue("CHORE")}
         today={catToday("CHORE")}
-        getAhead={getAhead}
-        alwaysOpen={choreAlwaysOpen}
-        openTasks={choreOpenTasks}
-        owner={{ id: person.id, name: person.name, color: person.color }}
+        openTitles={choreOpenTasks.map((t) => t.title)}
         badges={choreBadges}
+        href={`/person/${id}/chores`}
       />,
     );
   }
   if (schoolOverdue.length > 0 || schoolToday.length > 0 || schoolProgress.progress.length > 0 || schoolAhead.length > 0) {
     tiles.push(
-      <SchoolCard
-        key="school"
-        overdue={[...schoolOverdue].sort(byDate)}
-        today={schoolToday}
-        progress={schoolProgress.progress}
-        targetISO={schoolProgress.targetISO}
-        ahead={schoolAhead}
-        addWork={{ userId: person.id, classesByUser: classOptions, subjects: subjectNames, defaultDate: today }}
-      />,
+      <SchoolTile key="school" overdue={schoolOverdue} today={schoolToday} href={`/person/${id}/school`} />,
     );
   }
   if (todayEx.length > 0 || overdueEx.length > 0 || restToday.rest != null || blocksToday) {
     tiles.push(
-      <WorkoutLauncher
+      <WorkoutTile
         key="exercise"
-        asTile
+        href={`/person/${id}/workouts`}
+        names={restToday.rest ? [] : todayEx.filter((r) => r.status !== "COMPLETE").map((r) => r.title)}
         card={exCard}
-        userId={id}
-        dateISO={today}
-        title="Workouts"
-        done={false}
-        overdue={false}
-        workouts={wdToday.workouts}
-        doneLabels={wdToday.doneLabels}
-        rested={wdToday.rested}
-        paused={wdToday.paused}
-        pool={pool}
-        hiitWorkouts={hiitWorkouts}
-        unitSystem={unitSystem}
-        weekPlan={(boardPerson?.plan ?? []).map((d) => d.workouts)}
-        swaps={boardPerson?.swaps ?? []}
-        todayISO={today}
-        person={boardPerson}
-        summaryNames={restToday.rest ? [] : todayEx.map((r) => r.title)}
+        blocks={blocksToday}
         remaining={workoutLeft}
         restDay={restDayToday}
-        blocks={blocksToday}
         overdueCount={overdueWorkoutDays.length}
         // Same rule as the phone's tile: today's workout is complete (or
         // something else logged on a skipped day) and nothing is overdue.
@@ -463,6 +346,7 @@ export default async function PersonPage({
         icon={<cfg.Icon className="h-[18px] w-[18px]" />}
         color={CATEGORY_COLORS[c]}
         label={c === "WORK" ? "Tasks" : CATEGORY_LABELS[c]}
+        href={`/person/${id}/tasks`}
         lines={lines(c)}
       />,
     );

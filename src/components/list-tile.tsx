@@ -16,9 +16,8 @@ export type ListTileLine = {
 };
 
 /**
- * A list area (Bible, Tasks) as a home tile (v0.799), like the app's: one
- * thing to do and the tile itself checks it off (tap again to undo); several
- * and each line taps on its own.
+ * A list area (Bible, Tasks) as a home tile (v0.799): each line checks off
+ * with a tap (tap again to undo); the tile's name opens the area's page.
  */
 export function ListTile({
   icon,
@@ -26,6 +25,7 @@ export function ListTile({
   label,
   lines,
   personal,
+  href,
 }: {
   icon: ReactNode;
   color: string;
@@ -33,6 +33,8 @@ export function ListTile({
   lines: ListTileLine[];
   /** The person's own Bible plan for today, as one more line. */
   personal?: { userId: string; passage: string; dayISO: string; read: boolean } | null;
+  /** The area's own page (v0.800), opened from the tile's name. */
+  href?: string;
 }) {
   const [pending, start] = useTransition();
   const all = [
@@ -53,7 +55,6 @@ export function ListTile({
   ];
   const late = all.filter((l) => l.late && !l.done).length;
   const allDone = all.length > 0 && all.every((l) => l.done);
-  const single = all.length === 1 ? all[0] : null;
 
   const line = (l: (typeof all)[number], tappable: boolean) => {
     const body = (
@@ -108,9 +109,9 @@ export function ListTile({
         label={label}
         state={allDone ? "done" : late ? "overdue" : "normal"}
         badge={late ? String(late) : null}
-        onClick={single && !pending ? single.tap : undefined}
+        headerHref={href}
       >
-        {single ? line(single, false) : all.slice(0, 4).map((l) => line(l, true))}
+        {all.slice(0, 4).map((l) => line(l, true))}
         {all.length > 4 && <span className="text-xs text-muted">+{all.length - 4} more</span>}
       </HomeTile>
     </div>

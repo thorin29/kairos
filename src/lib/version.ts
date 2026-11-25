@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.799.0";
+export const APP_VERSION = "0.800.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -201,6 +201,14 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.800.0",
+    summary: [
+      "School, Chores, Bible, Tasks and Workouts open as their own pages from the home tiles, with the side menu, instead of pop-ups.",
+      "Late work sits on the left, oldest first, and scrolls on its own when it's long; today, progress and extra work stay on the right.",
+      "Bible and Tasks tiles: tap a line to check it off; tap the name to open the page.",
+    ],
+  },
   {
     version: "0.799.0",
     summary: [

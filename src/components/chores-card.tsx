@@ -1,179 +1,55 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { TaskRow, type Row } from "@/components/task-row";
-import { GetAheadRow } from "@/components/get-ahead-row";
-import { AlwaysOpenChores } from "@/components/always-open-chores";
-import { OpenTasks } from "@/components/open-tasks";
-import { ChoresIcon, XIcon } from "@/components/icons";
+import { ChoresIcon } from "@/components/icons";
 import { HomeTile, TileNote, TileTitle } from "@/components/home-tile";
 import { ChoreBadges, type ChoreBadge } from "@/lib/chore-icons";
-import type { GetAheadChore } from "@/lib/queries/get-ahead";
+import type { Row } from "@/components/task-row";
 
-const CHORE_COLOR = "#ea580c";
+export const CHORE_COLOR = "#ea580c";
 
-/** Chores pop-up: carried-over (overdue) work at the top, then today's chores,
- *  then get-ahead — mirroring the School card so the home screen stays tidy.
- *  Overdue rows arrive oldest-first from the caller. */
-export function ChoresCard({
+/**
+ * Chores' home tile (v0.799), the same as the app's. It opens Chores' own
+ * page (v0.800); only personally assigned chores earn or block "All caught
+ * up" — an up-for-grabs one doesn't.
+ */
+export function ChoresTile({
   overdue,
   today,
-  getAhead,
-  alwaysOpen = [],
-  openTasks = [],
-  owner,
+  openTitles,
   badges = [],
+  href,
 }: {
   overdue: Row[];
   today: Row[];
-  getAhead: GetAheadChore[];
-  alwaysOpen?: React.ComponentProps<typeof AlwaysOpenChores>["chores"];
-  openTasks?: React.ComponentProps<typeof OpenTasks>["tasks"];
-  /** The person whose card this is — always-open and up-for-grabs are
-   *  one-tap completions attributed to them. */
-  owner?: React.ComponentProps<typeof OpenTasks>["owner"];
-  /** Glyphs for chores completed today, shown after the summary line. */
+  /** Up-for-grabs chores' titles, for the line under the summary. */
+  openTitles: string[];
   badges?: ChoreBadge[];
+  href: string;
 }) {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
   const pendingOverdue = overdue.filter((r) => r.status !== "COMPLETE");
   const pendingToday = today.filter((r) => r.status !== "COMPLETE");
-  const nothing =
-    overdue.length === 0 &&
-    today.length === 0 &&
-    getAhead.length === 0 &&
-    alwaysOpen.length === 0 &&
-    openTasks.length === 0;
-  const poolText =
-    openTasks.length === 1
-      ? openTasks[0].title
-      : openTasks.length > 1
-        ? "Up for grabs chores are available"
-        : null;
-  if (nothing) return null;
-
-  const completeForToday =
-    pendingOverdue.length === 0 &&
-    pendingToday.length === 0 &&
-    (today.length > 0 || overdue.length > 0);
-  // When nothing is overdue or due today, say so plainly rather than headlining
-  // the get-ahead backlog (the old "N to get ahead" read as a to-do count).
+  const completeForToday = pendingOverdue.length === 0 && pendingToday.length === 0 && (today.length > 0 || overdue.length > 0);
   const summary =
     pendingOverdue.length || pendingToday.length
-      ? [
-          pendingOverdue.length ? `${pendingOverdue.length} overdue` : null,
-          pendingToday.length ? `${pendingToday.length} today` : null,
-        ]
+      ? [pendingOverdue.length ? `${pendingOverdue.length} overdue` : null, pendingToday.length ? `${pendingToday.length} today` : null]
           .filter(Boolean)
-          .join(" \u00b7 ")
-      : "Nothing due today";
-
-  const label = (t: string) => (
-    <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{t}</p>
-  );
-
-  // A tile (v0.799), the same as the app's.
+          .join(" · ")
+      : "All caught up";
+  const poolText = openTitles.length === 1 ? openTitles[0] : openTitles.length > 1 ? "Up for grabs chores are available" : null;
   return (
-    <>
-      <HomeTile
-        icon={<ChoresIcon className="h-[18px] w-[18px]" />}
-        color={CHORE_COLOR}
-        label="Chores"
-        state={completeForToday ? "done" : pendingOverdue.length ? "overdue" : "normal"}
-        badge={pendingOverdue.length ? String(pendingOverdue.length) : null}
-        onClick={() => setOpen(true)}
-      >
-        <span className="flex items-center gap-2">
-          <TileTitle>{completeForToday || summary === "Nothing due today" ? "All caught up" : summary}</TileTitle>
-          <ChoreBadges badges={badges} />
-        </span>
-        {poolText && <TileNote>{poolText}</TileNote>}
-      </HomeTile>
-
-      {open && (
-        <div
-          className="animate-backdrop-fade fixed inset-0 z-50 overflow-y-auto bg-ground"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="mx-auto min-h-full w-full max-w-3xl bg-surface p-5 sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <span aria-hidden style={{ color: CHORE_COLOR }} className="flex">
-                  <ChoresIcon className="h-5 w-5" />
-                </span>
-                <h2 className="font-display text-lg font-semibold">Chores</h2>
-              </span>
-              <button
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="rounded-full p-1 text-muted transition-colors hover:bg-ground hover:text-ink"
-              >
-                <XIcon className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {overdue.length > 0 && (
-                <div>
-                  {label("Overdue")}
-                  <div className="divide-y divide-hairline rounded-lg border border-red-200 bg-surface">
-                    {overdue.map((r) => (
-                      <TaskRow key={r.id} task={r} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {today.length > 0 && (
-                <div>
-                  {label("Today")}
-                  <div className="divide-y divide-hairline rounded-lg border border-hairline bg-surface">
-                    {today.map((r) => (
-                      <TaskRow key={r.id} task={r} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {alwaysOpen.length > 0 && (
-                <AlwaysOpenChores chores={alwaysOpen} owner={owner} />
-              )}
-
-              {openTasks.length > 0 && (
-                <OpenTasks tasks={openTasks} owner={owner} />
-              )}
-
-              {getAhead.length > 0 && (
-                <div>
-                  {label("Get ahead")}
-                  <div className="divide-y divide-hairline rounded-lg border border-hairline bg-surface">
-                    {getAhead.map((c) => (
-                      <GetAheadRow key={c.taskId} chore={c} />
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-muted">
-                    Jump on an upcoming chore for a small bonus &mdash; it still counts toward its own
-                    week; the bonus is on top, this week.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    <HomeTile
+      icon={<ChoresIcon className="h-[18px] w-[18px]" />}
+      color={CHORE_COLOR}
+      label="Chores"
+      state={completeForToday ? "done" : pendingOverdue.length ? "overdue" : "normal"}
+      badge={pendingOverdue.length ? String(pendingOverdue.length) : null}
+      href={href}
+    >
+      <span className="flex items-center gap-2">
+        <TileTitle>{completeForToday ? "All caught up" : summary}</TileTitle>
+        <ChoreBadges badges={badges} />
+      </span>
+      {poolText && <TileNote>{poolText}</TileNote>}
+    </HomeTile>
   );
 }

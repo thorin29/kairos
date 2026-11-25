@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-11 — Area pages instead of pop-ups (v0.800.0, app 0.575.0)
+
+- `/person/[id]/{school,chores,bible,tasks,workouts}`: real pages, so the side
+  menu stays. `AreaPage` lays them out: Late on the left (oldest first, red
+  edge, scrolling inside its card), Today, Progress and Extra on the right;
+  one column on a phone with Today first; no late column when nothing is late.
+  Workouts is the same `DayLog` day page as before, as a page.
+- Rows come from `lib/queries/person-rows.ts` (`personRows`, `splitRows`), now
+  shared with the home page. Home tiles link to these pages; `SchoolCard`,
+  `ChoresCard` and `WorkoutLauncher` pop-ups are gone (`SchoolTile`,
+  `ChoresTile`, `WorkoutTile`; `SchoolProgressList` for the page). Deleted:
+  `src/app/person/[id]/workout-launcher.tsx`.
+- The home page no longer loads the whole workouts board: it syncs core days
+  and reads the person's swaps itself.
+- Bible and Tasks tiles: lines check off; the tile's name opens the page
+  (a whole-tile tap can't sit around a link).
+
 ## 2026-11 — Web home as tiles (v0.799.0)
 
 - `/person/[id]` (the home on a personal device, and a person's page on the

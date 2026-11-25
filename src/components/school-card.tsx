@@ -1,162 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { TaskRow, type Row } from "@/components/task-row";
-import { SchoolGetAhead } from "@/components/school-get-ahead";
+import { useState } from "react";
 import { formatShort } from "@/lib/dates";
 import { CATEGORY_COLORS } from "@/lib/colors";
 import { XIcon, SchoolIcon } from "@/components/icons";
-import { AddSchoolWork } from "@/components/add-school-work";
 import { HomeTile, TileNote, TileTitle } from "@/components/home-tile";
-import type { SchoolAheadSubject } from "@/lib/queries/school-get-ahead";
+import type { Row } from "@/components/task-row";
 import type { SchoolProgress } from "@/lib/queries/school-card";
 
-export function SchoolCard({
-  overdue,
-  today,
-  progress,
-  targetISO,
-  ahead,
-  addWork,
-}: {
-  overdue: Row[];
-  today: Row[];
-  progress: SchoolProgress[];
-  targetISO: string | null;
-  ahead: SchoolAheadSubject[];
-  addWork?: {
-    userId: string;
-    classesByUser: Record<string, { id: string; name: string }[]>;
-    subjects: string[];
-    defaultDate: string;
-  };
-}) {
-  const [open, setOpen] = useState(false);
-  const [catchUpFor, setCatchUpFor] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
-  const nothing =
-    overdue.length === 0 && today.length === 0 && progress.length === 0 && ahead.length === 0;
-  if (nothing) return null;
-
-  // Completed items stay in the list (checked), so gauge "done" by what's still
-  // pending, not by whether the list is empty.
+/**
+ * School's home tile (v0.799), the same as the app's: green when done, red
+ * with a count when something's overdue. It opens School's own page (v0.800).
+ */
+export function SchoolTile({ overdue, today, href }: { overdue: Row[]; today: Row[]; href: string }) {
   const pendingOverdue = overdue.filter((r) => r.status !== "COMPLETE");
   const pendingToday = today.filter((r) => r.status !== "COMPLETE");
-  // When nothing is overdue or due today, say exactly that. We used to headline
-  // the get-ahead backlog here (e.g. "180 to get ahead"), a confusing and
-  // misleadingly large number since it sums up to 30 upcoming items per subject.
   const summary =
     pendingOverdue.length || pendingToday.length
-      ? [
-          pendingOverdue.length ? `${pendingOverdue.length} overdue` : null,
-          pendingToday.length ? `${pendingToday.length} due today` : null,
-        ]
+      ? [pendingOverdue.length ? `${pendingOverdue.length} overdue` : null, pendingToday.length ? `${pendingToday.length} due today` : null]
           .filter(Boolean)
           .join(" \u00b7 ")
       : "Nothing due today";
-  const completeForToday =
-    pendingOverdue.length === 0 &&
-    pendingToday.length === 0 &&
-    (today.length > 0 || overdue.length > 0);
-
-  const label = (t: string) => (
-    <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{t}</p>
+  const completeForToday = pendingOverdue.length === 0 && pendingToday.length === 0 && (today.length > 0 || overdue.length > 0);
+  return (
+    <HomeTile
+      icon={<SchoolIcon className="h-[18px] w-[18px]" />}
+      color={CATEGORY_COLORS.SCHOOL}
+      label="School"
+      state={completeForToday ? "done" : pendingOverdue.length ? "overdue" : "normal"}
+      badge={pendingOverdue.length ? String(pendingOverdue.length) : null}
+      href={href}
+    >
+      <TileTitle>{completeForToday ? "All caught up" : summary}</TileTitle>
+      {!completeForToday && pendingToday[0] && <TileNote>{pendingToday[0].title}</TileNote>}
+    </HomeTile>
   );
+}
 
-  // A tile (v0.799), the same as the app's: green when done, red with a count
-  // when something's overdue. It opens the full list.
+/** Each class's pace and finish date, with "how to catch up" behind a late one. */
+export function SchoolProgressList({ progress, targetISO }: { progress: SchoolProgress[]; targetISO: string | null }) {
+  const [catchUpFor, setCatchUpFor] = useState<string | null>(null);
   return (
     <>
-      <HomeTile
-        icon={<SchoolIcon className="h-[18px] w-[18px]" />}
-        color={CATEGORY_COLORS.SCHOOL}
-        label="School"
-        state={completeForToday ? "done" : pendingOverdue.length ? "overdue" : "normal"}
-        badge={pendingOverdue.length ? String(pendingOverdue.length) : null}
-        onClick={() => setOpen(true)}
-      >
-        <TileTitle>{completeForToday ? "All caught up" : summary === "Nothing due today" ? "Nothing due today" : summary}</TileTitle>
-        {!completeForToday && pendingToday[0] && <TileNote>{pendingToday[0].title}</TileNote>}
-      </HomeTile>
-
-      {open && (
-        <div
-          className="animate-backdrop-fade fixed inset-0 z-50 overflow-y-auto bg-ground"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="mx-auto min-h-full w-full max-w-3xl bg-surface p-5 sm:my-6 sm:min-h-0 sm:rounded-2xl sm:border sm:border-hairline sm:p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <span aria-hidden style={{ color: CATEGORY_COLORS.SCHOOL }} className="flex">
-                  <SchoolIcon className="h-5 w-5" />
-                </span>
-                <h2 className="font-display text-lg font-semibold">School</h2>
-              </span>
-              <div className="flex items-center gap-1">
-                {addWork && (
-                  <AddSchoolWork
-                    userId={addWork.userId}
-                    classesByUser={addWork.classesByUser}
-                    subjects={addWork.subjects}
-                    defaultDate={addWork.defaultDate}
-                  />
-                )}
-                <button
-                  onClick={() => setOpen(false)}
-                  aria-label="Close"
-                  className="rounded-full p-1 text-muted transition-colors hover:bg-ground hover:text-ink"
-                >
-                  <XIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {targetISO && (
-              <p className="mb-4 text-sm text-muted">
-                School year ends <span className="font-medium text-accent">{formatShort(targetISO)}</span>
-              </p>
-            )}
-
-            <div className="space-y-6">
-              {overdue.length > 0 && (
-                <div>
-                  {label("Overdue")}
-                  <div className="divide-y divide-hairline rounded-lg border border-red-200 bg-surface">
-                    {overdue.map((r) => (
-                      <TaskRow key={r.id} task={r} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {today.length > 0 && (
-                <div>
-                  {label("Today")}
-                  <div className="divide-y divide-hairline rounded-lg border border-hairline bg-surface">
-                    {today.map((r) => (
-                      <TaskRow key={r.id} task={r} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {progress.length > 0 && (
-                <div>
-                  {label("Progress")}
-                  <div className="rounded-lg border border-hairline bg-surface p-4">
-                    <ul className="space-y-1.5 text-sm">
+      <div className="px-4 py-3">
+        <ul className="space-y-1.5 text-sm">
                       {progress.map((p) => (
                         <li key={p.className} className="flex items-center justify-between gap-3">
                           <span className="flex min-w-0 items-center gap-2">
@@ -205,20 +92,12 @@ export function SchoolCard({
                         </li>
                       ))}
                     </ul>
-                  </div>
-                </div>
-              )}
-
-              {ahead.length > 0 && (
-                <div>
-                  {label("Do some extra work")}
-                  <SchoolGetAhead subjects={ahead} />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        {targetISO && (
+          <p className="mt-3 border-t border-hairline pt-3 text-xs text-muted">
+            School year ends <span className="font-medium text-accent">{formatShort(targetISO)}</span>
+          </p>
+        )}
+      </div>
 
       {catchUpFor &&
         (() => {

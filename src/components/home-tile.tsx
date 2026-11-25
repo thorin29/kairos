@@ -18,6 +18,7 @@ export function HomeTile({
   badge,
   onClick,
   href,
+  headerHref,
   children,
 }: {
   icon: ReactNode;
@@ -27,6 +28,8 @@ export function HomeTile({
   badge?: string | null;
   onClick?: () => void;
   href?: string;
+  /** A tile whose lines tap on their own (Bible, Tasks): its name opens the page. */
+  headerHref?: string;
   children?: ReactNode;
 }) {
   const tone =
@@ -45,7 +48,13 @@ export function HomeTile({
         >
           {icon}
         </span>
-        <span className="min-w-0 flex-1 truncate font-display text-base font-semibold">{label}</span>
+        {headerHref ? (
+          <Link href={headerHref} className="min-w-0 flex-1 truncate font-display text-base font-semibold hover:text-accent">
+            {label} <span aria-hidden className="text-muted">&rsaquo;</span>
+          </Link>
+        ) : (
+          <span className="min-w-0 flex-1 truncate font-display text-base font-semibold">{label}</span>
+        )}
         {state === "done" ? (
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16a34a] text-white" aria-label="Done">
             <CheckIcon className="h-3.5 w-3.5" />
