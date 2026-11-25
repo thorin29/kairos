@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11 — Dashboard workoutCard (v0.798.0, app 0.574.0)
+
+- `workoutBlocksFor` also returns `items` (each workout: a program block,
+  the planned workout with `name: null`, each sport event by its kind name,
+  each tracked walk/run), with done states. The dashboard API turns that into
+  `workoutCard { items[{name, done}], kinds[] }`: the planned workout is named
+  from the day's title after the first " · " ("Core · Hanging core" →
+  "Hanging core"), and kinds are the part before " · " of the title and each
+  extra ("Isometric · Rack pulls and holds" → "Isometric"). Event times are
+  left out; they're in Today's schedule. `workoutBlocks` is unchanged.
+
 ## 2026-11 — All places first (v0.797.1)
 
 - On the Places page the All places tile (where spots get confirmed) moved

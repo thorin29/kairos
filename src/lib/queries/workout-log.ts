@@ -2801,7 +2801,16 @@ export async function workoutRestFor(
  * workouts": the planned workout and each sport event. A skipped one counts
  * as done. Null with fewer than two.
  */
-export async function workoutBlocksFor(userId: string, dateISO: string): Promise<{ done: number; total: number } | null> {
+export type WorkoutBlockItem = {
+  /** Null for the planned workout: the caller names it from the day's title. */
+  name: string | null;
+  done: boolean;
+};
+
+export async function workoutBlocksFor(
+  userId: string,
+  dateISO: string,
+): Promise<{ done: number; total: number; items: WorkoutBlockItem[] } | null> {
   const [sports, progress, task] = await Promise.all([
     sportsForDay(userId, dateISO),
     loadDayPlanProgress(userId, dateISO),
@@ -2820,7 +2829,18 @@ export async function workoutBlocksFor(userId: string, dateISO: string): Promise
   const planDone = planned && (progress.done || (task != null && task.status !== "PENDING"));
   const plannedDone = progs.length ? progs.filter((b) => b.done || planDone).length : planDone ? 1 : 0;
   const done = plannedDone + sports.filter((x) => x.state !== "open").length + tracked;
-  return { done, total };
+  // Each workout by name (v0.798), for the home tile's list.
+  const kinds = await sportLabels(sports.map((x) => x.eventId));
+  const items: WorkoutBlockItem[] = [
+    ...(progs.length
+      ? progs.map((b) => ({ name: b.name, done: b.done || !!planDone }))
+      : planned
+        ? [{ name: null, done: !!planDone }]
+        : []),
+    ...sports.map((x) => ({ name: kinds.get(x.eventId) ?? x.title, done: x.state !== "open" })),
+    ...Array.from({ length: tracked }, () => ({ name: "Tracked workout", done: true })),
+  ];
+  return { done, total, items };
 }
 
 /** The plan has a workout (not Rest) on this weekday. */

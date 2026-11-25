@@ -111,6 +111,10 @@ export type ApiDashboard = {
   /** v0.745: with two or more workouts on the day (the planned one and each
    *  sport event), how many are done or skipped. Null otherwise. */
   workoutBlocks: { done: number; total: number } | null;
+  /** The home tile (v0.798): each workout by name with its done state, and
+   *  the kinds the plan covers ("Core · Cardio · Isometric"). Null with
+   *  fewer than two workouts. */
+  workoutCard: { items: { name: string; done: boolean }[]; kinds: string[] } | null;
   /** Per-book reading-goal progress for the Book reading home section. */
   reading: ReadingProgress[];
   groups: { category: Category; label: string; items: ApiTask[] }[];
@@ -405,7 +409,22 @@ export async function loadApiDashboard(
     const progress = await loadDayPlanProgress(userId, dayISO);
     if (progress.logged && !progress.done && progress.remaining.length > 0) workoutRemaining = progress.remaining;
   }
-  const workoutBlocks = restDay.rest === "planned" ? null : await workoutBlocksFor(userId, dayISO);
+  const blocks = restDay.rest === "planned" ? null : await workoutBlocksFor(userId, dayISO);
+  const workoutBlocks = blocks ? { done: blocks.done, total: blocks.total } : null;
+  let workoutCard: ApiDashboard["workoutCard"] = null;
+  if (blocks) {
+    const title = rows.find((r) => r.isWorkout && r.dueDate === dayISO)?.title ?? null;
+    const split = (t: string) => (t.includes(" \u00b7 ") ? [t.slice(0, t.indexOf(" \u00b7 ")), t.slice(t.indexOf(" \u00b7 ") + 3)] : [null, t]);
+    const [titleKind, mainName] = title ? split(title) : [null, null];
+    const kinds: string[] = [];
+    for (const k of [titleKind, ...(workoutExtras.get(planWeekday(swaps, dayISO)) ?? []).map((x) => split(x)[0] ?? x)]) {
+      if (k && !kinds.some((o) => o.toLowerCase() === k.toLowerCase())) kinds.push(k);
+    }
+    workoutCard = {
+      items: blocks.items.map((i) => ({ name: i.name ?? mainName ?? "Workout", done: i.done })),
+      kinds,
+    };
+  }
 
   return {
     date: dayISO,
@@ -418,6 +437,7 @@ export async function loadApiDashboard(
     workoutExtraLogged: restDay.extraLogged,
     workoutRemaining,
     workoutBlocks,
+    workoutCard,
     reading,
     groups,
     personalReading,
