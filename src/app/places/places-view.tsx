@@ -391,7 +391,9 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           mapId,
           center: first ? { lat: first.lat, lng: first.lng } : { lat: 39.5, lng: -98.35 },
           zoom: first ? 13 : 4,
-          gestureHandling: touchInline() ? "cooperative" : "greedy",
+          // One finger moves the map in the app (v0.794): the page there doesn't
+          // scroll, so a one-finger drag can only mean the map.
+          gestureHandling: touchInline() && !embed ? "cooperative" : "greedy",
           clickableIcons: true,
           mapTypeControl: false,
           streetViewControl: false,
@@ -715,7 +717,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
 
   // Full screen: same map, grown to the window. Esc closes it.
   useEffect(() => {
-    mapRef.current?.setOptions({ gestureHandling: full || !touchInline() ? "greedy" : "cooperative" });
+    mapRef.current?.setOptions({ gestureHandling: full || embed || !touchInline() ? "greedy" : "cooperative" });
     if (!full) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setFull(false);
@@ -727,7 +729,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [full]);
+  }, [full, embed]);
 
   // Clean up markers and lines when leaving the page.
   useEffect(() => {

@@ -35,6 +35,39 @@ function shiftDate(iso: string, days: number): string {
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
 
+/** Fit a set of points (v0.794): under 400 m centres at zoom 15 — fitBounds on a
+ *  near-point goes to max zoom and a following setZoom is overridden — else
+ *  fits them, never closer than zoom 17. */
+function fitPoints(map: google.maps.Map, b: google.maps.LatLngBounds): void {
+  const ne = b.getNorthEast();
+  const sw = b.getSouthWest();
+  if (metres({ lat: ne.lat(), lng: ne.lng() }, { lat: sw.lat(), lng: sw.lng() }) < 400) {
+    map.setCenter(b.getCenter());
+    map.setZoom(15);
+    return;
+  }
+  map.fitBounds(b, 56);
+  const once = map.addListener("idle", () => {
+    once.remove();
+    if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
+  });
+}
+
+/** Fade a drawn trip (v0.794), or bring it back to how it was drawn. */
+const drawn = new WeakMap<google.maps.Polyline, { strokeOpacity: number; icons: google.maps.IconSequence[] | null }>();
+function fadeLine(line: google.maps.Polyline, faded: boolean): void {
+  let base = drawn.get(line);
+  if (!base) {
+    base = { strokeOpacity: (line.get("strokeOpacity") as number | undefined) ?? 1, icons: (line.get("icons") as google.maps.IconSequence[] | undefined) ?? null };
+    drawn.set(line, base);
+  }
+  const k = faded ? 0.22 : 1;
+  line.setOptions({
+    strokeOpacity: base.strokeOpacity * k,
+    icons: base.icons?.map((ic) => ({ ...ic, icon: ic.icon ? { ...ic.icon, strokeOpacity: (ic.icon.strokeOpacity ?? 1) * k } : ic.icon })) ?? null,
+  });
+}
+
 function dateLabel(iso: string, today: string): string {
   if (iso === today) return "Today";
   if (iso === shiftDate(today, -1)) return "Yesterday";
@@ -105,6 +138,7 @@ export function HistoryView({
   const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
+  const [removing, setRemoving] = useState<DayStopItem | null>(null);
   const [fixing, setFixing] = useState<DayStopItem | null>(null);
   /** Adding a stop on a trip: its times, middle and search reach. */
   const [adding, setAdding] = useState<{ from: string; to: string; middle: { lat: number; lng: number }; radiusM: number } | null>(null);
@@ -147,7 +181,9 @@ export function HistoryView({
           mapId,
           center: { lat: 39.5, lng: -98.35 },
           zoom: 4,
-          gestureHandling: touchInline() ? "cooperative" : "greedy",
+          // One finger moves the map in the app (v0.794): the page there doesn't
+          // scroll, so a one-finger drag can only mean the map.
+          gestureHandling: touchInline() && !embed ? "cooperative" : "greedy",
           clickableIcons: true,
           // Satellite and terrain are icons (v0.790), as on the live map.
           mapTypeControl: false,
@@ -208,7 +244,7 @@ export function HistoryView({
         title: stopName(s),
         gmpClickable: true,
       });
-      pin.addEventListener("gmp-click", () => setSelected(s.n));
+      pin.addEventListener("gmp-click", () => setSelected((cur) => (cur === s.n ? null : s.n)));
       return pin;
     });
     const b = new google.maps.LatLngBounds();
@@ -223,22 +259,8 @@ export function HistoryView({
       }
     }
     if (any) {
-      // A day that stays within a few hundred metres (at home all day, with
-      // the phone's jitter) opens at neighbourhood zoom (v0.793). fitBounds
-      // on a near-point zoomed in as far as Google goes, and a setZoom right
-      // after it was overridden once the fit applied.
-      const ne = b.getNorthEast();
-      const sw = b.getSouthWest();
-      if (metres({ lat: ne.lat(), lng: ne.lng() }, { lat: sw.lat(), lng: sw.lng() }) < 400) {
-        map.setCenter(b.getCenter());
-        map.setZoom(15);
-      } else {
-        map.fitBounds(b, 56);
-        const once = map.addListener("idle", () => {
-          once.remove();
-          if ((map.getZoom() ?? 0) > 17) map.setZoom(17);
-        });
-      }
+      // A day within a few hundred metres opens at neighbourhood zoom (v0.793).
+      fitPoints(map, b);
     } else if (day.lastSeen) {
       // Nothing that day (v0.790): open where they were last seen.
       map.setCenter(day.lastSeen);
@@ -302,11 +324,57 @@ export function HistoryView({
     if (ghost.current) ghost.current.map = null;
   }, [day.date]);
 
-  const focusStop = (s: DayStopItem) => {
-    setSelected(s.n);
-    mapRef.current?.panTo({ lat: s.lat, lng: s.lng });
-    if ((mapRef.current?.getZoom() ?? 0) < 15) mapRef.current?.setZoom(16);
-  };
+  // Tapping a stop (v0.794) shows the trip that leaves it — #1 shows the way
+  // from #1 to #2, an out-and-back with no stop shows the whole loop — with
+  // the day's other trips faded. Tapping it again shows the whole day.
+  const focusStop = (s: DayStopItem) => setSelected((cur) => (cur === s.n ? null : s.n));
+  const wasSelected = useRef<number | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    // Which drawn line belongs to which item: drawTrips draws, in order, every
+    // trip with a path of two or more points.
+    const lineItem = day.items.flatMap((it, i) => (it.kind !== "stop" && it.path.length >= 2 ? [i] : []));
+    const at = selected == null ? -1 : day.items.findIndex((it) => it.kind === "stop" && it.n === selected);
+    if (at < 0) {
+      lines.current.forEach((l) => fadeLine(l, false));
+      if (wasSelected.current != null) {
+        // Back to the whole day.
+        const b = new google.maps.LatLngBounds();
+        let any = false;
+        for (const it of day.items) {
+          if (it.kind === "stop") b.extend({ lat: it.lat, lng: it.lng });
+          else for (const [lat, lng] of it.path) b.extend({ lat, lng });
+          any = true;
+        }
+        if (any) fitPoints(map, b);
+      }
+      wasSelected.current = null;
+      return;
+    }
+    wasSelected.current = selected;
+    const stop = day.items[at] as DayStopItem;
+    let end = at + 1;
+    while (end < day.items.length && day.items[end].kind !== "stop") end++;
+    const trip = new Set<number>();
+    for (let i = at + 1; i < end; i++) trip.add(i);
+    lines.current.forEach((l, k) => fadeLine(l, trip.size > 0 && !trip.has(lineItem[k])));
+    if (trip.size === 0) {
+      // The day's last stop: nothing leaves it, so show the stop itself.
+      map.panTo({ lat: stop.lat, lng: stop.lng });
+      if ((map.getZoom() ?? 0) < 15) map.setZoom(16);
+      return;
+    }
+    const b = new google.maps.LatLngBounds();
+    b.extend({ lat: stop.lat, lng: stop.lng });
+    for (const i of trip) {
+      const it = day.items[i];
+      if (it.kind !== "stop") for (const [lat, lng] of it.path) b.extend({ lat, lng });
+    }
+    const nextStop = day.items[end];
+    if (nextStop && nextStop.kind === "stop") b.extend({ lat: nextStop.lat, lng: nextStop.lng });
+    fitPoints(map, b);
+  }, [selected, ready, day]);
 
   const prev = shiftDate(day.date, -1);
   const next = shiftDate(day.date, 1);
@@ -411,22 +479,23 @@ export function HistoryView({
                 key={l}
                 className={`flex min-w-0 flex-1 items-baseline justify-center gap-1 ${i > 0 ? "border-l border-hairline" : ""}`}
               >
-                <span className="text-sm font-bold">{v}</span>
+                <span className="text-sm font-bold tabular-nums">{v}</span>
                 <span className="truncate text-xs text-muted">{l}</span>
               </div>
             ))}
           </div>
-          <div className="flex h-10 shrink-0 items-center rounded-[10px] border border-hairline bg-surface">
-            <Link href={placesHref(embed, person.id, prev)} aria-label="Previous day" className="flex h-full w-8 items-center justify-center hover:bg-ground">
+          {/* A fixed width (v0.794), so the row doesn't shift from day to day. */}
+          <div className="flex h-10 w-[8.75rem] shrink-0 items-center rounded-[10px] border border-hairline bg-surface">
+            <Link href={placesHref(embed, person.id, prev)} aria-label="Previous day" className="flex h-full w-8 shrink-0 items-center justify-center hover:bg-ground">
               ‹
             </Link>
-            <span className="px-1 text-center text-[0.8rem] font-semibold">{dateLabel(day.date, today)}</span>
+            <span className="min-w-0 flex-1 truncate text-center text-[0.8rem] font-semibold">{dateLabel(day.date, today)}</span>
             {day.date < today ? (
-              <Link href={placesHref(embed, person.id, next)} aria-label="Next day" className="flex h-full w-8 items-center justify-center hover:bg-ground">
+              <Link href={placesHref(embed, person.id, next)} aria-label="Next day" className="flex h-full w-8 shrink-0 items-center justify-center hover:bg-ground">
                 ›
               </Link>
             ) : (
-              <span aria-hidden className="flex h-full w-8 items-center justify-center text-hairline">
+              <span aria-hidden className="flex h-full w-8 shrink-0 items-center justify-center text-hairline">
                 ›
               </span>
             )}
@@ -445,8 +514,8 @@ export function HistoryView({
             if (it.kind === "stop") {
               const isSel = selected === it.n;
               return (
-                <div key={`s${idx}`} style={isSel ? { backgroundColor: `${person.color}1f` } : undefined}>
-                  <button type="button" onClick={() => focusStop(it)} className="flex w-full gap-3 px-4 py-3 text-left">
+                <div key={`s${idx}`} className="flex items-center" style={isSel ? { backgroundColor: `${person.color}1f` } : undefined}>
+                  <button type="button" onClick={() => focusStop(it)} className="flex min-w-0 flex-1 gap-3 py-3 pl-4 pr-2 text-left">
                     <span
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-[3px] bg-white font-mono text-xs font-semibold"
                       style={{ borderColor: person.color }}
@@ -468,21 +537,13 @@ export function HistoryView({
                     </span>
                   </button>
                   {isSel && canEdit && (
-                    <div className="flex flex-wrap gap-2 px-4 pb-3 pl-14">
-                      <button type="button" onClick={() => setFixing(it)} className={small}>
+                    // On the right, like the people cards' icons (v0.794).
+                    <div className="flex shrink-0 items-center gap-1.5 pr-3">
+                      <button type="button" onClick={() => setFixing(it)} className={iconBtn} aria-label="Edit stop" title="Edit stop">
                         <PencilGlyph />
-                        Edit
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!confirm(`Remove ${stopName(it)} from ${person.name}'s day?`)) return;
-                          void change(it.editId ? { op: "undo", editId: it.editId } : { op: "remove", personId: person.id, start: it.start });
-                        }}
-                        className={small}
-                      >
+                      <button type="button" onClick={() => setRemoving(it)} className={iconBtn} aria-label="Remove stop" title="Remove stop">
                         <TrashGlyph />
-                        Remove
                       </button>
                     </div>
                   )}
@@ -559,6 +620,41 @@ export function HistoryView({
         </aside>
       </div>
 
+      {removing && (
+        // Removing asks first (v0.794). The trip in and out stays — it's joined
+        // into one route through where the stop was; only the stop goes.
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" onClick={() => setRemoving(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Remove stop"
+            className="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold">Remove {stopName(removing)}?</h2>
+            <p className="mt-2 text-sm text-muted">
+              This deletes the stop but keeps the route. You can put it back from Removed at the bottom of the day.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setRemoving(null)} className={small}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const it = removing;
+                  setRemoving(null);
+                  void change(it.editId ? { op: "undo", editId: it.editId } : { op: "remove", personId: person.id, start: it.start });
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-800"
+              >
+                <TrashGlyph />
+                Remove stop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {fixing && (
         <PlaceFix
           personId={person.id}

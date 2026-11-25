@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11 — History focus, fixed strip, stop actions (v0.794.0)
+
+- Maps in the app (`/places/embed`) use `gestureHandling: "greedy"`: the page
+  there doesn't scroll (0.793), so one finger can only mean the map. On the web
+  a phone still needs two fingers, since the page scrolls.
+- Tapping a stop selects it and frames the trip that leaves it — every leg up
+  to the next stop, plus both stops (an out-and-back with no stop is one leg,
+  shown whole). The day's other trips fade to 22% (`fadeLine`, which keeps
+  each line's drawn opacity in a WeakMap); lines map to items in draw order
+  (every non-stop item with ≥2 path points). Tapping the same stop, or its pin,
+  again clears it and refits the day. The last stop has nothing leaving it, so
+  it pans to the stop. `fitPoints` holds the 400 m / zoom-17 rule for both.
+- The facts strip uses tabular numbers and the day picker a fixed 8.75rem with
+  the label truncated, so the row doesn't move between days.
+- Edit and remove are icon buttons on the right of a selected stop. Remove
+  opens a confirm ("This deletes the stop but keeps the route"). It was
+  already route-safe: a removal is a `PlacesStopEdit` overlay; `applyEdits`
+  joins the legs on either side into one route through the spot and no
+  location points are deleted.
+
 ## 2026-11 — History top, locked maps, rtask guard (v0.793.0, app 0.572.0)
 
 - History (chosen from "Kairos: History page top", round 2, #2): back, avatar

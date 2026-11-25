@@ -110,7 +110,7 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.793.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.794.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   182_generated_once_rtask, all registered in `MIGRATIONS`.
 - App 0.572.0 (versionCode 644, CLIENT_BUILD 644).
 - ice-time 0.1.3.
@@ -423,6 +423,9 @@ Kept here so they don't come back as open items.
 
 ### Places
 
+- History focus (v0.794): tap a stop to frame the trip leaving it with the
+  rest faded; fixed-size facts strip; edit/remove on the right, remove asks
+  and keeps the route; one-finger maps in the app.
 - History's compact top and locked maps (v0.793): name on the map, a facts
   strip (miles · top mph · stops) with the day picker; in the app only the
   list/timeline scrolls and a swipe below the map opens the menu. A day in
