@@ -11,7 +11,7 @@ import { generateWorkoutTasks } from "@/lib/workouts/generate";
 import { generatePoolChores } from "@/lib/chores/pool";
 import { generateReadingTasks } from "@/lib/bible/generate";
 import { AlertIcon } from "@/components/icons";
-import { FamilyGoalBanner } from "@/components/family-goal-banner";
+import { FamilyGoalTile } from "@/components/family-goal-banner";
 
 import { DaySchedule } from "@/components/day-schedule";
 import { loadDaySchedule } from "@/lib/queries/calendar";
@@ -151,65 +151,66 @@ export default async function Home({
 
   return (
     <>
-      <main className="mx-auto max-w-6xl px-6 py-6">
-        {/* Streamed, not awaited: the goal needs the progression query, which is
-            the heaviest read here. The person cards paint first and this drops
-            in. The skeleton reserves the same height so nothing jumps. */}
-        <Suspense
-          fallback={
-            <div className="mb-4 h-[5.5rem] animate-pulse rounded-2xl border border-hairline bg-surface" />
-          }
-        >
-          <FamilyGoalBanner />
-        </Suspense>
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        {/* The shared home (v0.801): person cards on the left, all one size;
+            the family goal and today's schedule in a column on the right,
+            where only the schedule scrolls. */}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+          <div className="min-w-0">
+            {!personal && totalOverdue > 0 && (
+              <p className="tabular mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
+                <AlertIcon className="h-4 w-4" />
+                {totalOverdue} overdue
+              </p>
+            )}
 
-        {!personal && totalOverdue > 0 && (
-          <p className="tabular mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
-            <AlertIcon className="h-4 w-4" />
-            {totalOverdue} overdue
-          </p>
-        )}
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {shown.map((p) => (
+                <PersonCard
+                  key={p.id}
+                  person={p}
+                  prompts={promptsByUser.get(p.id) ?? []}
+                  rollover={adminIds.has(p.id) ? rolloverReminder : null}
+                  moneyPending={moneyAdminIds.has(p.id) ? moneyPending : 0}
+                  moneyBibleRewards={moneyAdminIds.has(p.id) ? bibleRewardsReady : 0}
+                  classPrompts={classPromptsByUser.get(p.id) ?? []}
+                  shoppingTrips={tripsByUser.get(p.id) ?? []}
+                  dateISO={today}
+                />
+              ))}
+            </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {shown.map((p) => (
-          <PersonCard
-            key={p.id}
-            person={p}
-            prompts={promptsByUser.get(p.id) ?? []}
-            rollover={adminIds.has(p.id) ? rolloverReminder : null}
-            moneyPending={moneyAdminIds.has(p.id) ? moneyPending : 0}
-            moneyBibleRewards={moneyAdminIds.has(p.id) ? bibleRewardsReady : 0}
-            classPrompts={classPromptsByUser.get(p.id) ?? []}
-            shoppingTrips={tripsByUser.get(p.id) ?? []}
-            dateISO={today}
-          />
-        ))}
-      </div>
+            {!personal && (
+              <div className="mt-8">
+                <AddTaskForm people={roster} defaultDate={today} />
+              </div>
+            )}
+          </div>
 
-      <div className="mt-10">
-        <DaySchedule
-          events={[...todaySchedule.allDay, ...todaySchedule.timed]}
-          title={
-            scheduleDay === today
-              ? "Today's schedule"
-              : formatLong(scheduleDay)
-          }
-          emptyText="Nothing scheduled."
-          href={`/calendar?view=day&date=${scheduleDay}`}
-          nav={{
-            prevHref: `/?day=${addDays(scheduleDay, -1)}`,
-            todayHref: "/",
-            nextHref: `/?day=${addDays(scheduleDay, 1)}`,
-          }}
-        />
-      </div>
-
-      {!personal && (
-        <div className="mt-8">
-          <AddTaskForm people={roster} defaultDate={today} />
+          <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-7rem)]">
+            {/* Streamed, not awaited: the goal needs the progression query,
+                the heaviest read here. */}
+            <Suspense fallback={<div className="h-[5.5rem] shrink-0 animate-pulse rounded-[18px] border border-hairline bg-surface" />}>
+              <div className="shrink-0">
+                <FamilyGoalTile />
+              </div>
+            </Suspense>
+            <div className="min-h-0 flex-1">
+              <DaySchedule
+                fill
+                events={[...todaySchedule.allDay, ...todaySchedule.timed]}
+                title={scheduleDay === today ? "Today's schedule" : formatLong(scheduleDay)}
+                emptyText="Nothing scheduled."
+                href={`/calendar?view=day&date=${scheduleDay}`}
+                nav={{
+                  prevHref: `/?day=${addDays(scheduleDay, -1)}`,
+                  todayHref: "/",
+                  nextHref: `/?day=${addDays(scheduleDay, 1)}`,
+                }}
+              />
+            </div>
+          </aside>
         </div>
-      )}
-
     </main>
     </>
   );

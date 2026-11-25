@@ -19,6 +19,7 @@ export function DaySchedule({
   title,
   compact = false,
   nav,
+  fill = false,
 }: {
   events: GridEvent[];
   emptyText?: string;
@@ -26,6 +27,8 @@ export function DaySchedule({
   title?: string;
   compact?: boolean;
   nav?: { prevHref: string; todayHref: string; nextHref: string };
+  /** Fill its column (v0.801, the shared home): the list scrolls on its own. */
+  fill?: boolean;
 }) {
   const sorted = [...events].sort(
     (a, b) => Number(b.allDay) - Number(a.allDay) || a.startMin - b.startMin,
@@ -63,8 +66,8 @@ export function DaySchedule({
   if (!title) return <Card className="overflow-hidden">{body}</Card>;
 
   return (
-    <section>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <section className={fill ? "flex h-full min-h-0 flex-col" : undefined}>
+      <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted">
           <CalendarIcon className="h-4 w-4" />
           {title}
@@ -99,7 +102,7 @@ export function DaySchedule({
           )}
         </div>
       </div>
-      <Card className="overflow-hidden">{body}</Card>
+      <Card className={fill ? "min-h-0 flex-1 overflow-y-auto" : "overflow-hidden"}>{body}</Card>
     </section>
   );
 }

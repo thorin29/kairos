@@ -128,3 +128,64 @@ function Shell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/**
+ * The family goal as a small tile (v0.801), for the top of the shared home's
+ * schedule column: white with the gold outline and soft glow, and a gold ring
+ * around the trophy that fills as the children finish their month.
+ */
+export async function FamilyGoalTile() {
+  const [data, admin, me] = await Promise.all([loadCoop(), isAdmin(), personalUserId()]);
+  const goal: CoopProposalView | null = data.carried ?? data.selected ?? data.granted ?? null;
+  let pct = 0;
+  let lines: { title: string; sub: string; done?: boolean };
+  let action: React.ReactNode = null;
+  if (!goal) {
+    const isChild = (id: string) => data.children.some((c) => c.id === id);
+    const viewer = me ? { id: me, isParent: admin || !isChild(me) } : admin ? { id: "", isParent: true } : null;
+    const nudge = coopHomeNudge(data, viewer);
+    if (!nudge) return null;
+    const n = data.proposals.length;
+    lines = { title: "Family goal", sub: `${n} idea${n === 1 ? "" : "s"} waiting` };
+    action = (
+      <Link href="/coop" className="mt-1.5 inline-flex rounded-full bg-[#ca8a04] px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90">
+        {nudge === "pick" ? "Pick" : "Vote"}
+      </Link>
+    );
+  } else {
+    const done = goal.status === "GRANTED";
+    const carried = data.carried?.id === goal.id;
+    pct = done || goal.gateMet ? 100 : data.childrenTotal > 0 ? Math.round((goal.childrenMeeting / data.childrenTotal) * 100) : 0;
+    lines = {
+      title: goal.title,
+      sub: done
+        ? `Earned · ${goal.seasonLabel}`
+        : `${goal.childrenMeeting} of ${data.childrenTotal} finished ${carried ? goal.seasonLabel : "their month"}${goal.gateMet ? " · ready" : ""}`,
+      done,
+    };
+    if (!done && admin && goal.gateMet) action = <div className="mt-1.5"><GoalCheckOff proposalId={goal.id} /></div>;
+  }
+  const ring = lines.done ? "#059669" : "#ca8a04";
+  return (
+    <div className="relative flex items-center gap-3 overflow-hidden rounded-[18px] border-[1.5px] border-[#ca8a04]/35 bg-surface p-3.5 shadow-[inset_0_0_0_5px_rgba(202,138,4,0.05),inset_0_0_0_10px_rgba(202,138,4,0.035)]">
+      <span aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#ca8a04]/10 blur-xl" />
+      <Link href="/coop" aria-label="Family goal" className="relative shrink-0">
+        <span
+          className="flex h-14 w-14 items-center justify-center rounded-full"
+          style={{ background: `conic-gradient(${ring} 0 ${pct}%, rgba(202,138,4,0.15) 0 100%)` }}
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface">
+            <TrophyIcon className={`h-6 w-6 ${lines.done ? "text-emerald-600" : "text-[#ca8a04]"}`} />
+          </span>
+        </span>
+      </Link>
+      <div className="relative min-w-0 flex-1">
+        <Link href="/coop" className="block truncate font-display text-[15px] font-semibold hover:text-accent">
+          {lines.title}
+        </Link>
+        <p className="truncate text-xs text-muted">{lines.sub}</p>
+        {action}
+      </div>
+    </div>
+  );
+}

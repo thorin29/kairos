@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Shared home: uniform cards, goal over the schedule (v0.801.0)
+
+- `PersonCard` is a fixed `h-[21rem]`; the categories and prompts scroll
+  inside it. The middle is its own link (the stretched link can't receive a
+  scroll), the prompts stay clickable above it.
+- `/` is two columns at `lg`: cards (three across at `xl`) and a sticky
+  right column, `FamilyGoalTile` (gold outline, glow, a ring around the trophy
+  that fills with the children finished) over `DaySchedule fill`, whose list
+  scrolls on its own. The full-width banner stays on the person page.
+
 ## 2026-11 — Area pages instead of pop-ups (v0.800.0, app 0.575.0)
 
 - `/person/[id]/{school,chores,bible,tasks,workouts}`: real pages, so the side

@@ -31,98 +31,75 @@ export function PersonCard({
   shoppingTrips?: DashboardTrip[];
   dateISO: string;
 }) {
+  const href = `/person/${person.id}`;
+  const hasPrompts =
+    prompts.length > 0 || rollover || moneyPending > 0 || moneyBibleRewards > 0 || classPrompts.length > 0 || shoppingTrips.length > 0;
+  // Every card the same size (v0.801), whatever it holds: a long day scrolls
+  // inside the card instead of stretching it.
   return (
-    <div className="hover-bounce group relative flex flex-col rounded-xl border border-hairline bg-surface p-5 transition-colors hover:border-accent">
+    <div className="hover-bounce group relative flex h-[21rem] flex-col rounded-xl border border-hairline bg-surface p-5 transition-colors hover:border-accent">
       {/* Stretched link: the whole card navigates, except the interactive
-          prompt below, which sits above it. */}
-      <Link
-        href={`/person/${person.id}`}
-        aria-label={person.name}
-        className="absolute inset-0 z-0 rounded-xl"
-      />
+          prompts, which sit above it. */}
+      <Link href={href} aria-label={person.name} className="absolute inset-0 z-0 rounded-xl" />
 
-      <div className="pointer-events-none relative z-[1]">
-        <div className="flex items-start justify-between gap-3">
-          <PersonAvatar
-            name={person.name}
-            color={person.color}
-            avatarPath={person.avatarPath}
-            avatarPosition={person.avatarPosition}
-          />
-          <span className="tabular text-lg font-medium">
-            {person.percent === null ? (
-              <span className="text-base text-muted">&mdash;</span>
-            ) : (
-              `${person.percent}%`
-            )}
-          </span>
-        </div>
+      <div className="pointer-events-none relative z-[1] flex shrink-0 items-start justify-between gap-3">
+        <PersonAvatar
+          name={person.name}
+          color={person.color}
+          avatarPath={person.avatarPath}
+          avatarPosition={person.avatarPosition}
+        />
+        <span className="tabular text-lg font-medium">
+          {person.percent === null ? <span className="text-base text-muted">&mdash;</span> : `${person.percent}%`}
+        </span>
+      </div>
 
-        {person.paused ? (
-          <p className="mt-3 text-sm text-muted">
-            <span className="font-medium text-accent">Paused</span> for{" "}
-            {person.paused}.
-            {person.categories.length === 0 &&
-              " Nothing due while you're away."}
-          </p>
-        ) : person.categories.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">Nothing scheduled today.</p>
-        ) : null}
+      <div className="relative z-[1] mt-3 min-h-0 flex-1 overflow-y-auto">
+        <Link href={href} className="block" tabIndex={-1}>
+          {person.paused ? (
+            <p className="text-sm text-muted">
+              <span className="font-medium text-accent">Paused</span> for {person.paused}.
+              {person.categories.length === 0 && " Nothing due while you're away."}
+            </p>
+          ) : person.categories.length === 0 ? (
+            <p className="text-sm text-muted">Nothing scheduled today.</p>
+          ) : null}
 
-        {person.categories.length > 0 && (
-          <>
-            <ul className="mt-3 space-y-3">
+          {person.categories.length > 0 && (
+            <ul className="space-y-3">
               {person.categories.map((c) => (
                 <li key={c.category}>
                   <div className="mb-1.5 flex items-baseline justify-between text-sm">
                     <span>{CATEGORY_LABELS[c.category]}</span>
                     <span className="tabular text-xs text-muted">
                       {c.complete}/{c.total}
-                      {c.overdue > 0 && (
-                        <span className="ml-2 font-medium text-red-700">
-                          {c.overdue} late
-                        </span>
-                      )}
+                      {c.overdue > 0 && <span className="ml-2 font-medium text-red-700">{c.overdue} late</span>}
                     </span>
                   </div>
-                  <CompletionBar
-                    percent={c.percent}
-                    overdue={c.overdue}
-                    total={c.total}
-                  />
+                  <CompletionBar percent={c.percent} overdue={c.overdue} total={c.total} />
                 </li>
               ))}
             </ul>
-            {person.total > 0 && (
-              <p className="mt-4 text-xs text-muted">
-                {person.complete} of {person.total} done
-              </p>
+          )}
+        </Link>
+
+        {hasPrompts && (
+          <div className="mt-4 space-y-3">
+            {shoppingTrips.length > 0 && <ShoppingReminder trips={shoppingTrips} />}
+            {rollover && <RolloverReminder fromTermName={rollover.fromTermName} />}
+            {(moneyPending > 0 || moneyBibleRewards > 0) && (
+              <MoneyReminder count={moneyPending} bibleRewards={moneyBibleRewards} />
             )}
-          </>
+            {classPrompts.length > 0 && <ClassPrompts prompts={classPrompts} today={dateISO} />}
+            {prompts.length > 0 && <SportPrompts prompts={prompts} dateISO={dateISO} />}
+          </div>
         )}
       </div>
 
-      {(prompts.length > 0 ||
-        rollover ||
-        moneyPending > 0 ||
-        moneyBibleRewards > 0 ||
-        classPrompts.length > 0 ||
-        shoppingTrips.length > 0) && (
-        <div className="relative z-[1] mt-4 space-y-3">
-          {shoppingTrips.length > 0 && (
-            <ShoppingReminder trips={shoppingTrips} />
-          )}
-          {rollover && <RolloverReminder fromTermName={rollover.fromTermName} />}
-          {(moneyPending > 0 || moneyBibleRewards > 0) && (
-            <MoneyReminder count={moneyPending} bibleRewards={moneyBibleRewards} />
-          )}
-          {classPrompts.length > 0 && (
-            <ClassPrompts prompts={classPrompts} today={dateISO} />
-          )}
-          {prompts.length > 0 && (
-            <SportPrompts prompts={prompts} dateISO={dateISO} />
-          )}
-        </div>
+      {person.total > 0 && (
+        <p className="pointer-events-none relative z-[1] mt-3 shrink-0 text-xs text-muted">
+          {person.complete} of {person.total} done
+        </p>
       )}
     </div>
   );
