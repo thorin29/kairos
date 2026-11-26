@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Watch how on warm-ups; History (v0.811.0, app 0.583.0)
+
+- Warm-up steps always show the ⓘ, and its dialog has Watch how (the same
+  video search as movements), with or without a written cue. The app reuses
+  `MovementInfoDialog`.
+- The Family map's search page is titled History (its map button too).
+
 ## 2026-11 — Skipped sport stays on the list (v0.810.0, app 0.582.0)
 
 - `workoutBlocksFor` returns skipped sports in `items` (`skipped: true`), not

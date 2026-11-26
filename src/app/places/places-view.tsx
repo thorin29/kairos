@@ -865,7 +865,7 @@ export function PlacesView({ mapKey, mapId, initial }: { mapKey: string; mapId: 
           <div className="absolute right-3 top-3 flex flex-col gap-2">
             {/* Places (v0.795): search where everyone has been. */}
             {!full && (
-              <Link href={searchHref(embed)} className={iconBtn} aria-label="Search places" title="Search places">
+              <Link href={searchHref(embed)} className={iconBtn} aria-label="History" title="History">
                 <SearchGlyph />
               </Link>
             )}

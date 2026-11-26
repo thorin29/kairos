@@ -159,7 +159,7 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
             ‹
           </Link>
         )}
-        <h1 className="font-display text-xl font-semibold tracking-tight">{view === "all" ? "All places" : "Places"}</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight">{view === "all" ? "All places" : "History"}</h1>
       </div>
 
       <div className={embed ? "min-h-0 flex-1 overflow-y-auto pb-4" : ""}>

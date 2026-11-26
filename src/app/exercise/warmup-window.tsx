@@ -1,5 +1,6 @@
 "use client";
 
+import { watchUrl } from "@/lib/workouts/watch";
 import { DANGER_BTN, PRIMARY_BTN, SECONDARY_BTN, SECONDARY_LG } from "./buttons";
 import { useEffect, useState, useTransition } from "react";
 import {
@@ -69,7 +70,16 @@ export function WarmupSteps({ steps, storeKey }: { steps: WarmupStep[]; storeKey
     <>
       {cue && (
         <Modal small title={cue.name} onClose={() => setCue(null)}>
-          <p className="text-sm">{cue.cue}</p>
+          {cue.cue && <p className="text-sm">{cue.cue}</p>}
+          {/* A video of it, like every movement's ⓘ (v0.811). */}
+          <a
+            href={watchUrl(cue.name)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-block text-sm font-semibold text-accent hover:underline"
+          >
+            Watch how
+          </a>
         </Modal>
       )}
       {timing != null && (
@@ -107,16 +117,15 @@ export function WarmupSteps({ steps, storeKey }: { steps: WarmupStep[]; storeKey
                 <span className="block text-sm font-semibold">{s.name}</span>
                 <span className="tabular block text-xs text-muted">{stepAmount(s)}</span>
               </span>
-              {s.cue && (
-                <button
-                  type="button"
-                  onClick={() => setCue(s)}
-                  aria-label={`How to do ${s.name}`}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
-                >
-                  <InfoIcon className="h-4 w-4" />
-                </button>
-              )}
+              {/* Every step has an ⓘ for "Watch how" (v0.811). */}
+              <button
+                type="button"
+                onClick={() => setCue(s)}
+                aria-label={`How to do ${s.name}`}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:text-accent"
+              >
+                <InfoIcon className="h-4 w-4" />
+              </button>
               {s.kind === "TIME" && (
                 <button
                   type="button"
