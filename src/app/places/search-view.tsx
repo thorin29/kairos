@@ -562,23 +562,22 @@ function PlaceSheet({
   onChanged: () => void;
   onShowVisits: () => void;
 }) {
-  const [type, setType] = useState<string | null>(placeType(row.type) ? row.type : null);
+  const isSpot = row.key.startsWith("spot:");
+  // A spot starts as a shop (v0.812.1) so the circle is what gets saved.
+  const [type, setType] = useState<string | null>(placeType(row.type) ? row.type : isSpot ? "shop" : null);
+  const [center, setCenter] = useState<{ lat: number; lng: number } | null>(row.lat != null && row.lng != null ? { lat: row.lat, lng: row.lng } : null);
   const [name, setName] = useState(row.name);
   const [near, setNear] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const isSpot = row.key.startsWith("spot:");
   const isName = row.key.startsWith("name:");
   const id = row.key.slice(5);
   const address = row.address ?? near;
   const radiusM = reachM(type, row.radiusM);
-  const typeField = (isSpot || (isName && canEdit)) && (
-    <div className="space-y-1.5">
-      <PlaceTypeField value={type} onChange={setType} />
-      <p className="text-xs text-muted">The blue circle is the area that counts as this place.</p>
-    </div>
-  );
+  const editable = isSpot || (isName && canEdit);
+  const typeField = editable && <PlaceTypeField value={type} onChange={setType} />;
+  const at = center ?? undefined;
 
   const run = async (f: () => Promise<{ error: string | null }>) => {
     setBusy(true);
@@ -589,12 +588,12 @@ function PlaceSheet({
     else onChanged();
   };
 
-  if (picking && row.lat != null && row.lng != null) {
+  if (picking && center) {
     return (
       <PlaceFix
         personId={people[0]?.id ?? ""}
         personName=""
-        spot={{ lat: row.lat, lng: row.lng, accuracyM: 30 }}
+        spot={{ lat: center.lat, lng: center.lng, accuracyM: 30 }}
         current={row.name || null}
         title={row.name ? "What is this place?" : "Name this place"}
         everyoneOnly
@@ -640,8 +639,12 @@ function PlaceSheet({
             lat={row.lat}
             lng={row.lng}
             radiusM={radiusM}
+            onCenter={editable ? (lat, lng) => setCenter({ lat, lng }) : undefined}
             onAddress={!row.name && !row.address ? setNear : undefined}
           />
+        )}
+        {editable && row.lat != null && (
+          <p className="-mt-1 text-xs text-muted">Move the map to put the pin on the place. The blue circle is the area that counts.</p>
         )}
 
         {isSpot && (
@@ -652,7 +655,7 @@ function PlaceSheet({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void run(() => changePlaceNow({ op: "confirm", spotId: id, kind: type, size: "normal" }))}
+                  onClick={() => void run(() => changePlaceNow({ op: "confirm", spotId: id, kind: type, size: "normal", ...at }))}
                   className={primaryBtn}
                 >
                   That&rsquo;s right: {row.name}
@@ -671,20 +674,20 @@ function PlaceSheet({
 
         {isName && canEdit && (
           <>
-            <label className="flex items-center gap-3">
-              <span className="w-20 shrink-0 text-sm font-medium">Name</span>
+            <label className="flex h-12 items-center gap-3 rounded-[10px] border border-hairline bg-surface px-3 focus-within:border-accent">
+              <span className="shrink-0 text-sm font-medium">Name</span>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={80}
-                className="h-11 min-w-0 flex-1 rounded-[10px] border border-hairline bg-surface px-3 text-base outline-none focus:border-accent"
+                className="min-w-0 flex-1 bg-transparent text-right text-base font-semibold outline-none"
               />
             </label>
             {typeField}
             <button
               type="button"
               disabled={busy}
-              onClick={() => void run(() => changePlaceNow({ op: "update", placeNameId: id, name, ...(type ? { kind: type } : {}) }))}
+              onClick={() => void run(() => changePlaceNow({ op: "update", placeNameId: id, name, ...(type ? { kind: type } : {}), ...at }))}
               className={primaryBtn}
             >
               Save

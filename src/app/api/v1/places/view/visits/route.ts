@@ -36,12 +36,13 @@ export async function GET(req: NextRequest) {
 
 /**
  * Changes from the Places page (v0.795):
- * `{ op: "confirm", spotId, kind?, size? }` (someone who stopped there, a
+ * `{ op: "confirm", spotId, kind?, size?, lat?, lng? }` (someone who stopped there, a
  * parent, or someone allowed to confirm everyone's places; v0.812 `kind` is a
  * place type, which sets the size);
  * parents only: `{ op: "choose", visitId, placeNameId }` ("Which one?"),
  * `{ op: "move", visitId, name, address?, placeId?, lat?, lng? }`,
- * `{ op: "update", placeNameId, name?, kind?, size? }`.
+ * `{ op: "update", placeNameId, name?, kind?, size?, lat?, lng? }`. v0.812.1: lat/lng
+ * move the place's centre (up to 400 m).
  */
 export async function POST(req: NextRequest) {
   const viewer = await requirePlacesViewer(req);
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     if (!(await canConfirmEverything(viewer.userId, parent)) && !(await stoppedAt(viewer.userId, spotId))) {
       return apiOk({ error: "Only people who stopped here can confirm it." });
     }
-    return apiOk(await confirmSpot(spotId, str(b.kind) || null, size(b.size)));
+    return apiOk(await confirmSpot(spotId, str(b.kind) || null, size(b.size), { lat: numOrNull(b.lat), lng: numOrNull(b.lng) }));
   }
   if (!(await canEditHistory(viewer.userId))) return apiError("forbidden", "Only parents can change places.");
   if (b.op === "choose") return apiOk(await chooseForVisit(str(b.visitId), str(b.placeNameId)));
@@ -81,6 +82,8 @@ export async function POST(req: NextRequest) {
         ...(typeof b.name === "string" ? { name: b.name } : {}),
         ...("kind" in b ? { kind: str(b.kind) || null } : {}),
         ...(b.size ? { size: size(b.size) } : {}),
+        lat: numOrNull(b.lat),
+        lng: numOrNull(b.lng),
       }),
     );
   }

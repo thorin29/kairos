@@ -1967,7 +1967,7 @@ map. Web sign-in is for parents, so the device hands itself over:
   visits in them; people who can't confirm everyone's places get only spots they stopped at).
   `POST /api/v1/places/view/visits` (header `x-kairos-embed: 1`): `{ op: "confirm", spotId, kind?, size? }`
   (parents, people in the `places.confirmAll` setting, or someone who stopped there; otherwise
-  `{ error }`), and parents only
+  `{ error }`; v0.812.1 `lat`/`lng` move the centre up to 400 m, also on `update`), and parents only
   `{ op: "choose", visitId, placeNameId }`, `{ op: "move", visitId, name, address?, placeId?, lat?, lng? }`,
   `{ op: "update", placeNameId, name?, kind?, size? }`. `size` is small (60 m) / normal (120) / large (250);
   `kind` is a place type (v0.812: home, shop, grocery, school, sports, bigbox, park, campus), which sets the

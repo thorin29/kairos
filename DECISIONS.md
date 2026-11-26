@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-11 — Place centre and type list (v0.812.1)
+
+- The pin stays in the middle of the place map and moving the map moves the
+  place; confirm and update take `lat`/`lng` (up to 400 m from where it was).
+  The zoom holds at 18 and only backs out when the circle wouldn't fit, so a
+  bigger type looks bigger.
+- Place type is a row that opens its own list page (feet right-aligned).
+  Feet are a radius: "Feet from the pin to the edge of the circle."
+- An unconfirmed spot starts as Shop or restaurant (200 ft). Before, the
+  preview showed the 50 m spot match but confirming saved the old 120 m.
+- Home is "Home or small shop" (130 ft): a shop in a strip center needs the
+  same small circle.
+- The overnight snapshot never asks Google, so a spot made before anyone
+  opened that day in History stayed unnamed. An unnamed spot now takes the
+  newest cached Google answer within 50 m when it's listed or visited again.
+
 ## 2026-11 — History filter, place types, who confirms (v0.812.0)
 
 - One Filter button on History (who; Today, 7 days, 30 days, 1 year, All or

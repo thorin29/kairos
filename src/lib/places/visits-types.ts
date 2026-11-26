@@ -45,7 +45,7 @@ export type PlacesList = { rows: PlacesListRow[]; toConfirm: number; whichOne: n
  * from a typical building and its parking.
  */
 export const PLACE_TYPES = [
-  { key: "home", label: "Home", ft: 130 },
+  { key: "home", label: "Home or small shop", ft: 130 },
   { key: "shop", label: "Shop or restaurant", ft: 200 },
   { key: "grocery", label: "Grocery store", ft: 400 },
   { key: "school", label: "School or church", ft: 500 },

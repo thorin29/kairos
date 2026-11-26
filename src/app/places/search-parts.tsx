@@ -14,10 +14,11 @@ import { mapLoaded, useEmbed } from "./embed-context";
 const fmtFt = (ft: number) => `${ft.toLocaleString()} ft`;
 
 /**
- * A close-up of the place: a pin where the stops were and a blue circle as
- * far as the place reaches, redrawn as the type changes. "Open in Google
- * Maps" for a closer look. An unnamed spot gets its nearest street address
- * once the map is up (`onAddress`); nothing is stored.
+ * A close-up of the place (v0.812.1): the pin stays in the middle and moving
+ * the map moves the place (`onCenter`), with a blue circle as far as it
+ * reaches. The zoom holds still so a bigger type shows a bigger circle; it
+ * only backs out when the circle wouldn't fit. An unnamed spot gets its
+ * nearest street address once the map is up (`onAddress`); nothing is stored.
  */
 export function PlaceMap({
   mapKey,
@@ -25,6 +26,7 @@ export function PlaceMap({
   lat,
   lng,
   radiusM,
+  onCenter,
   onAddress,
 }: {
   mapKey: string;
@@ -32,6 +34,7 @@ export function PlaceMap({
   lat: number;
   lng: number;
   radiusM: number;
+  onCenter?: (lat: number, lng: number) => void;
   onAddress?: (a: string) => void;
 }) {
   const embed = useEmbed();
@@ -39,6 +42,19 @@ export function PlaceMap({
   const circle = useRef<google.maps.Circle | null>(null);
   const map = useRef<google.maps.Map | null>(null);
   const [failed, setFailed] = useState(false);
+  const [here, setHere] = useState({ lat, lng });
+  const cb = useRef({ onCenter, radiusM });
+  cb.current = { onCenter, radiusM };
+
+  /** Back out until the circle fits; never zooms in. */
+  const fit = () => {
+    const m = map.current;
+    const c = circle.current;
+    const view = m?.getBounds();
+    const b = c?.getBounds();
+    if (!m || !view || !b) return;
+    if (!view.contains(b.getNorthEast()) || !view.contains(b.getSouthWest())) m.fitBounds(b, 16);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -59,19 +75,27 @@ export function PlaceMap({
         cameraControl: false,
       });
       map.current = m;
-      new google.maps.marker.AdvancedMarkerElement({ map: m, position: { lat, lng } });
       circle.current = new google.maps.Circle({
         map: m,
         center: { lat, lng },
-        radius: radiusM,
+        radius: cb.current.radiusM,
         strokeColor: "#2563eb",
         strokeWeight: 2,
         fillColor: "#2563eb",
         fillOpacity: 0.12,
         clickable: false,
       });
-      const b = circle.current.getBounds();
-      if (b) m.fitBounds(b, 12);
+      m.addListener("center_changed", () => {
+        const c = m.getCenter();
+        if (c) circle.current?.setCenter(c);
+      });
+      m.addListener("idle", () => {
+        const c = m.getCenter();
+        if (!c) return;
+        setHere({ lat: c.lat(), lng: c.lng() });
+        cb.current.onCenter?.(c.lat(), c.lng());
+      });
+      google.maps.event.addListenerOnce(m, "idle", fit);
       if (onAddress) {
         try {
           const { Geocoder } = await importLibrary("geocoding");
@@ -91,17 +115,26 @@ export function PlaceMap({
   }, [mapKey, mapId, lat, lng]);
 
   useEffect(() => {
-    if (!circle.current || !map.current) return;
+    if (!circle.current) return;
     circle.current.setRadius(radiusM);
-    const b = circle.current.getBounds();
-    if (b) map.current.fitBounds(b, 12);
+    fit();
   }, [radiusM]);
 
   return (
-    <div className="relative h-48 overflow-hidden rounded-2xl border border-hairline bg-ground">
+    <div className="relative h-56 overflow-hidden rounded-2xl border border-hairline bg-ground">
       <div ref={div} className="h-full w-full" />
+      {!failed && (
+        <svg
+          viewBox="0 0 24 34"
+          className="pointer-events-none absolute left-1/2 top-1/2 h-9 w-[1.6rem] -translate-x-1/2 -translate-y-full drop-shadow"
+          aria-hidden
+        >
+          <path d="M12 0C5.4 0 0 5.2 0 11.7 0 20.5 12 34 12 34s12-13.5 12-22.3C24 5.2 18.6 0 12 0Z" fill="#dc2626" />
+          <circle cx="12" cy="11.5" r="4.2" fill="#7f1d1d" />
+        </svg>
+      )}
       <a
-        href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+        href={`https://www.google.com/maps/search/?api=1&query=${here.lat.toFixed(6)},${here.lng.toFixed(6)}`}
         target="_blank"
         rel="noopener noreferrer"
         className="absolute bottom-2 right-2 rounded-full bg-surface px-2.5 py-1 text-xs font-semibold shadow"
@@ -113,56 +146,98 @@ export function PlaceMap({
   );
 }
 
-/** The Place type drop-down: names on the left, reach in feet on the right. */
+/**
+ * Place type (v0.812.1): a row that opens the whole list on its own page,
+ * names on the left and reach in feet on the right.
+ */
 export function PlaceTypeField({ value, onChange }: { value: string | null; onChange: (k: string) => void }) {
   const [open, setOpen] = useState(false);
   const cur = placeType(value);
   return (
-    <div className="relative">
-      <div className="flex items-center gap-3">
-        <span className="w-20 shrink-0 text-sm font-medium">Place type</span>
-        <button
-          type="button"
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-hairline bg-surface px-3 text-left text-sm hover:border-accent"
-        >
-          <span className={`min-w-0 flex-1 truncate font-semibold ${cur ? "" : "text-muted"}`}>{cur?.label ?? "Choose one"}</span>
-          {cur && <span className="tabular shrink-0 text-xs text-muted">{fmtFt(cur.ft)}</span>}
-          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </button>
-      </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex h-12 w-full items-center gap-3 rounded-[10px] border border-hairline bg-surface px-3 text-left text-sm hover:border-accent"
+      >
+        <span className="shrink-0 font-medium">Place type</span>
+        <span className={`min-w-0 flex-1 truncate text-right font-semibold ${cur ? "" : "text-muted"}`}>{cur?.label ?? "Choose one"}</span>
+        {cur && <span className="tabular shrink-0 text-xs text-muted">{fmtFt(cur.ft)}</span>}
+        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      </button>
       {open && (
-        <ul
-          role="listbox"
-          aria-label="Place type"
-          className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-hairline bg-surface shadow-lg"
-        >
+        <TypeList
+          value={value}
+          onPick={(k) => {
+            onChange(k);
+            setOpen(false);
+          }}
+          onBack={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function TypeList({ value, onPick, onBack }: { value: string | null; onPick: (k: string) => void; onBack: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onBack();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onBack]);
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40 sm:items-center sm:p-3" onClick={onBack}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Place type"
+        className="flex h-[92dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:h-auto sm:max-h-[92dvh] sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center gap-2 border-b border-hairline px-2 py-2.5">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-xl hover:bg-ground"
+          >
+            &lsaquo;
+          </button>
+          <h2 className="text-base font-semibold">Place type</h2>
+        </div>
+        <ul role="listbox" aria-label="Place type" className="min-h-0 flex-1 overflow-y-auto">
           {PLACE_TYPES.map((t) => {
             const on = t.key === value;
             return (
               <li key={t.key} role="option" aria-selected={on}>
                 <button
                   type="button"
-                  onClick={() => {
-                    onChange(t.key);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-2 border-t border-hairline px-3 py-2.5 text-left text-sm first:border-t-0 hover:bg-ground ${
-                    on ? "bg-ground font-semibold" : ""
-                  }`}
+                  onClick={() => onPick(t.key)}
+                  className="flex min-h-14 w-full items-center gap-3 border-b border-hairline px-4 text-left hover:bg-ground"
                 >
-                  <span className="min-w-0 flex-1 truncate">{t.label}</span>
-                  <span className="tabular shrink-0 text-xs text-muted">{fmtFt(t.ft)}</span>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center text-accent" aria-hidden>
+                    {on && (
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m5 12 5 5 9-10" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={`min-w-0 flex-1 text-[15px] ${on ? "font-semibold" : ""}`}>{t.label}</span>
+                  <span className="tabular shrink-0 text-sm text-muted">{fmtFt(t.ft)}</span>
                 </button>
               </li>
             );
           })}
         </ul>
-      )}
+        <p className="shrink-0 px-4 py-3 text-xs text-muted">Feet from the pin to the edge of the circle.</p>
+      </div>
     </div>
   );
 }

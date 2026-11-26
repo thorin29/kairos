@@ -58,8 +58,8 @@ export function pickPlace(rows: NameRow[], p: Pt): { placeNameId: string | null;
 }
 
 /** The newest Google answer for a spot that's still within 30 days. */
-async function lookupNear(p: Pt): Promise<{ name: string | null; address: string | null; placeId: string | null; at: Date } | null> {
-  const b = boxAround(p, 30);
+async function lookupNear(p: Pt, withinM = 30): Promise<{ name: string | null; address: string | null; placeId: string | null; at: Date } | null> {
+  const b = boxAround(p, withinM);
   const rows = (await prisma.placeLookup.findMany({
     where: {
       lat: { gte: b.minLat, lte: b.maxLat },
@@ -71,8 +71,23 @@ async function lookupNear(p: Pt): Promise<{ name: string | null; address: string
     take: 5,
     select: { lat: true, lng: true, name: true, address: true, googlePlaceId: true, fetchedAt: true },
   })) as { lat: number; lng: number; name: string | null; address: string | null; googlePlaceId: string | null; fetchedAt: Date }[];
-  const near = rows.sort((a, b) => metres(p, a) - metres(p, b))[0];
+  const near = rows.filter((r) => metres(p, r) <= withinM).sort((a, b) => metres(p, a) - metres(p, b))[0];
   return near ? { name: near.name, address: near.address, placeId: near.googlePlaceId, at: near.fetchedAt } : null;
+}
+
+/**
+ * An unnamed spot takes the name Google gave once History or the live map
+ * looked it up there (v0.812.1). The overnight snapshot never asks Google
+ * itself, so a spot made before anyone opened that day stayed unnamed.
+ */
+async function nameSpotLater(s: { id: string; lat: number; lng: number }): Promise<{ label: string; address: string | null; labelAt: Date } | null> {
+  const g = await lookupNear(s, SPOT_M);
+  if (!g?.name) return null;
+  await prisma.placeSpot.update({
+    where: { id: s.id },
+    data: { label: g.name, address: g.address, googlePlaceId: g.placeId, labelAt: g.at },
+  });
+  return { label: g.name, address: g.address, labelAt: g.at };
 }
 
 /** The unconfirmed spot for a stop: the nearest one close by, or a new one. */
@@ -86,6 +101,8 @@ async function spotFor(p: Pt, typed: { name: string | null; address: string | nu
   if (hit) {
     if (typed?.name && !hit.s.label) {
       await prisma.placeSpot.update({ where: { id: hit.s.id }, data: { label: typed.name, address: typed.address, labelAt: null } });
+    } else if (!hit.s.label) {
+      await nameSpotLater(hit.s);
     }
     return hit.s.id;
   }
@@ -398,6 +415,10 @@ export async function listPlaces(
   for (const s of spots as { id: string; label: string | null; address: string | null; labelAt: Date | null; lat: number; lng: number }[]) {
     const g = spotStat.get(s.id);
     if (!g) continue;
+    if (!s.label || !fresh(s.labelAt)) {
+      const got = await nameSpotLater(s);
+      if (got) Object.assign(s, got);
+    }
     const ok = fresh(s.labelAt);
     rows.push({
       key: `spot:${s.id}`,
@@ -476,7 +497,21 @@ export async function moveVisit(
 }
 
 /** "That's right": confirm an unconfirmed spot as Google named it. */
-export async function confirmSpot(spotId: string, kind: string | null, size: keyof typeof SIZES): Promise<{ error: string | null }> {
+/** How far the map may move a place's centre from where it was (v0.812.1). */
+const MOVE_M = 400;
+function movedTo(from: Pt, to: { lat?: number | null; lng?: number | null } | null | undefined): Pt {
+  if (!to || to.lat == null || to.lng == null || !Number.isFinite(to.lat) || !Number.isFinite(to.lng)) return from;
+  const p = { lat: to.lat, lng: to.lng };
+  const d = metres(from, p);
+  return d >= 2 && d <= MOVE_M ? p : from;
+}
+
+export async function confirmSpot(
+  spotId: string,
+  kind: string | null,
+  size: keyof typeof SIZES,
+  at?: { lat?: number | null; lng?: number | null } | null,
+): Promise<{ error: string | null }> {
   const s = (await prisma.placeSpot.findUnique({
     where: { id: spotId },
     select: { lat: true, lng: true, label: true, address: true, googlePlaceId: true, labelAt: true },
@@ -484,17 +519,18 @@ export async function confirmSpot(spotId: string, kind: string | null, size: key
   if (!s) return { error: "That place is gone." };
   if (!s.label || !fresh(s.labelAt)) return { error: "No name to confirm. Pick or type one." };
   const radiusM = radiusFor(kind, size) ?? SIZES.normal;
+  const c = movedTo(s, at);
   await prisma.placeName.create({
-    data: { name: s.label, address: s.address, googlePlaceId: s.googlePlaceId, lat: s.lat, lng: s.lng, radiusM, kind: cleanKind(kind) },
+    data: { name: s.label, address: s.address, googlePlaceId: s.googlePlaceId, lat: c.lat, lng: c.lng, radiusM, kind: cleanKind(kind) },
   });
-  await rematchAround({ lat: s.lat, lng: s.lng }, radiusM);
+  await rematchAround(c, radiusM + metres(s, c));
   return { error: null };
 }
 
 /** Rename a confirmed place, or change whether it's a home and its size. */
 export async function updatePlace(
   placeNameId: string,
-  input: { name?: string; kind?: string | null; size?: keyof typeof SIZES },
+  input: { name?: string; kind?: string | null; size?: keyof typeof SIZES; lat?: number | null; lng?: number | null },
 ): Promise<{ error: string | null }> {
   const p = (await prisma.placeName.findUnique({ where: { id: placeNameId }, select: { lat: true, lng: true, radiusM: true } })) as {
     lat: number;
@@ -505,15 +541,18 @@ export async function updatePlace(
   const name = input.name?.trim().slice(0, 80);
   if (input.name !== undefined && !name) return { error: "Type a name." };
   const radiusM = (input.kind !== undefined ? typeRadiusM(input.kind) : null) ?? (input.size ? SIZES[input.size] : undefined);
+  const c = movedTo(p, input);
+  const moved = metres(p, c);
   await prisma.placeName.update({
     where: { id: placeNameId },
     data: {
       ...(name ? { name } : {}),
       ...(input.kind !== undefined ? { kind: cleanKind(input.kind) } : {}),
       ...(radiusM ? { radiusM } : {}),
+      ...(moved > 0 ? { lat: c.lat, lng: c.lng } : {}),
     },
   });
-  if (radiusM && radiusM !== p.radiusM) await rematchAround(p, Math.max(radiusM, p.radiusM));
+  if ((radiusM && radiusM !== p.radiusM) || moved > 0) await rematchAround(p, Math.max(radiusM ?? p.radiusM, p.radiusM) + moved);
   return { error: null };
 }
 

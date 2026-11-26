@@ -190,10 +190,10 @@ export async function placesListNow(from?: string | null, to?: string | null): P
 }
 
 export type PlaceChange =
-  | { op: "confirm"; spotId: string; kind: string | null; size: "small" | "normal" | "large" }
+  | { op: "confirm"; spotId: string; kind: string | null; size: "small" | "normal" | "large"; lat?: number; lng?: number }
   | { op: "choose"; visitId: string; placeNameId: string }
   | { op: "move"; visitId: string; name: string; address: string | null; placeId: string | null; lat: number | null; lng: number | null }
-  | { op: "update"; placeNameId: string; name?: string; kind?: string | null; size?: "small" | "normal" | "large" };
+  | { op: "update"; placeNameId: string; name?: string; kind?: string | null; size?: "small" | "normal" | "large"; lat?: number; lng?: number };
 
 export async function changePlaceNow(c: PlaceChange): Promise<{ error: string | null }> {
   const res = await fetch("/api/v1/places/view/visits", {
