@@ -41,20 +41,27 @@ export function WorkoutTile({
     >
       {restDay ? (
         <TileTitle muted>Rest day</TileTitle>
-      ) : completeForToday ? (
-        <TileTitle>
-          <span className="text-emerald-600">Complete for today!</span>
-        </TileTitle>
       ) : card && card.items.length >= 2 ? (
+        // The list stays, done or not (v0.810): finished in green, a practice
+        // or game you didn't go to greyed out.
         <>
-          {blocks && <span className="text-xs font-semibold text-muted">{blocks.done} of {blocks.total} workouts</span>}
+          {blocks && blocks.total >= 2 && (
+            <span className="text-xs font-semibold text-muted">
+              {blocks.done} of {blocks.total} workouts
+            </span>
+          )}
           {/* Each workout with a tiny bullet (green once done) and its own
               details under its name (v0.805). */}
           {(card.items.length > 3 ? card.items.slice(0, 2) : card.items).map((it, i) => (
             <span key={`${it.name}-${i}`} className="grid min-w-0 grid-cols-[0.25rem_minmax(0,1fr)] items-baseline gap-x-2">
-              <span aria-hidden className={`h-1 w-1 -translate-y-[0.2em] rounded-full ${it.done ? "bg-emerald-600" : "bg-muted/50"}`} />
+              <span aria-hidden className={`h-1 w-1 -translate-y-[0.2em] rounded-full ${it.done ? "bg-emerald-600" : it.skipped ? "bg-muted/30" : "bg-muted/50"}`} />
               {/* A finished workout reads green (v0.809). */}
-              <span className={`truncate text-[15px] font-semibold lg:text-base ${it.done ? "text-emerald-600" : ""}`}>{it.name}</span>
+              <span
+                className={`truncate text-[15px] font-semibold lg:text-base ${it.done ? "text-emerald-600" : it.skipped ? "text-muted/60" : ""}`}
+                title={it.skipped ? "Didn't go" : undefined}
+              >
+                {it.name}
+              </span>
               {/* Started and not done: "In progress", not its parts (v0.809). */}
               {it.detail && !it.done && remaining.length > 0 ? (
                 <span className="col-start-2 truncate text-[11px] italic leading-tight text-muted lg:text-xs">In progress</span>
@@ -65,6 +72,10 @@ export function WorkoutTile({
           ))}
           {card.items.length > 3 && <span className="text-xs font-semibold text-muted">+{card.items.length - 2} more</span>}
         </>
+      ) : completeForToday ? (
+        <TileTitle>
+          <span className="text-emerald-600">Complete for today!</span>
+        </TileTitle>
       ) : remaining.length > 0 ? (
         <>
           <TileTitle>{one ? one.slice(one.indexOf(DOT) + DOT.length) : (uniq[0] ?? "Workout")}</TileTitle>

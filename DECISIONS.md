@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11 — Skipped sport stays on the list (v0.810.0, app 0.582.0)
+
+- `workoutBlocksFor` returns skipped sports in `items` (`skipped: true`), not
+  in done/total, and stays non-null while two or more are listed, so the tile
+  keeps its list (it fell back to the old extras line with "7:15 PM"). The web
+  tile shows the list ahead of "Complete for today!"; "N of M" needs two
+  counted.
+- Moving sets to another movement by hand: set `swappedFromId` to the planned
+  movement, or that day's plan reads unlogged and turns overdue.
+
 ## 2026-11 — Farmer hold timed; In progress (v0.809.0, app 0.581.0)
 
 - `isCarry` matched "farmer" in any name, so Farmer hold got a yards unit on

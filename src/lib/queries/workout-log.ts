@@ -2799,8 +2799,9 @@ export async function workoutRestFor(
 
 /**
  * The day's workouts done of how many (v0.745), for the home card's "1 of 2
- * workouts": the planned workout and each sport event. A skipped one counts
- * as done. Null with fewer than two.
+ * workouts": the planned workout and each sport event. A sport you didn't go
+ * to isn't counted (v0.808) but stays in `items`, marked skipped (v0.810).
+ * Null with fewer than two listed.
  */
 export type WorkoutBlockItem = {
   /** Null for the planned workout: the caller names it from the day's title. */
@@ -2808,6 +2809,8 @@ export type WorkoutBlockItem = {
   done: boolean;
   /** The day's plan (its kinds go under it on the tile, v0.805). */
   plan?: boolean;
+  /** A practice or game you didn't go to (v0.810): listed, greyed, not counted. */
+  skipped?: boolean;
 };
 
 export async function workoutBlocksFor(
@@ -2830,12 +2833,14 @@ export async function workoutBlocksFor(
   // A walk, run, ruck or hike tracked in the app (v0.777) is a workout of its own.
   const tracked = await trackedCount(userId, dateISO);
   const total = (progs.length ? progs.length : planned ? 1 : 0) + sports.length + tracked;
-  if (total < 2) return null;
+  const skippedSports = allSports.filter((x) => x.state === "skipped");
+  // A day that had two workouts keeps its list after one is skipped (v0.810).
+  if (total + skippedSports.length < 2) return null;
   const planDone = planned && (progress.done || (task != null && task.status !== "PENDING"));
   const plannedDone = progs.length ? progs.filter((b) => b.done || planDone).length : planDone ? 1 : 0;
   const done = plannedDone + sports.filter((x) => x.state !== "open").length + tracked;
   // Each workout by name (v0.798), for the home tile's list.
-  const kinds = await sportLabels(sports.map((x) => x.eventId));
+  const kinds = await sportLabels(allSports.map((x) => x.eventId));
   const items: WorkoutBlockItem[] = [
     ...(progs.length
       ? progs.map((b) => ({ name: b.name, done: b.done || !!planDone, plan: true }))
@@ -2844,6 +2849,7 @@ export async function workoutBlocksFor(
         : []),
     ...sports.map((x) => ({ name: kinds.get(x.eventId) ?? x.title, done: x.state !== "open" })),
     ...Array.from({ length: tracked }, () => ({ name: "Tracked workout", done: true })),
+    ...skippedSports.map((x) => ({ name: kinds.get(x.eventId) ?? x.title, done: false, skipped: true })),
   ];
   return { done, total, items };
 }

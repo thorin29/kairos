@@ -8,7 +8,7 @@
  */
 export type WorkoutCard = {
   /** `detail` (v0.805): the plan's kinds, under the planned workout only. */
-  items: { name: string; done: boolean; detail: string | null }[];
+  items: { name: string; done: boolean; detail: string | null; skipped?: boolean }[];
   kinds: string[];
 };
 
@@ -20,7 +20,7 @@ function split(t: string): [string | null, string] {
 }
 
 export function workoutCard(
-  items: readonly { name: string | null; done: boolean; plan?: boolean }[],
+  items: readonly { name: string | null; done: boolean; plan?: boolean; skipped?: boolean }[],
   title: string | null,
   extras: readonly string[],
 ): WorkoutCard {
@@ -32,7 +32,12 @@ export function workoutCard(
   const firstPlan = items.findIndex((i) => i.plan);
   const detail = kinds.length ? kinds.join(DOT) : null;
   return {
-    items: items.map((i, n) => ({ name: i.name ?? mainName ?? "Workout", done: i.done, detail: n === firstPlan ? detail : null })),
+    items: items.map((i, n) => ({
+      name: i.name ?? mainName ?? "Workout",
+      done: i.done,
+      detail: n === firstPlan ? detail : null,
+      ...(i.skipped ? { skipped: true } : {}),
+    })),
     kinds,
   };
 }
