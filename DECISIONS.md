@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-11 — Smaller workout details (v0.806.0, app 0.579.0)
+
+- The detail under a workout on the tile is 11px (12px at `lg`) on the web
+  and 10sp in the app.
+
 ## 2026-11 — Workout details under their workout (v0.805.0, app 0.578.0)
 
 - `workoutBlocksFor` marks plan items (`plan: true`); `workoutCard` puts the

@@ -60,7 +60,7 @@ export function WorkoutTile({
             <span key={`${it.name}-${i}`} className="grid min-w-0 grid-cols-[0.25rem_minmax(0,1fr)] items-baseline gap-x-2">
               <span aria-hidden className={`h-1 w-1 -translate-y-[0.2em] rounded-full ${it.done ? "bg-emerald-600" : "bg-muted/50"}`} />
               <span className={`truncate text-[15px] font-semibold lg:text-base ${it.done ? "text-muted" : ""}`}>{it.name}</span>
-              {it.detail && <span className="col-start-2 truncate text-xs text-muted lg:text-sm">{it.detail}</span>}
+              {it.detail && <span className="col-start-2 truncate text-[11px] leading-tight text-muted lg:text-xs">{it.detail}</span>}
             </span>
           ))}
           {card.items.length > 3 && <span className="text-xs font-semibold text-muted">+{card.items.length - 2} more</span>}
