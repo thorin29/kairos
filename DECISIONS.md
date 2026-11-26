@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Vote badge, + placement, Back (v0.804.0)
+
+- `FamilyGoalTile`'s badge is always "Vote" until a goal wins.
+- `AddTaskFab` moved to `bottom-2 right-[4.5rem]`, left of the admin lock
+  (`bottom-4 right-4`), centres level.
+- `AreaHeader`'s button reads Back: Home means the shared screen.
+
 ## 2026-11 — Home right column, + button, Get ahead pop-up (v0.803.0, app 0.577.0)
 
 - `/person/[id]`: the right column is the character (`Companion size="lg"`),

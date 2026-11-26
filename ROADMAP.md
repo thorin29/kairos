@@ -110,7 +110,7 @@ Kept here so they don't come back as open items.
 
 ## Versions
 
-- Web 0.803.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
+- Web 0.804.0 on Next.js 16.4.6 and Prisma 7.10.1. Migrations through
   183_place_visits, all registered in `MIGRATIONS`.
 - App 0.577.0 (versionCode 649, CLIENT_BUILD 649).
 - ice-time 0.1.3.

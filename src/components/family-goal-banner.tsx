@@ -137,7 +137,7 @@ function Shell({ children }: { children: React.ReactNode }) {
  * (v0.802).
  */
 export async function FamilyGoalTile() {
-  const [data, admin, me] = await Promise.all([loadCoop(), isAdmin(), personalUserId()]);
+  const data = await loadCoop();
   const goal: CoopProposalView | null = data.carried ?? data.selected ?? data.granted ?? null;
   const done = goal?.status === "GRANTED";
   const carried = !!goal && data.carried?.id === goal.id;
@@ -153,10 +153,8 @@ export async function FamilyGoalTile() {
     : goal
       ? finished
       : [`${n} idea${n === 1 ? "" : "s"} waiting`, finished].filter(Boolean).join(" \u00b7 ");
-  // Voting is open until a goal wins: a parent picks, everyone else votes.
-  const isChild = (id: string) => data.children.some((c) => c.id === id);
-  const viewer = me ? { id: me, isParent: admin || !isChild(me) } : admin ? { id: "", isParent: true } : null;
-  const badge = goal ? null : coopHomeNudge(data, viewer) === "pick" ? "Pick" : "Vote";
+  // Voting is open until a goal wins (v0.804: "Vote" for everyone).
+  const badge = goal ? null : "Vote";
   const ring = done ? "#059669" : "#ca8a04";
   return (
     <Link

@@ -89,7 +89,7 @@ export function AreaCard({
   );
 }
 
-/** An area page's top: back to Home, the area's icon and name, its actions. */
+/** An area page's top: Back (to the person's page), the area's icon and name, its actions. */
 export function AreaHeader({
   backHref,
   icon,
@@ -110,7 +110,7 @@ export function AreaHeader({
           className="inline-flex h-10 items-center gap-1.5 rounded-full border border-hairline bg-surface px-3.5 text-sm font-medium hover:border-accent"
         >
           <ArrowLeftIcon className="h-4 w-4" />
-          Home
+          Back
         </Link>
         <span
           aria-hidden

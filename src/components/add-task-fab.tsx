@@ -20,7 +20,8 @@ const FIELD = "h-11 w-full rounded-xl border border-hairline bg-surface px-3 out
 const LABEL = "mb-1.5 block text-sm font-medium";
 
 /**
- * Add a task (v0.803): a round + in the bottom-right corner opens a pop-up
+ * Add a task (v0.803): a round + in the bottom-right corner (left of the
+ * admin lock, v0.804) opens a pop-up
  * with the app's choices — who, due date, repeat, a reminder. Nothing on the
  * page moves.
  */
@@ -75,7 +76,7 @@ export function AddTaskFab({ people, defaultUserId, defaultDate }: { people: Per
         onClick={() => setOpen(true)}
         aria-label="Add a task"
         title="Add a task"
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg transition-transform hover:scale-105"
+        className="fixed bottom-2 right-[4.5rem] z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg transition-transform hover:scale-105"
       >
         <PlusIcon className="h-6 w-6" />
       </button>
