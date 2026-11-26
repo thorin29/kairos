@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-11 — Clearer goal votes (v0.807.0)
+
+- On /coop each idea's people: a vote is the avatar in full colour, the chip
+  outlined and tinted in the person's colour with a check; no vote is a grey,
+  faded avatar and muted name.
+
 ## 2026-11 — Smaller workout details (v0.806.0, app 0.579.0)
 
 - The detail under a workout on the tile is 11px (12px at `lg`) on the web

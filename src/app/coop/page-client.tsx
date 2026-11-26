@@ -289,14 +289,24 @@ function ProposalCard({
                 })
               }
               title={`${voted ? "Remove" : "Add"} ${person.name}'s vote`}
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors disabled:opacity-50 ${
-                voted
-                  ? "border-accent bg-accent/10 text-accent"
-                  : "border-hairline bg-surface text-muted hover:border-accent"
+              aria-pressed={voted}
+              // Who voted where (v0.807): a vote is the person in full colour,
+              // outlined and tinted in their colour with a check; no vote is
+              // grey and faded.
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-all disabled:opacity-50 ${
+                voted ? "font-semibold text-ink" : "border-hairline bg-surface text-muted hover:border-accent"
               }`}
+              style={voted ? { borderColor: person.color, backgroundColor: `${person.color}1f`, boxShadow: `0 0 0 1px ${person.color}` } : undefined}
             >
-              <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} avatarPosition={person.avatarPosition} size="xs" />
+              <span className={voted ? "" : "opacity-40 grayscale"}>
+                <Avatar name={person.name} color={person.color} avatarPath={person.avatarPath} avatarPosition={person.avatarPosition} size="xs" />
+              </span>
               {person.name}
+              {voted && (
+                <span style={{ color: person.color }}>
+                  <CheckIcon className="h-3.5 w-3.5" />
+                </span>
+              )}
             </button>
           );
         })}
