@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-11 — History filter, place types, who confirms (v0.812.0)
+
+- One Filter button on History (who; Today, 7 days, 30 days, 1 year, All or
+  two days picked on a calendar). Active filters show as chips with ✕. The
+  dates apply to All places too: places with no visits in them drop out.
+- A place's size comes from its type (`PLACE_TYPES`, feet shown, metres
+  stored): Home 130 ft up to Stadium, mall or campus 1300 ft. Stored in
+  `PlaceName.kind`; the old "business" still reads as Business and keeps its
+  size. No migration.
+- The place sheet draws the place's circle on a close-up map and redraws it as
+  the type changes. An unnamed spot's street comes from the browser's Google
+  geocoder; nothing is stored.
+- Confirming a spot: parents, anyone listed in the `places.confirmAll` setting
+  (Admin → Family map → People), or someone who stopped there. A setting, not a
+  `PlacesPerson` column, because saving People recreates those rows. Others see
+  only their own spots in All places.
+
 ## 2026-11 — Watch how on warm-ups; History (v0.811.0, app 0.583.0)
 
 - Warm-up steps always show the ⓘ, and its dialog has Watch how (the same

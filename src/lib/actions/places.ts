@@ -5,6 +5,8 @@ import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { bustPlaceMemo } from "@/lib/places/live";
 import { notify, saveFirebase } from "@/lib/push";
+import { clearSetting, setSetting } from "@/lib/settings";
+import { CONFIRM_ALL } from "@/lib/places/visits";
 import {
   createIngestToken,
   deleteHistory,
@@ -43,6 +45,15 @@ export async function savePlacesPeopleAction(
   const res = await savePeople(rows);
   if (!res.error) revalidatePath("/admin/places");
   return res;
+}
+
+/** Who else may confirm everyone's places (v0.812); parents always can. */
+export async function savePlacesConfirmAllAction(userIds: string[]): Promise<void> {
+  await requireAdmin();
+  const ids = userIds.filter((x) => typeof x === "string" && /^[\w-]{1,64}$/.test(x));
+  if (ids.length) await setSetting(CONFIRM_ALL, ids.join(","));
+  else await clearSetting(CONFIRM_ALL);
+  revalidatePath("/admin/places");
 }
 
 export async function deletePlacesHistoryAction(input: {

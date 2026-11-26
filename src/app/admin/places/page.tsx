@@ -6,6 +6,8 @@ import { householdTz } from "@/lib/dates";
 import { PlacesAdminForm, type PersonView } from "./places-admin";
 import { ZoneColors } from "./zone-colors";
 import { zonesForAdmin } from "@/lib/places/zones-look";
+import { confirmAllIds } from "@/lib/places/visits";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,16 @@ function ago(iso: string, now: number): string {
 }
 
 export default async function PlacesAdminPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
-  const [data, usage, zones] = await Promise.all([loadPlacesAdmin(), usageSummary(), zonesForAdmin()]);
+  const [data, usage, zones, confirmAll] = await Promise.all([loadPlacesAdmin(), usageSummary(), zonesForAdmin(), confirmAllIds()]);
+  // Parents can always confirm everyone's places (v0.812).
+  const parents = new Set(
+    (
+      (await prisma.user.findMany({
+        where: { id: { in: data.people.map((p) => p.id) }, OR: [{ role: "ADMIN" }, { kind: "PARENT" }] },
+        select: { id: true },
+      })) as { id: string }[]
+    ).map((u) => u.id),
+  );
   const now = Date.now();
   const tz = householdTz();
   const time = new Intl.DateTimeFormat("en-US", {
@@ -38,6 +49,8 @@ export default async function PlacesAdminPage({ searchParams }: { searchParams: 
     avatarPath: p.avatarPath,
     avatarPosition: p.avatarPosition,
     entityId: p.entityId,
+    parent: parents.has(p.id),
+    confirmAll: parents.has(p.id) || confirmAll.includes(p.id),
     points: p.points,
     last: p.last
       ? {

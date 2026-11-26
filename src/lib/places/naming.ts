@@ -1,5 +1,5 @@
 import "server-only";
-import { SIZES, cleanKind, rematchAround } from "@/lib/places/visits";
+import { SIZES, cleanKind, radiusFor, rematchAround } from "@/lib/places/visits";
 import { prisma } from "@/lib/prisma";
 import { getSetting } from "@/lib/settings";
 import { PLACES_LOOKUP_KEY } from "@/lib/places/config";
@@ -79,7 +79,8 @@ export async function saveFamilyName(input: {
     const d = metres({ lat: input.lat, lng: input.lng }, { lat: input.placeLat, lng: input.placeLng });
     radiusM = Math.round(Math.min(250, Math.max(100, d + 75)));
   }
-  if (input.size && SIZES[input.size]) radiusM = SIZES[input.size];
+  // A place type sets the size (v0.812); the old size names still work.
+  radiusM = radiusFor(input.kind, input.size) ?? radiusM;
   await prisma.placeName.create({
     data: {
       lat: input.lat,

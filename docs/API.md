@@ -1958,16 +1958,20 @@ map. Web sign-in is for parents, so the device hands itself over:
   (a stop on the trip between from and to, at the time it passed nearest the spot). A day's
   `items[]` stops carry `editId` when added; `removed[]` lists removed stops `{ editId, start, end, place }`.
 - Places page (v0.795), Kairos's own visit records (no Google calls):
-  `GET /api/v1/places/view/visits?q=&users=a,b&since=YYYY-MM-DD&place=<key>&offset=` →
+  `GET /api/v1/places/view/visits?q=&users=a,b&since=YYYY-MM-DD&until=YYYY-MM-DD&place=<key>&offset=` →
   `{ visits: [{ id, arrivedAt, leftAt, lat, lng, person: { id, name, color, avatarPath, avatarPosition },
   place, address, confirmed, placeKey, choices }], total, more }` (50 a page, newest first; `placeKey` is
   `name:<id>`, `spot:<id>` or `zone:<name>`; `choices` = two places when it's "Which one?").
-  `GET /api/v1/places/view/places` → `{ rows: [{ key, name, address, confirmed, kind, visits, last, lat,
-  lng, radiusM, justOne }], toConfirm, whichOne }`. `POST /api/v1/places/view/visits` (header
-  `x-kairos-embed: 1`): `{ op: "confirm", spotId, kind?, size? }` (anyone), and parents only
+  `GET /api/v1/places/view/places?from=YYYY-MM-DD&to=YYYY-MM-DD` → `{ rows: [{ key, name, address, confirmed,
+  kind, type, visits, last, lat, lng, radiusM, justOne }], toConfirm, whichOne }` (v0.812: dates count only
+  visits in them; people who can't confirm everyone's places get only spots they stopped at).
+  `POST /api/v1/places/view/visits` (header `x-kairos-embed: 1`): `{ op: "confirm", spotId, kind?, size? }`
+  (parents, people in the `places.confirmAll` setting, or someone who stopped there; otherwise
+  `{ error }`), and parents only
   `{ op: "choose", visitId, placeNameId }`, `{ op: "move", visitId, name, address?, placeId?, lat?, lng? }`,
   `{ op: "update", placeNameId, name?, kind?, size? }`. `size` is small (60 m) / normal (120) / large (250);
-  `kind` home / business. `POST /api/v1/places/view/name` also takes `kind` and `size`.
+  `kind` is a place type (v0.812: home, shop, grocery, school, sports, bigbox, park, campus), which sets the
+  size and wins over `size`; the old business still reads. `POST /api/v1/places/view/name` also takes `kind` and `size`.
 - The embed pages read through `GET /api/v1/places/view/live`, `GET /api/v1/places/view/tracks?ids=a,b`
   and count map loads with `POST /api/v1/places/view/mapload` (v0.778: called before the map opens; `{ ok: false }` past 300 a day, and the map isn't opened). These accept a device token, the
   `fd_places` cookie, or a parent's web session (`requirePlacesViewer`).

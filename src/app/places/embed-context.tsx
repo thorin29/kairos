@@ -166,15 +166,27 @@ export function dayHref(embed: boolean, personId: string, date: string, stopISO?
   return `${placesHref(embed, personId, date)}${stopISO ? `&stop=${encodeURIComponent(stopISO)}` : ""}`;
 }
 
-export async function visitsNow(p: { q: string; users: string[]; since: string | null; place?: string | null; offset: number }): Promise<VisitSearch> {
+export async function visitsNow(p: {
+  q: string;
+  users: string[];
+  since: string | null;
+  until?: string | null;
+  place?: string | null;
+  offset: number;
+}): Promise<VisitSearch> {
   const u = new URLSearchParams({ q: p.q, users: p.users.join(","), offset: String(p.offset) });
   if (p.since) u.set("since", p.since);
+  if (p.until) u.set("until", p.until);
   if (p.place) u.set("place", p.place);
   return getJson(`/api/v1/places/view/visits?${u.toString()}`);
 }
 
-export async function placesListNow(): Promise<PlacesList> {
-  return getJson("/api/v1/places/view/places");
+export async function placesListNow(from?: string | null, to?: string | null): Promise<PlacesList> {
+  const u = new URLSearchParams();
+  if (from) u.set("from", from);
+  if (to) u.set("to", to);
+  const qs = u.toString();
+  return getJson(`/api/v1/places/view/places${qs ? `?${qs}` : ""}`);
 }
 
 export type PlaceChange =

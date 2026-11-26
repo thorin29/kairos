@@ -111,5 +111,5 @@ export async function renderSearch(embed: boolean) {
   const people = tracked
     .map(({ user: u }) => ({ id: u.id, name: u.displayName || u.name, color: u.color, avatarPath: u.avatarPath, avatarPosition: u.avatarPosition }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  return wrap(embed, <PlacesSearch people={people} today={todayISO()} canEdit={canEdit} />);
+  return wrap(embed, <PlacesSearch people={people} today={todayISO()} canEdit={canEdit} mapKey={cfg.mapKey} mapId={cfg.mapId} />);
 }

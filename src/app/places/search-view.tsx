@@ -7,29 +7,23 @@ import type { PlaceChoice } from "@/lib/places/naming-types";
 import type { PlacesList, PlacesListRow, PlaceVisitRow } from "@/lib/places/visits-types";
 import { changePlaceNow, dayHref, placesHref, placesListNow, useEmbed, visitsNow } from "./embed-context";
 import { PlaceFix } from "./place-fix";
+import { FilterSheet, NO_FILTERS, PlaceMap, PlaceTypeField, rangeOf, reachM, shortDate, whenLabel, type Filters } from "./search-parts";
+import { placeType } from "@/lib/places/visits-types";
 
 /**
- * Places (v0.795): search where the family has been, and the list of every
- * place to confirm or tidy. Reads Kairos's own visit records only — nothing
- * here asks Google, except picking a business name while confirming.
+ * History (v0.795, renamed v0.811): search where the family has been, and the
+ * list of every place to confirm or tidy. Reads Kairos's own visit records;
+ * Google is asked only for the place's map, its address and picking a name.
+ * v0.812: one Filter (who and when, any dates) for visits and All places.
  */
 
 type Person = { id: string; name: string; color: string; avatarPath: string | null; avatarPosition: string };
-type Size = "small" | "normal" | "large";
-type Range = "30" | "365" | "all";
 
 const chip = (on: boolean) =>
   `inline-flex h-8 items-center whitespace-nowrap rounded-[10px] border px-2.5 text-xs font-semibold ${
     on ? "border-ink bg-ink text-white" : "border-hairline bg-surface text-ink hover:border-accent"
   }`;
 const card = "overflow-hidden rounded-2xl border border-hairline bg-surface";
-
-function sinceFor(range: Range, today: string): string | null {
-  if (range === "all") return null;
-  const [y, m, d] = today.split("-").map(Number);
-  const t = new Date(Date.UTC(y, m - 1, d) - Number(range) * 86_400_000);
-  return t.toISOString().slice(0, 10);
-}
 
 function dayLabel(iso: string, thisYear: number): string {
   const d = new Date(iso);
@@ -51,50 +45,25 @@ function isoDay(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function KindSize({
-  kind,
-  size,
-  onKind,
-  onSize,
+export function PlacesSearch({
+  people,
+  today,
+  canEdit,
+  mapKey,
+  mapId,
 }: {
-  kind: string | null;
-  size: Size;
-  onKind: (k: string | null) => void;
-  onSize: (s: Size) => void;
+  people: Person[];
+  today: string;
+  canEdit: boolean;
+  mapKey: string;
+  mapId: string;
 }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="w-12 text-xs text-muted">Type</span>
-        {[
-          ["business", "Business"],
-          ["home", "Someone's home"],
-        ].map(([k, l]) => (
-          <button key={k} type="button" className={chip(kind === k)} onClick={() => onKind(kind === k ? null : k)}>
-            {l}
-          </button>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="w-12 text-xs text-muted">Size</span>
-        {(["small", "normal", "large"] as Size[]).map((s) => (
-          <button key={s} type="button" className={chip(size === s)} onClick={() => onSize(s)}>
-            {s === "small" ? "Small" : s === "normal" ? "Normal" : "Large"}
-          </button>
-        ))}
-      </div>
-      <p className="text-xs text-muted">Small keeps neighbouring shops apart; Large covers a big store or campus.</p>
-    </div>
-  );
-}
-
-export function PlacesSearch({ people, today, canEdit }: { people: Person[]; today: string; canEdit: boolean }) {
   const embed = useEmbed();
   const thisYear = Number(today.slice(0, 4));
   const [view, setView] = useState<"search" | "all">("search");
   const [q, setQ] = useState("");
-  const [who, setWho] = useState<string[]>([]);
-  const [range, setRange] = useState<Range>("365");
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [filtering, setFiltering] = useState(false);
   const [place, setPlace] = useState<{ key: string; name: string } | null>(null);
   const [visits, setVisits] = useState<PlaceVisitRow[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -105,12 +74,13 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
   const [moving, setMoving] = useState<PlaceVisitRow | null>(null);
   const seq = useRef(0);
 
-  const since = sinceFor(range, today);
+  const { from, to } = rangeOf(filters, today);
+  const who = filters.who;
   const load = useCallback(
     async (offset: number) => {
       const mine = ++seq.current;
       try {
-        const res = await visitsNow({ q, users: who, since, place: place?.key ?? null, offset });
+        const res = await visitsNow({ q, users: who, since: from, until: to, place: place?.key ?? null, offset });
         if (mine !== seq.current) return;
         setVisits((cur) => (offset > 0 && cur ? [...cur, ...res.visits] : res.visits));
         setTotal(res.total);
@@ -120,7 +90,7 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
         if (mine === seq.current) setError("Couldn't search. Try again.");
       }
     },
-    [q, who, since, place],
+    [q, who, from, to, place],
   );
 
   useEffect(() => {
@@ -130,12 +100,24 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
   }, [load, view, q, reload]);
 
   useEffect(() => {
-    placesListNow()
+    placesListNow(from, to)
       .then(setList)
       .catch(() => setList(null));
-  }, [reload]);
+  }, [reload, from, to]);
 
-  const toggleWho = (id: string) => setWho((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  /** How many visits a filter would leave, for the sheet's button. */
+  const countFor = useCallback(
+    async (f: Filters) => {
+      const r = rangeOf(f, today);
+      try {
+        return (await visitsNow({ q, users: f.who, since: r.from, until: r.to, place: place?.key ?? null, offset: 0 })).total;
+      } catch {
+        return null;
+      }
+    },
+    [q, place, today],
+  );
+
   const refresh = () => setReload((n) => n + 1);
 
   return (
@@ -181,54 +163,36 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
                 <span className="rounded-lg bg-amber-700 px-2 py-0.5 text-xs font-semibold text-white">{list.toConfirm}</span>
               )}
             </button>
-            <div className="flex h-11 items-center gap-2 rounded-[10px] border-[1.5px] border-ink bg-surface px-3">
-              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                maxLength={80}
-                enterKeyHint="search"
-                placeholder="A place, a name you gave it, or a street"
-                aria-label="Search places"
-                className="min-w-0 flex-1 bg-transparent text-base outline-none"
-              />
-              {q && (
-                <button type="button" onClick={() => setQ("")} aria-label="Clear" className="text-muted hover:text-ink">
-                  ✕
-                </button>
-              )}
+            <div className="flex gap-2">
+              <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] border-[1.5px] border-ink bg-surface px-3">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  maxLength={80}
+                  enterKeyHint="search"
+                  placeholder="A place, a name you gave it, or a street"
+                  aria-label="Search places"
+                  className="min-w-0 flex-1 bg-transparent text-base outline-none"
+                />
+                {q && (
+                  <button type="button" onClick={() => setQ("")} aria-label="Clear" className="text-muted hover:text-ink">
+                    ✕
+                  </button>
+                )}
+              </div>
+              <FilterButton count={who.length + (filters.when === "all" ? 0 : 1)} onClick={() => setFiltering(true)} />
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <button type="button" className={chip(who.length === 0)} onClick={() => setWho([])}>
-                Everyone
-              </button>
-              {people.map((p) => (
-                <button key={p.id} type="button" className={chip(who.includes(p.id))} onClick={() => toggleWho(p.id)}>
-                  {p.name}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(
-                [
-                  ["30", "30 days"],
-                  ["365", "1 year"],
-                  ["all", "All"],
-                ] as [Range, string][]
-              ).map(([r, l]) => (
-                <button key={r} type="button" className={chip(range === r)} onClick={() => setRange(r)}>
-                  {l}
-                </button>
-              ))}
-              {place && (
-                <button type="button" className={chip(true)} onClick={() => setPlace(null)} aria-label={`Showing ${place.name}; clear`}>
-                  {place.name} ✕
-                </button>
-              )}
-            </div>
+            <ActiveChips
+              people={people}
+              filters={filters}
+              place={place}
+              onFilters={setFilters}
+              onClearPlace={() => setPlace(null)}
+            />
 
             {error && <p className="text-sm text-red-700">{error}</p>}
             <p className="px-0.5 text-xs text-muted">
@@ -268,6 +232,9 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
           </div>
         ) : (
           <AllPlaces
+            mapKey={mapKey}
+            mapId={mapId}
+            dated={from != null || to != null}
             list={list}
             thisYear={thisYear}
             canEdit={canEdit}
@@ -281,6 +248,20 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
           />
         )}
       </div>
+
+      {filtering && (
+        <FilterSheet
+          people={people}
+          today={today}
+          initial={filters}
+          countFor={countFor}
+          onApply={(f) => {
+            setFilters(f);
+            setFiltering(false);
+          }}
+          onClose={() => setFiltering(false)}
+        />
+      )}
 
       {moving && (
         <PlaceFix
@@ -309,6 +290,76 @@ export function PlacesSearch({ people, today, canEdit }: { people: Person[]; tod
         />
       )}
     </main>
+  );
+}
+
+function FilterButton({ count, onClick }: { count: number; onClick: () => void }) {
+  const on = count > 0;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={on ? `Filter, ${count} on` : "Filter"}
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border ${
+        on ? "border-ink bg-ink text-white" : "border-hairline bg-surface text-ink hover:border-accent"
+      }`}
+    >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+        <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+        <circle cx="16" cy="6" r="2" />
+        <circle cx="10" cy="12" r="2" />
+        <circle cx="18" cy="18" r="2" />
+      </svg>
+      {on && (
+        <span className="tabular absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-on-accent">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** What's filtering the list, each with an ✕. */
+function ActiveChips({
+  people,
+  filters,
+  place,
+  onFilters,
+  onClearPlace,
+}: {
+  people: Person[];
+  filters: Filters;
+  place: { key: string; name: string } | null;
+  onFilters: (f: Filters) => void;
+  onClearPlace: () => void;
+}) {
+  const items: { key: string; label: string; clear: () => void }[] = [];
+  if (place) items.push({ key: "place", label: place.name, clear: onClearPlace });
+  for (const id of filters.who) {
+    const p = people.find((x) => x.id === id);
+    if (p) items.push({ key: id, label: p.name, clear: () => onFilters({ ...filters, who: filters.who.filter((x) => x !== id) }) });
+  }
+  if (filters.when !== "all") {
+    const label =
+      filters.when === "dates" && filters.from
+        ? filters.to && filters.to !== filters.from
+          ? `${shortDate(filters.from)} – ${shortDate(filters.to)}`
+          : shortDate(filters.from)
+        : whenLabel(filters.when);
+    items.push({ key: "when", label, clear: () => onFilters({ ...filters, when: "all", from: null, to: null }) });
+  }
+  if (items.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((c) => (
+        <button key={c.key} type="button" onClick={c.clear} className={chip(true)} aria-label={`${c.label}; remove`}>
+          {c.label}
+          <span className="ml-1.5 opacity-70" aria-hidden>
+            ✕
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -373,6 +424,9 @@ type Filter = "todo" | "done" | "all";
 type Sort = "last" | "most" | "az";
 
 function AllPlaces({
+  mapKey,
+  mapId,
+  dated,
   list,
   thisYear,
   canEdit,
@@ -380,6 +434,9 @@ function AllPlaces({
   onChanged,
   onShowVisits,
 }: {
+  mapKey: string;
+  mapId: string;
+  dated: boolean;
   list: PlacesList | null;
   thisYear: number;
   canEdit: boolean;
@@ -437,7 +494,7 @@ function AllPlaces({
         </p>
       )}
       {rows.length === 0 ? (
-        <p className="py-3 text-sm text-muted">{filter === "todo" ? "Nothing to confirm." : "No places yet."}</p>
+        <p className="py-3 text-sm text-muted">{filter === "todo" ? "Nothing to confirm." : dated ? "No places in those dates." : "No places yet."}</p>
       ) : (
         <div className={card}>
           {rows.map((r, i) => (
@@ -466,6 +523,8 @@ function AllPlaces({
       )}
       {open && (
         <PlaceSheet
+          mapKey={mapKey}
+          mapId={mapId}
           row={open}
           canEdit={canEdit}
           people={people}
@@ -485,6 +544,8 @@ function AllPlaces({
 }
 
 function PlaceSheet({
+  mapKey,
+  mapId,
   row,
   canEdit,
   people,
@@ -492,6 +553,8 @@ function PlaceSheet({
   onChanged,
   onShowVisits,
 }: {
+  mapKey: string;
+  mapId: string;
   row: PlacesListRow;
   canEdit: boolean;
   people: Person[];
@@ -499,15 +562,23 @@ function PlaceSheet({
   onChanged: () => void;
   onShowVisits: () => void;
 }) {
-  const [kind, setKind] = useState<string | null>(row.kind === "Home" ? "home" : row.kind === "Business" ? "business" : null);
-  const [size, setSize] = useState<Size>(row.radiusM != null && row.radiusM <= 60 ? "small" : row.radiusM != null && row.radiusM >= 250 ? "large" : "normal");
+  const [type, setType] = useState<string | null>(placeType(row.type) ? row.type : null);
   const [name, setName] = useState(row.name);
+  const [near, setNear] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isSpot = row.key.startsWith("spot:");
   const isName = row.key.startsWith("name:");
   const id = row.key.slice(5);
+  const address = row.address ?? near;
+  const radiusM = reachM(type, row.radiusM);
+  const typeField = (isSpot || (isName && canEdit)) && (
+    <div className="space-y-1.5">
+      <PlaceTypeField value={type} onChange={setType} />
+      <p className="text-xs text-muted">The blue circle is the area that counts as this place.</p>
+    </div>
+  );
 
   const run = async (f: () => Promise<{ error: string | null }>) => {
     setBusy(true);
@@ -525,29 +596,33 @@ function PlaceSheet({
         personName=""
         spot={{ lat: row.lat, lng: row.lng, accuracyM: 30 }}
         current={row.name || null}
-        title="What is this place?"
+        title={row.name ? "What is this place?" : "Name this place"}
         everyoneOnly
-        extra={{ kind, size }}
-        controls={<KindSize kind={kind} size={size} onKind={setKind} onSize={setSize} />}
+        extra={{ kind: type }}
+        controls={<PlaceTypeField value={type} onChange={setType} />}
         onClose={() => setPicking(false)}
         onSaved={onChanged}
       />
     );
   }
 
+  const primaryBtn =
+    "flex h-11 w-full items-center justify-center rounded-[10px] bg-ink text-sm font-semibold text-white disabled:opacity-50";
+  const secondaryBtn = "flex h-11 w-full items-center justify-center rounded-[10px] border border-hairline text-sm font-semibold hover:border-accent";
+
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-3 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 sm:items-center sm:p-3" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label={row.name || "Place"}
-        className="w-full max-w-md space-y-3 rounded-2xl bg-surface p-4 shadow-xl"
+        className="max-h-[92dvh] w-full max-w-md space-y-3 overflow-y-auto rounded-t-2xl bg-surface p-4 shadow-xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold">{row.name || row.address || "Unnamed spot"}</h2>
-            {row.name && row.address && <p className="truncate text-sm text-muted">{row.address}</p>}
+            <h2 className="truncate text-base font-semibold">{row.name || "Unnamed spot"}</h2>
+            {address && <p className="truncate text-sm text-muted">{row.name ? address : `Near ${address}`}</p>}
             <p className="text-xs text-muted">
               {row.visits} visit{row.visits === 1 ? "" : "s"}
               {row.confirmed ? ` · ${row.kind}` : " · not confirmed"}
@@ -558,48 +633,59 @@ function PlaceSheet({
           </button>
         </div>
 
+        {row.lat != null && row.lng != null && (
+          <PlaceMap
+            mapKey={mapKey}
+            mapId={mapId}
+            lat={row.lat}
+            lng={row.lng}
+            radiusM={radiusM}
+            onAddress={!row.name && !row.address ? setNear : undefined}
+          />
+        )}
+
         {isSpot && (
           <>
-            <KindSize kind={kind} size={size} onKind={setKind} onSize={setSize} />
+            {typeField}
             {row.name ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void run(() => changePlaceNow({ op: "confirm", spotId: id, kind, size }))}
-                className="flex h-11 w-full items-center justify-center rounded-[10px] bg-ink text-sm font-semibold text-white disabled:opacity-50"
-              >
-                That&rsquo;s right: {row.name}
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => changePlaceNow({ op: "confirm", spotId: id, kind: type, size: "normal" }))}
+                  className={primaryBtn}
+                >
+                  That&rsquo;s right: {row.name}
+                </button>
+                <button type="button" onClick={() => setPicking(true)} className={secondaryBtn}>
+                  Not right? Pick or type a name
+                </button>
+              </>
             ) : (
-              <p className="text-xs text-muted">Google&rsquo;s name for this spot has expired or was never looked up. Pick or type one.</p>
+              <button type="button" onClick={() => setPicking(true)} className={primaryBtn}>
+                Name this place
+              </button>
             )}
-            <button
-              type="button"
-              onClick={() => setPicking(true)}
-              className="flex h-11 w-full items-center justify-center rounded-[10px] border border-hairline text-sm font-semibold hover:border-accent"
-            >
-              {row.name ? "Not right? Pick or type a name" : "Pick or type a name"}
-            </button>
           </>
         )}
 
         {isName && canEdit && (
           <>
-            <label className="block">
-              <span className="text-xs text-muted">Name</span>
+            <label className="flex items-center gap-3">
+              <span className="w-20 shrink-0 text-sm font-medium">Name</span>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={80}
-                className="mt-1 h-11 w-full rounded-[10px] border border-hairline bg-surface px-3 text-base outline-none focus:border-accent"
+                className="h-11 min-w-0 flex-1 rounded-[10px] border border-hairline bg-surface px-3 text-base outline-none focus:border-accent"
               />
             </label>
-            <KindSize kind={kind} size={size} onKind={setKind} onSize={setSize} />
+            {typeField}
             <button
               type="button"
               disabled={busy}
-              onClick={() => void run(() => changePlaceNow({ op: "update", placeNameId: id, name, kind, size }))}
-              className="flex h-11 w-full items-center justify-center rounded-[10px] bg-ink text-sm font-semibold text-white disabled:opacity-50"
+              onClick={() => void run(() => changePlaceNow({ op: "update", placeNameId: id, name, ...(type ? { kind: type } : {}) }))}
+              className={primaryBtn}
             >
               Save
             </button>

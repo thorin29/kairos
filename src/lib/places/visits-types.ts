@@ -26,6 +26,8 @@ export type PlacesListRow = {
   confirmed: boolean;
   /** "Home", "Business", "Named", "Zone", or "" when unconfirmed. */
   kind: string;
+  /** The stored type key (v0.812), for the Place type field. */
+  type: string | null;
   visits: number;
   last: string | null;
   lat: number | null;
@@ -36,3 +38,28 @@ export type PlacesListRow = {
 };
 
 export type PlacesList = { rows: PlacesListRow[]; toConfirm: number; whichOne: number };
+
+/**
+ * What a place is (v0.812), each with how far it reaches: a type sets the
+ * place's size. Feet are what's shown; metres are what's stored. Estimates
+ * from a typical building and its parking.
+ */
+export const PLACE_TYPES = [
+  { key: "home", label: "Home", ft: 130 },
+  { key: "shop", label: "Shop or restaurant", ft: 200 },
+  { key: "grocery", label: "Grocery store", ft: 400 },
+  { key: "school", label: "School or church", ft: 500 },
+  { key: "sports", label: "Rink, gym or field", ft: 500 },
+  { key: "bigbox", label: "Big-box store", ft: 600 },
+  { key: "park", label: "Park", ft: 650 },
+  { key: "campus", label: "Stadium, mall or campus", ft: 1300 },
+] as const;
+export type PlaceTypeKey = (typeof PLACE_TYPES)[number]["key"];
+export const placeType = (k: string | null | undefined) => PLACE_TYPES.find((t) => t.key === k) ?? null;
+export const typeRadiusM = (k: string | null | undefined): number | null => {
+  const t = placeType(k);
+  return t ? Math.round(t.ft * 0.3048) : null;
+};
+/** A stored place's type label; the old "business" reads as before. */
+export const typeLabel = (k: string | null | undefined): string =>
+  placeType(k)?.label ?? (k === "business" ? "Business" : "Named");

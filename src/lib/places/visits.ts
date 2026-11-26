@@ -4,7 +4,8 @@ import { addDays, fromDateColumn, toDateColumn, todayISO } from "@/lib/dates";
 import { boxAround, metres, shortAddress, type Pt } from "@/lib/places/geo";
 import { loadDay } from "@/lib/places/history";
 import type { DayStopItem } from "@/lib/places/history-types";
-import type { PlacesListRow, PlaceVisitRow, VisitSearch } from "@/lib/places/visits-types";
+import { placeType, typeLabel, typeRadiusM, type PlacesListRow, type PlaceVisitRow, type VisitSearch } from "@/lib/places/visits-types";
+import { getSetting } from "@/lib/settings";
 
 /**
  * Places page (v0.795): every stop is kept as a visit — to a place the family
@@ -305,7 +306,15 @@ function toRow(v: VisitRow): PlaceVisitRow {
 }
 
 /** Search visits by place name, the family's names, address or zone. */
-export async function searchVisits(input: { q: string; userIds: string[]; sinceISO: string | null; placeKey?: string | null; offset: number }): Promise<VisitSearch> {
+export async function searchVisits(input: {
+  q: string;
+  userIds: string[];
+  sinceISO: string | null;
+  /** The last day to include (v0.812, a picked range). */
+  untilISO?: string | null;
+  placeKey?: string | null;
+  offset: number;
+}): Promise<VisitSearch> {
   const q = input.q.trim().slice(0, 80);
   const text = q
     ? {
@@ -330,7 +339,14 @@ export async function searchVisits(input: { q: string; userIds: string[]; sinceI
     ...text,
     ...byPlace,
     ...(input.userIds.length > 0 ? { userId: { in: input.userIds.slice(0, 20) } } : {}),
-    ...(input.sinceISO ? { day: { gte: toDateColumn(input.sinceISO) } } : {}),
+    ...(input.sinceISO || input.untilISO
+      ? {
+          day: {
+            ...(input.sinceISO ? { gte: toDateColumn(input.sinceISO) } : {}),
+            ...(input.untilISO ? { lte: toDateColumn(input.untilISO) } : {}),
+          },
+        }
+      : {}),
   };
   const [rows, total] = await Promise.all([
     prisma.placeVisit.findMany({ where, orderBy: { arrivedAt: "desc" }, skip: Math.max(0, input.offset), take: PAGE, select: VISIT_SELECT }) as Promise<VisitRow[]>,
@@ -340,11 +356,20 @@ export async function searchVisits(input: { q: string; userIds: string[]; sinceI
 }
 
 /** Every place with visits, for "All places". */
-export async function listPlaces(): Promise<{ rows: PlacesListRow[]; toConfirm: number; whichOne: number }> {
+export async function listPlaces(
+  opts: { viewerId?: string | null; everything?: boolean; fromISO?: string | null; toISO?: string | null } = {},
+): Promise<{ rows: PlacesListRow[]; toConfirm: number; whichOne: number }> {
+  // Dates (v0.812) count only visits in that stretch; a place with none drops.
+  const dated = opts.fromISO || opts.toISO;
+  const inDates = {
+    ...(dated ? { day: { ...(opts.fromISO ? { gte: toDateColumn(opts.fromISO) } : {}), ...(opts.toISO ? { lte: toDateColumn(opts.toISO) } : {}) } } : {}),
+  };
+  // Someone who can't confirm everything sees only spots they stopped at.
+  const mineOnly = opts.everything === false && opts.viewerId ? { userId: opts.viewerId } : {};
   const [byName, bySpot, byZone, names, spots, whichOne] = await Promise.all([
-    prisma.placeVisit.groupBy({ by: ["placeNameId"], where: { placeNameId: { not: null } }, _count: { _all: true }, _max: { arrivedAt: true } }),
-    prisma.placeVisit.groupBy({ by: ["spotId"], where: { spotId: { not: null } }, _count: { _all: true }, _max: { arrivedAt: true } }),
-    prisma.placeVisit.groupBy({ by: ["zone"], where: { zone: { not: null } }, _count: { _all: true }, _max: { arrivedAt: true } }),
+    prisma.placeVisit.groupBy({ by: ["placeNameId"], where: { placeNameId: { not: null }, ...inDates }, _count: { _all: true }, _max: { arrivedAt: true } }),
+    prisma.placeVisit.groupBy({ by: ["spotId"], where: { spotId: { not: null }, ...inDates, ...mineOnly }, _count: { _all: true }, _max: { arrivedAt: true } }),
+    prisma.placeVisit.groupBy({ by: ["zone"], where: { zone: { not: null }, ...inDates }, _count: { _all: true }, _max: { arrivedAt: true } }),
     prisma.placeName.findMany({ where: { name: { not: null } }, select: { id: true, name: true, address: true, kind: true, lat: true, lng: true, radiusM: true, userId: true } }),
     prisma.placeSpot.findMany({ select: { id: true, label: true, address: true, labelAt: true, lat: true, lng: true } }),
     prisma.placeVisit.count({ where: { altPlaceNameId: { not: null } } }),
@@ -354,12 +379,14 @@ export async function listPlaces(): Promise<{ rows: PlacesListRow[]; toConfirm: 
   const rows: PlacesListRow[] = [];
   for (const n of names as { id: string; name: string | null; address: string | null; kind: string | null; lat: number; lng: number; radiusM: number; userId: string | null }[]) {
     const g = nameStat.get(n.id);
+    if (dated && !g) continue;
     rows.push({
       key: `name:${n.id}`,
       name: n.name ?? "",
       address: shortAddress(n.address),
       confirmed: true,
-      kind: n.kind === "home" ? "Home" : n.kind === "business" ? "Business" : "Named",
+      kind: typeLabel(n.kind),
+      type: n.kind,
       visits: g?._count._all ?? 0,
       last: g?._max.arrivedAt?.toISOString() ?? null,
       lat: n.lat,
@@ -378,6 +405,7 @@ export async function listPlaces(): Promise<{ rows: PlacesListRow[]; toConfirm: 
       address: ok ? shortAddress(s.address) : null,
       confirmed: false,
       kind: "",
+      type: null,
       visits: g._count._all,
       last: g._max.arrivedAt?.toISOString() ?? null,
       lat: s.lat,
@@ -393,6 +421,7 @@ export async function listPlaces(): Promise<{ rows: PlacesListRow[]; toConfirm: 
       address: null,
       confirmed: true,
       kind: "Zone",
+      type: null,
       visits: z._count._all,
       last: z._max.arrivedAt?.toISOString() ?? null,
       lat: null,
@@ -454,7 +483,7 @@ export async function confirmSpot(spotId: string, kind: string | null, size: key
   })) as { lat: number; lng: number; label: string | null; address: string | null; googlePlaceId: string | null; labelAt: Date | null } | null;
   if (!s) return { error: "That place is gone." };
   if (!s.label || !fresh(s.labelAt)) return { error: "No name to confirm. Pick or type one." };
-  const radiusM = SIZES[size] ?? SIZES.normal;
+  const radiusM = radiusFor(kind, size) ?? SIZES.normal;
   await prisma.placeName.create({
     data: { name: s.label, address: s.address, googlePlaceId: s.googlePlaceId, lat: s.lat, lng: s.lng, radiusM, kind: cleanKind(kind) },
   });
@@ -475,7 +504,7 @@ export async function updatePlace(
   if (!p) return { error: "That place is gone." };
   const name = input.name?.trim().slice(0, 80);
   if (input.name !== undefined && !name) return { error: "Type a name." };
-  const radiusM = input.size ? SIZES[input.size] : undefined;
+  const radiusM = (input.kind !== undefined ? typeRadiusM(input.kind) : null) ?? (input.size ? SIZES[input.size] : undefined);
   await prisma.placeName.update({
     where: { id: placeNameId },
     data: {
@@ -488,8 +517,31 @@ export async function updatePlace(
   return { error: null };
 }
 
+/** A place's type (v0.812: the PLACE_TYPES keys; "business" from before). */
 export function cleanKind(k: unknown): string | null {
-  return k === "home" || k === "business" ? k : null;
+  return typeof k === "string" && (k === "business" || placeType(k)) ? k : null;
+}
+
+/** The size for a place: its type's reach, else the old size names. */
+export function radiusFor(kind: string | null | undefined, size: keyof typeof SIZES | null | undefined): number | null {
+  return typeRadiusM(kind) ?? (size ? SIZES[size] : null);
+}
+
+/**
+ * Who may confirm a spot (v0.812): parents, anyone an admin let confirm
+ * everyone's places, or someone who stopped there.
+ */
+export const CONFIRM_ALL = "places.confirmAll";
+export async function confirmAllIds(): Promise<string[]> {
+  const raw = await getSetting(CONFIRM_ALL);
+  return (raw ?? "").split(",").filter(Boolean);
+}
+export async function canConfirmEverything(userId: string | null, isParent: boolean): Promise<boolean> {
+  if (isParent) return true;
+  return !!userId && (await confirmAllIds()).includes(userId);
+}
+export async function stoppedAt(userId: string, spotId: string): Promise<boolean> {
+  return (await prisma.placeVisit.count({ where: { userId, spotId } })) > 0;
 }
 
 /** Sizes of the visit tables, for Admin → Family map → Status. */

@@ -13,6 +13,7 @@ import {
   sendTestNotificationAction,
   savePlacesKeysAction,
   savePlacesPeopleAction,
+  savePlacesConfirmAllAction,
 } from "@/lib/actions/places";
 import type { UsageSummary } from "@/lib/places/usage-types";
 
@@ -23,6 +24,9 @@ export type PersonView = {
   avatarPath: string | null;
   avatarPosition: string;
   entityId: string;
+  /** Parents can always confirm everyone's places (v0.812). */
+  parent: boolean;
+  confirmAll: boolean;
   points: number;
   last: { when: string; accuracy: string | null; speed: string | null; battery: string | null } | null;
 };
@@ -107,6 +111,9 @@ export function PlacesAdminForm(props: {
   const [entities, setEntities] = useState<Record<string, string>>(
     Object.fromEntries(props.people.map((p) => [p.id, p.entityId])),
   );
+  const [confirmAll, setConfirmAll] = useState<Record<string, boolean>>(
+    Object.fromEntries(props.people.map((p) => [p.id, p.confirmAll])),
+  );
   const [peopleMsg, setPeopleMsg] = useState<Msg>(null);
   const savePeople = () =>
     startTransition(async () => {
@@ -114,6 +121,7 @@ export function PlacesAdminForm(props: {
       const res = await savePlacesPeopleAction(
         props.people.map((p) => ({ userId: p.id, entityId: entities[p.id] ?? "" })),
       );
+      if (!res.error) await savePlacesConfirmAllAction(props.people.filter((p) => !p.parent && confirmAll[p.id]).map((p) => p.id));
       setPeopleMsg(res.error ? { ok: false, text: res.error } : { ok: true, text: "Saved." });
       if (!res.error) router.refresh();
     });
@@ -310,6 +318,7 @@ export function PlacesAdminForm(props: {
       {props.tab === "people" && (
       <section className={card}>
         <h2 className={label}>People</h2>
+        <p className="text-sm text-muted">Everyone can confirm places they stopped at.</p>
         <ul className="space-y-4">
           {props.people.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-3">
@@ -336,6 +345,17 @@ export function PlacesAdminForm(props: {
                 spellCheck={false}
                 className={`${field} basis-64 flex-1 font-mono`}
               />
+              <label className="flex basis-full items-center gap-2 pl-11 text-sm">
+                <input
+                  type="checkbox"
+                  checked={p.parent || !!confirmAll[p.id]}
+                  disabled={p.parent}
+                  onChange={(e) => setConfirmAll({ ...confirmAll, [p.id]: e.target.checked })}
+                  className="h-4 w-4 accent-[var(--color-accent)]"
+                />
+                <span>Confirm everyone&rsquo;s places</span>
+                {p.parent && <span className="text-xs text-muted">Parents always can</span>}
+              </label>
             </li>
           ))}
         </ul>
