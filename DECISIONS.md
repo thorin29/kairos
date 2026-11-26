@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11 — Didn't go; chip matches the tile (v0.808.0, app 0.580.0)
+
+- `workoutBlocksFor` leaves out sports answered "didn't go" (they used to
+  count as done), so the tile, `workoutBlocks` and `workoutCard` drop them.
+- `workoutBar` (day-card.ts) swaps today's part of the Workout bar for the
+  blocks' done / total, keeping overdue workout days; used by the dashboard
+  API (app chips and ring) and the web greeting card. The chip said 0/1 (the
+  plan's task) while the tile said 0 of 2 (plan + practice).
+- The day page's "N workouts" leaves out a didn't-go event; it stays listed
+  so the answer can be changed.
+
 ## 2026-11 — Clearer goal votes (v0.807.0)
 
 - On /coop each idea's people: a vote is the avatar in full colour, the chip

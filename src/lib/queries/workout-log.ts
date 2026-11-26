@@ -2813,7 +2813,7 @@ export async function workoutBlocksFor(
   userId: string,
   dateISO: string,
 ): Promise<{ done: number; total: number; items: WorkoutBlockItem[] } | null> {
-  const [sports, progress, task] = await Promise.all([
+  const [allSports, progress, task] = await Promise.all([
     sportsForDay(userId, dateISO),
     loadDayPlanProgress(userId, dateISO),
     prisma.task.findFirst({
@@ -2821,6 +2821,8 @@ export async function workoutBlocksFor(
       select: { status: true },
     }) as Promise<{ status: string } | null>,
   ]);
+  // An event you said you didn't go to isn't one of the day's workouts (v0.808).
+  const sports = allSports.filter((x) => x.state !== "skipped");
   const planned = progress.planCount > 0;
   // Two programs that day (v0.749): each counts as its own workout.
   const progs = planned ? await dayProgramBlocks(userId, dateISO) : [];

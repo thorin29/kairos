@@ -36,3 +36,25 @@ export function workoutCard(
     kinds,
   };
 }
+
+/**
+ * The day's workout chip counts its workouts (v0.808), the same as the tile:
+ * on a day with two or more (a practice or game as well as the plan), today's
+ * part of the Workout bar becomes blocks done / total; overdue workout days
+ * still count as they did. A day with only a practice gets a bar.
+ */
+export function workoutBar<B extends { category: string; total: number; complete: number; overdue: number }>(
+  bars: B[],
+  blocks: { done: number; total: number } | null,
+  make: (total: number, complete: number, overdue: number) => B,
+  order: readonly string[],
+): B[] {
+  if (!blocks) return bars;
+  const i = bars.findIndex((b) => b.category === "EXERCISE");
+  const late = i >= 0 ? bars[i].overdue : 0;
+  // Overdue workout prompts are still pending, so they're in total, not complete.
+  const bar = make(blocks.total + late, blocks.done, late);
+  if (i >= 0) return bars.map((b, n) => (n === i ? bar : b));
+  const out = [...bars, bar];
+  return out.sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category));
+}

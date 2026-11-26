@@ -623,7 +623,12 @@ export function DayLog({
               {lateDay && " · logging late"}
             </p>
             <h3 className="mt-1 font-display text-xl font-semibold">
-              {blocks.length} {blocks.length === 1 ? "workout" : "workouts"}
+              {/* An event you didn't go to stays listed (to change the
+                  answer) but isn't counted as a workout (v0.808). */}
+              {(() => {
+                const n = blocks.filter((b) => !(b.kind === "sport" && b.sport?.state === "skipped")).length;
+                return `${n} ${n === 1 ? "workout" : "workouts"}`;
+              })()}
             </h3>
           </div>
           <DayWorkoutsList

@@ -6,7 +6,7 @@ import { Category, TaskStatus } from "@/generated/prisma/client";
 import { loadPersonDay } from "@/lib/queries/overview";
 import { loadWorkoutDayExtras, loadWorkoutPlanNames } from "@/lib/queries/workouts";
 import { sportLabels } from "@/lib/workouts/history-run";
-import { workoutCard as buildWorkoutCard, type WorkoutCard } from "@/lib/workouts/day-card";
+import { workoutBar, workoutCard as buildWorkoutCard, type WorkoutCard } from "@/lib/workouts/day-card";
 import { loadDayPlanProgress, loadOverdueWorkoutDates,
   workoutBlocksFor, workoutRestFor } from "@/lib/queries/workout-log";
 import { loadReadingProgress, type ReadingProgress } from "@/lib/queries/reading";
@@ -290,7 +290,7 @@ export async function loadApiDashboard(
     ? Math.round((done / counted.length) * 100)
     : null;
 
-  const categories: ApiCategoryBar[] = ORDER.map((category) => {
+  let categories: ApiCategoryBar[] = ORDER.map((category) => {
     const items = rows.filter(
       (r) =>
         r.category === category &&
@@ -412,6 +412,19 @@ export async function loadApiDashboard(
   }
   const blocks = restDay.rest === "planned" ? null : await workoutBlocksFor(userId, dayISO);
   const workoutBlocks = blocks ? { done: blocks.done, total: blocks.total } : null;
+  categories = workoutBar(
+    categories,
+    workoutBlocks,
+    (total, complete, overdue) => ({
+      category: "EXERCISE" as Category,
+      label: CATEGORY_LABELS.EXERCISE,
+      total,
+      complete,
+      overdue,
+      percent: total ? Math.round((complete / total) * 100) : 0,
+    }),
+    ORDER,
+  );
   let workoutCard: ApiDashboard["workoutCard"] = null;
   if (blocks) {
     const title = rows.find((r) => r.isWorkout && r.dueDate === dayISO)?.title ?? null;

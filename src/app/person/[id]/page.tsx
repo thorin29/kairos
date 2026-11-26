@@ -59,7 +59,7 @@ import { ListTile } from "@/components/list-tile";
 import { FamilyGoalTile } from "@/components/family-goal-banner";
 import { ScheduleCard } from "@/components/day-schedule";
 import { AddTaskFab } from "@/components/add-task-fab";
-import { workoutCard } from "@/lib/workouts/day-card";
+import { workoutBar, workoutCard } from "@/lib/workouts/day-card";
 import { personRows } from "@/lib/queries/person-rows";
 import { MoonIcon, FlameIcon, StarIcon, BookIcon } from "@/components/icons";
 import {
@@ -395,7 +395,12 @@ export default async function PersonPage({
               avatarPosition: person.avatarPosition,
             }}
             dateLabel={formatLong(today).replace(/, \d{4}$/, "")}
-            bars={catBars}
+            bars={workoutBar(
+              catBars,
+              blocksToday ? { done: blocksToday.done, total: blocksToday.total } : null,
+              (total, complete, overdue) => ({ category: "EXERCISE" as (typeof ORDER)[number], total, complete, overdue, percent: total ? Math.round((complete / total) * 100) : 0 }),
+              ORDER,
+            )}
             extra={levelChips}
           />
 
