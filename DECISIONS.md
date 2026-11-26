@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11 — Farmer hold timed; In progress (v0.809.0, app 0.581.0)
+
+- `isCarry` matched "farmer" in any name, so Farmer hold got a yards unit on
+  its target. A name with "hold" isn't a carry.
+- `WorkoutTile`: a started workout shows its name and italic "In progress"
+  (with several, in place of its details) instead of the remaining parts; a
+  finished one is green.
+
 ## 2026-11 — Didn't go; chip matches the tile (v0.808.0, app 0.580.0)
 
 - `workoutBlocksFor` leaves out sports answered "didn't go" (they used to

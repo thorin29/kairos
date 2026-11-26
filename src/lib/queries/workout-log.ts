@@ -2241,8 +2241,9 @@ export async function loadMovementLog(
 export const isShuttle = (p: { name?: string } | null | undefined) => !!p && /shuttle carry/i.test(p.name ?? "");
 
 /** A loaded carry (suitcase, farmer, overhead…): logged as weight and distance. */
+// A farmer hold (v0.809) is a hold, timed: only a carry walks a distance.
 export const isCarry = (p: { pattern?: string | null; name?: string } | null | undefined) =>
-  !!p && /\bcarry\b|farmer/i.test(p.name ?? "");
+  !!p && /\bcarry\b|farmer/i.test(p.name ?? "") && !/\bhold\b/i.test(p.name ?? "");
 
 /** A planned movement's targets for a day, from its set scheme and the
  *  person's program (v0.611). Null when the movement has no scheme. */

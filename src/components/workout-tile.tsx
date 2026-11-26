@@ -45,12 +45,6 @@ export function WorkoutTile({
         <TileTitle>
           <span className="text-emerald-600">Complete for today!</span>
         </TileTitle>
-      ) : remaining.length > 0 ? (
-        <>
-          {blocks && <TileNote>{blocks.done} of {blocks.total} workouts</TileNote>}
-          <TileNote>Remaining</TileNote>
-          <TileTitle>{remaining.slice(0, 3).join(DOT)}</TileTitle>
-        </>
       ) : card && card.items.length >= 2 ? (
         <>
           {blocks && <span className="text-xs font-semibold text-muted">{blocks.done} of {blocks.total} workouts</span>}
@@ -59,11 +53,22 @@ export function WorkoutTile({
           {(card.items.length > 3 ? card.items.slice(0, 2) : card.items).map((it, i) => (
             <span key={`${it.name}-${i}`} className="grid min-w-0 grid-cols-[0.25rem_minmax(0,1fr)] items-baseline gap-x-2">
               <span aria-hidden className={`h-1 w-1 -translate-y-[0.2em] rounded-full ${it.done ? "bg-emerald-600" : "bg-muted/50"}`} />
-              <span className={`truncate text-[15px] font-semibold lg:text-base ${it.done ? "text-muted" : ""}`}>{it.name}</span>
-              {it.detail && <span className="col-start-2 truncate text-[11px] leading-tight text-muted lg:text-xs">{it.detail}</span>}
+              {/* A finished workout reads green (v0.809). */}
+              <span className={`truncate text-[15px] font-semibold lg:text-base ${it.done ? "text-emerald-600" : ""}`}>{it.name}</span>
+              {/* Started and not done: "In progress", not its parts (v0.809). */}
+              {it.detail && !it.done && remaining.length > 0 ? (
+                <span className="col-start-2 truncate text-[11px] italic leading-tight text-muted lg:text-xs">In progress</span>
+              ) : it.detail ? (
+                <span className="col-start-2 truncate text-[11px] leading-tight text-muted lg:text-xs">{it.detail}</span>
+              ) : null}
             </span>
           ))}
           {card.items.length > 3 && <span className="text-xs font-semibold text-muted">+{card.items.length - 2} more</span>}
+        </>
+      ) : remaining.length > 0 ? (
+        <>
+          <TileTitle>{one ? one.slice(one.indexOf(DOT) + DOT.length) : (uniq[0] ?? "Workout")}</TileTitle>
+          <span className="block text-xs italic text-muted lg:text-sm">In progress</span>
         </>
       ) : one ? (
         <>
