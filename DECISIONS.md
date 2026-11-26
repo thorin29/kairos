@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Menu swipe off the map (v0.812.2, app 0.584.0)
+
+- `useMapEdge` reports the topmost map's band (`mapBand(top, bottom)`; a
+  picker over the day's map wins) and clears it when the map goes; `useNoMap`
+  says a page has none. The app opens the menu on a rightward swipe off the
+  band, so History and All places swipe anywhere. Old apps get `mapBottom`.
+
 ## 2026-11 — Place centre and type list (v0.812.1)
 
 - The pin stays in the middle of the place map and moving the map moves the

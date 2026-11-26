@@ -1945,7 +1945,9 @@ map. Web sign-in is for parents, so the device hands itself over:
   app asks for a new ticket.
 - Page → app bridge (v0.793): the embed pages call `window.KairosPlaces.mapBottom(px)` with the
   map's bottom edge in CSS px (on load and resize) when the app provides that object; the app opens
-  its menu on a rightward swipe below it.
+  its menu on a rightward swipe below it. v0.812.2: `mapBand(top, bottom)` gives the topmost map's
+  band (0, 0 for a page with none, on load, resize and scroll), and the app opens the menu on a swipe
+  anywhere off it; `mapBottom` is still called when the app has no `mapBand`.
 - "Not right?" in the app (v0.768): `GET /api/v1/places/view/choices?lat=&lng=&acc=` (nearby
   businesses), `GET /api/v1/places/view/search?lat=&lng=&q=` (Text Search near the spot, 40 a day →
   `{ choices: [{ name, address, placeId, lat, lng, distanceM }], error }`), and

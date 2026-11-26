@@ -236,7 +236,7 @@ production:
 | Admin tabs (v0.797) | `src/components/admin-tabs.tsx` — `?tab=` on Workouts, Chores, Family map, Bible reading |
 | Admin ↔ page mapping (v0.796) | `src/lib/admin-sections.ts` — used by `components/admin-lock.tsx`, `app/admin/close-admin-button.tsx`, `app/admin/lock-button.tsx`; `AdminBack({ parent })` for pages inside a section |
 | Places visits and search (v0.795) | `src/lib/places/visits.ts` (snapshot, match, search, list, changes), `visits-types.ts`; timer in `src/lib/timers.ts`; `/api/v1/places/view/visits`, `/places`; page `src/app/places/search-view.tsx` via `renderSearch`; v0.812 filter sheet, place map and Place type in `search-parts.tsx`, `PLACE_TYPES` in `visits-types.ts` |
-| Map edge to the app (v0.793) | `useMapEdge` in `src/app/places/embed-context.tsx` → app `KairosPlaces.mapBottom` in `PlacesScreen.kt` |
+| Map edge to the app (v0.793) | `useMapEdge` / `useNoMap` in `src/app/places/embed-context.tsx` → app `KairosPlaces.mapBand` (v0.812.2; `mapBottom` before) in `PlacesScreen.kt` |
 | Generated tasks once per day (v0.792) | migration `181_generated_once` (partial unique index `Task_generated_once`); `createMany({ skipDuplicates })` in `src/lib/bible/generate.ts` and `src/lib/workouts/generate.ts` |
 | Plates on bar lifts; Log with missed sets (v0.791) | `barOf` in `src/lib/queries/workout-log.ts` (`bar` on the sets payload); `plates` and the "Log with missed sets?" modal in `src/app/exercise/day-log.tsx`; app `SetCard` / `CoreWorkoutScreen` in `MovementSetsScreen.kt` |
 | A movement on two cards the same day (v0.736): the first card keeps it | `repeatsByPlan` in `src/lib/workouts/day-repeats.ts` (pure), applied in `loadTodayPlannedWorkouts` (`repeatOf`, counted skipped) and on the web day page |

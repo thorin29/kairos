@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import type { PlaceChoice } from "@/lib/places/naming-types";
 import type { PlacesList, PlacesListRow, PlaceVisitRow } from "@/lib/places/visits-types";
-import { changePlaceNow, dayHref, placesHref, placesListNow, useEmbed, visitsNow } from "./embed-context";
+import { changePlaceNow, dayHref, placesHref, placesListNow, useEmbed, useNoMap, visitsNow } from "./embed-context";
 import { PlaceFix } from "./place-fix";
 import { FilterSheet, NO_FILTERS, PlaceMap, PlaceTypeField, rangeOf, reachM, shortDate, whenLabel, type Filters } from "./search-parts";
 import { placeType } from "@/lib/places/visits-types";
@@ -59,6 +59,7 @@ export function PlacesSearch({
   mapId: string;
 }) {
   const embed = useEmbed();
+  useNoMap(embed);
   const thisYear = Number(today.slice(0, 4));
   const [view, setView] = useState<"search" | "all">("search");
   const [q, setQ] = useState("");

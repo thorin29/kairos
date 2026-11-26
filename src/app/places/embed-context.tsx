@@ -129,28 +129,61 @@ export async function changeStopNow(embed: boolean, c: StopChange): Promise<{ er
   return (await res.json()) as { error: string | null };
 }
 
+type Bridge = { mapBottom?: (px: number) => void; mapBand?: (top: number, bottom: number) => void };
+const bridge = (): Bridge | undefined => (window as unknown as { KairosPlaces?: Bridge }).KairosPlaces;
+
+/** Tell the app which band of the screen is a map (top and bottom, CSS px); 0,0 = none. */
+function sendBand(top: number, bottom: number): void {
+  const b = bridge();
+  if (b?.mapBand) b.mapBand(top, bottom);
+  else b?.mapBottom?.(bottom);
+}
+
 /**
- * In the phone app (v0.793): tell the app where the map ends on screen, in CSS
- * pixels from the top, so a sideways swipe below it (on the list) can open the
- * app's menu while swipes on the map still pan it. The app adds the
- * `KairosPlaces` bridge; on the web it isn't there and this does nothing.
+ * In the phone app (v0.793; any band v0.812.2): tell the app where a map is on
+ * screen, so a sideways swipe anywhere else opens the app's menu while swipes
+ * on the map still pan it. Pass the map's element; when it goes away the band
+ * is cleared. The app adds the `KairosPlaces` bridge; on the web it isn't
+ * there and this does nothing.
  */
 export function useMapEdge(embed: boolean, map: RefObject<HTMLElement | null>): void {
   useEffect(() => {
     if (!embed) return;
-    const bridge = (window as unknown as { KairosPlaces?: { mapBottom?: (px: number) => void } }).KairosPlaces;
     const el = map.current;
-    if (!bridge?.mapBottom || !el) return;
-    const send = () => bridge.mapBottom?.(Math.round(el.getBoundingClientRect().bottom));
+    if (!bridge() || !el) return;
+    maps.push(el);
+    const send = () => sendTop();
     send();
     const ro = new ResizeObserver(send);
     ro.observe(el);
     window.addEventListener("resize", send);
+    // A map inside a sheet moves when the sheet scrolls.
+    window.addEventListener("scroll", send, true);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", send);
+      window.removeEventListener("scroll", send, true);
+      const i = maps.lastIndexOf(el);
+      if (i >= 0) maps.splice(i, 1);
+      sendTop();
     };
   }, [embed, map]);
+}
+
+/** Maps on screen, newest (topmost) last: a picker over the day's map wins. */
+const maps: HTMLElement[] = [];
+function sendTop(): void {
+  const el = maps[maps.length - 1];
+  if (!el) return sendBand(0, 0);
+  const r = el.getBoundingClientRect();
+  sendBand(Math.round(r.top), Math.round(r.bottom));
+}
+
+/** A page with no map (v0.812.2): the menu swipe works anywhere. */
+export function useNoMap(embed: boolean): void {
+  useEffect(() => {
+    if (embed && bridge()) sendBand(0, 0);
+  }, [embed]);
 }
 
 // ---------- Places page (v0.795) ----------

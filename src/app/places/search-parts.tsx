@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PLACE_TYPES, placeType, typeRadiusM } from "@/lib/places/visits-types";
 import { importLibrary } from "@googlemaps/js-api-loader";
 import { loadMaps } from "./map-kit";
-import { mapLoaded, useEmbed } from "./embed-context";
+import { mapLoaded, useEmbed, useMapEdge } from "./embed-context";
 
 /**
  * Pieces of the History page (v0.812): the place's close-up map with its
@@ -42,6 +42,7 @@ export function PlaceMap({
   const circle = useRef<google.maps.Circle | null>(null);
   const map = useRef<google.maps.Map | null>(null);
   const [failed, setFailed] = useState(false);
+  useMapEdge(embed, div);
   const [here, setHere] = useState({ lat, lng });
   const cb = useRef({ onCenter, radiusM });
   cb.current = { onCenter, radiusM };

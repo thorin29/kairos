@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { PlaceChoice } from "@/lib/places/naming-types";
 import { metres } from "@/lib/places/geo";
-import { searchNow, useEmbed } from "../embed-context";
+import { searchNow, useEmbed, useMapEdge } from "../embed-context";
 import { loadMaps } from "../map-kit";
 import { PlaceFix, Shell, primary, row } from "../place-fix";
 import { PinGlyph } from "../places-view";
@@ -187,6 +187,7 @@ function PinPicker({
   const div = useRef<HTMLDivElement | null>(null);
   const map = useRef<google.maps.Map | null>(null);
   const [failed, setFailed] = useState(false);
+  useMapEdge(useEmbed(), div);
 
   useEffect(() => {
     let cancelled = false;
