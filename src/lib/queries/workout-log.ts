@@ -2805,6 +2805,8 @@ export type WorkoutBlockItem = {
   /** Null for the planned workout: the caller names it from the day's title. */
   name: string | null;
   done: boolean;
+  /** The day's plan (its kinds go under it on the tile, v0.805). */
+  plan?: boolean;
 };
 
 export async function workoutBlocksFor(
@@ -2833,9 +2835,9 @@ export async function workoutBlocksFor(
   const kinds = await sportLabels(sports.map((x) => x.eventId));
   const items: WorkoutBlockItem[] = [
     ...(progs.length
-      ? progs.map((b) => ({ name: b.name, done: b.done || !!planDone }))
+      ? progs.map((b) => ({ name: b.name, done: b.done || !!planDone, plan: true }))
       : planned
-        ? [{ name: null, done: !!planDone }]
+        ? [{ name: null, done: !!planDone, plan: true }]
         : []),
     ...sports.map((x) => ({ name: kinds.get(x.eventId) ?? x.title, done: x.state !== "open" })),
     ...Array.from({ length: tracked }, () => ({ name: "Tracked workout", done: true })),

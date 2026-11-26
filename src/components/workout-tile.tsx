@@ -54,15 +54,16 @@ export function WorkoutTile({
       ) : card && card.items.length >= 2 ? (
         <>
           {blocks && <span className="text-xs font-semibold text-muted">{blocks.done} of {blocks.total} workouts</span>}
+          {/* Each workout with a tiny bullet (green once done) and its own
+              details under its name (v0.805). */}
           {(card.items.length > 3 ? card.items.slice(0, 2) : card.items).map((it, i) => (
-            <span key={`${it.name}-${i}`} className="flex min-w-0 items-center gap-1.5">
-              {/* A small bullet (v0.803), green once done. */}
-              <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${it.done ? "bg-emerald-600" : "bg-ink"}`} />
+            <span key={`${it.name}-${i}`} className="grid min-w-0 grid-cols-[0.25rem_minmax(0,1fr)] items-baseline gap-x-2">
+              <span aria-hidden className={`h-1 w-1 -translate-y-[0.2em] rounded-full ${it.done ? "bg-emerald-600" : "bg-muted/50"}`} />
               <span className={`truncate text-[15px] font-semibold lg:text-base ${it.done ? "text-muted" : ""}`}>{it.name}</span>
+              {it.detail && <span className="col-start-2 truncate text-xs text-muted lg:text-sm">{it.detail}</span>}
             </span>
           ))}
           {card.items.length > 3 && <span className="text-xs font-semibold text-muted">+{card.items.length - 2} more</span>}
-          {card.kinds.length > 0 && <TileNote>{card.kinds.join(DOT)}</TileNote>}
         </>
       ) : one ? (
         <>

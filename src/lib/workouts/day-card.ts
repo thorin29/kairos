@@ -6,7 +6,11 @@
  * of the title and of each extra ("Isometric · Rack pulls and holds" →
  * "Isometric").
  */
-export type WorkoutCard = { items: { name: string; done: boolean }[]; kinds: string[] };
+export type WorkoutCard = {
+  /** `detail` (v0.805): the plan's kinds, under the planned workout only. */
+  items: { name: string; done: boolean; detail: string | null }[];
+  kinds: string[];
+};
 
 const DOT = " · ";
 
@@ -16,7 +20,7 @@ function split(t: string): [string | null, string] {
 }
 
 export function workoutCard(
-  items: readonly { name: string | null; done: boolean }[],
+  items: readonly { name: string | null; done: boolean; plan?: boolean }[],
   title: string | null,
   extras: readonly string[],
 ): WorkoutCard {
@@ -25,5 +29,10 @@ export function workoutCard(
   for (const k of [titleKind, ...extras.map((x) => split(x)[0] ?? x)]) {
     if (k && !kinds.some((o) => o.toLowerCase() === k.toLowerCase())) kinds.push(k);
   }
-  return { items: items.map((i) => ({ name: i.name ?? mainName ?? "Workout", done: i.done })), kinds };
+  const firstPlan = items.findIndex((i) => i.plan);
+  const detail = kinds.length ? kinds.join(DOT) : null;
+  return {
+    items: items.map((i, n) => ({ name: i.name ?? mainName ?? "Workout", done: i.done, detail: n === firstPlan ? detail : null })),
+    kinds,
+  };
 }

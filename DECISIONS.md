@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-11 — Workout details under their workout (v0.805.0, app 0.578.0)
+
+- `workoutBlocksFor` marks plan items (`plan: true`); `workoutCard` puts the
+  kinds line on the first of them as `detail`, so "Core · Cardio · Isometric"
+  sits under Hanging core, not after the sport. `kinds` stays for old apps.
+- Bullets are 4px (web, faint) / 3dp (app); the detail lines up with the name.
+
 ## 2026-11 — Vote badge, + placement, Back (v0.804.0)
 
 - `FamilyGoalTile`'s badge is always "Vote" until a goal wins.

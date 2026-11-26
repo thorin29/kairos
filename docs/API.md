@@ -1347,8 +1347,9 @@ add `key` and `color`. `POST /workouts/cardio` takes `hike` and `walk`.
 `GET /workouts/weekly`: each week adds `plannedParts` (planned parts plus the
 week's sport events; null before they were saved). The dashboard adds
 `workoutBlocks` (`{ done, total }` with two or more workouts on the day, else
-null). v0.798: the dashboard adds `workoutCard` (`{ items: [{ name, done }],
-kinds: string[] }`, same days as `workoutBlocks`, else null). A sport's `label` is the picked sport, else the names, else "Sport".
+null). v0.798: the dashboard adds `workoutCard` (`{ items: [{ name, done, detail }],
+kinds: string[] }`, same days as `workoutBlocks`, else null; v0.805 `detail` is
+the kinds line on the planned workout only, else null). A sport's `label` is the picked sport, else the names, else "Sport".
 
 v0.744: workouts as blocks. `GET /api/v1/workouts` adds `sports` (each sport
 event that day: `eventId`, `title`, `label`, `start`/`end` minutes, labels,
