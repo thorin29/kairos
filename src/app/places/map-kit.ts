@@ -25,6 +25,9 @@ export function touchInline(): boolean {
  * while still under way), walks and other slow trips dotted, workouts tracked
  * in the app in thin short dashes. Stops aren't lines.
  */
+/** How far (px) a dashed walk is drawn beside its path, so there and back don't overlap. */
+const KEEP_RIGHT = 2.5;
+
 export function drawTrips(map: google.maps.Map, items: DayItem[], color: string): google.maps.Polyline[] {
   const lines: google.maps.Polyline[] = [];
   for (const it of items) {
@@ -41,7 +44,10 @@ export function drawTrips(map: google.maps.Map, items: DayItem[], color: string)
           zIndex: 3,
           icons: [
             {
-              icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: color, strokeWeight: 2, scale: 2 },
+              // Drawn a little to the right of the way it went (v0.813), so an
+              // out-and-back shows two dashed lines side by side instead of
+              // the two sets of dashes filling each other in.
+              icon: { path: "M 0,-1 0,1", strokeOpacity: 1, strokeColor: color, strokeWeight: 2, scale: 2, anchor: new google.maps.Point(KEEP_RIGHT / 2, 0) },
               offset: "0",
               repeat: "7px",
             },
@@ -71,7 +77,7 @@ export function drawTrips(map: google.maps.Map, items: DayItem[], color: string)
           zIndex: 1,
           icons: [
             {
-              icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, strokeColor: color, scale: 3 },
+              icon: { path: "M 0,-1 0,1", strokeOpacity: 0.9, strokeColor: color, scale: 3, anchor: new google.maps.Point(KEEP_RIGHT / 3, 0) },
               offset: "0",
               repeat: "10px",
             },

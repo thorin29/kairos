@@ -512,6 +512,7 @@ function AllPlaces({
                   {r.visits} visit{r.visits === 1 ? "" : "s"}
                   {r.last ? ` · last ${dayLabel(r.last, thisYear)}` : ""}
                 </span>
+                {r.who && r.who.length > 0 && <span className="block truncate text-xs text-muted">{r.who.join(", ")}</span>}
               </span>
               {r.confirmed ? (
                 <span className="shrink-0 text-xs text-muted">{r.kind}</span>
@@ -627,6 +628,7 @@ function PlaceSheet({
               {row.visits} visit{row.visits === 1 ? "" : "s"}
               {row.confirmed ? ` · ${row.kind}` : " · not confirmed"}
             </p>
+            {row.who && row.who.length > 0 && <p className="text-xs text-muted">Stopped here: {row.who.join(", ")}</p>}
           </div>
           <button type="button" aria-label="Close" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-ground">
             ✕

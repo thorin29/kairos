@@ -412,6 +412,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
           date: true,
           completedOn: true,
           sourceEventId: true,
+          track: { select: { activity: true } },
           sets: {
             select: {
               exerciseId: true,
@@ -713,6 +714,7 @@ export async function loadWorkoutsBoard(todayISO: string): Promise<WorkoutsBoard
         result: s.isRest ? "" : workoutResult(s),
         isRest: s.isRest,
         category: (s.category as string | null) ?? null,
+        own: !!(s as { track?: unknown }).track,
       })),
       await loadProgramSpans(person.id),
       30,

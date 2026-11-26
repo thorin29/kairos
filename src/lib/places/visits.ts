@@ -391,6 +391,21 @@ export async function listPlaces(
     prisma.placeSpot.findMany({ select: { id: true, label: true, address: true, labelAt: true, lat: true, lng: true } }),
     prisma.placeVisit.count({ where: { altPlaceNameId: { not: null } } }),
   ]);
+  // Who stopped at each spot (v0.813), for those who confirm everyone's.
+  const whoAt = new Map<string, string[]>();
+  if (opts.everything) {
+    const pairs = (await prisma.placeVisit.findMany({ where: { spotId: { not: null }, ...inDates }, distinct: ["spotId", "userId"], select: { spotId: true, userId: true } })) as { spotId: string | null; userId: string }[];
+    const users = (await prisma.user.findMany({
+      where: { id: { in: [...new Set(pairs.map((p) => p.userId))] } },
+      select: { id: true, name: true, displayName: true },
+    })) as { id: string; name: string; displayName: string | null }[];
+    const nameOf = new Map(users.map((u) => [u.id, u.displayName || u.name]));
+    for (const p of pairs) {
+      if (!p.spotId) continue;
+      const n = nameOf.get(p.userId);
+      if (n) whoAt.set(p.spotId, [...(whoAt.get(p.spotId) ?? []), n].sort());
+    }
+  }
   const nameStat = new Map(byName.map((g) => [g.placeNameId as string, g]));
   const spotStat = new Map(bySpot.map((g) => [g.spotId as string, g]));
   const rows: PlacesListRow[] = [];
@@ -433,6 +448,7 @@ export async function listPlaces(
       lng: s.lng,
       radiusM: SPOT_M,
       justOne: false,
+      ...(whoAt.has(s.id) ? { who: whoAt.get(s.id) } : {}),
     });
   }
   for (const z of byZone) {

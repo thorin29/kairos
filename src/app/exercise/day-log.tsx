@@ -36,15 +36,15 @@ import type { DayExtraView } from "@/lib/workouts/day-extras-run";
 import type { Concept2Day } from "@/lib/workouts/concept2-run";
 import { AddCardioPage, CardioCard } from "./cardio-card";
 import { ConditioningCard } from "./conditioning-card";
-import { FamilyWodDayCard, FamilyWodEditor } from "./family-wod";
-import { loadFamilyWod } from "@/lib/actions/family-wod";
+import { FamilyWodDayCard, FamilyWodPage } from "./family-wod";
+import { DayTools } from "./day-tools";
 import type { FamilyWodDay } from "@/lib/workouts/family-wod-run";
 import { ConditioningTimer } from "./conditioning-timer";
 import { EffortPicker } from "@/components/effort-picker";
 import { WarmupSteps, WarmupWindow } from "./warmup-window";
 import type { WarmupRoutine } from "@/lib/workouts/warmup-library";
 import { rotationKindOf, testCountFor, testTitleFor } from "@/lib/workouts/core-library";
-import { AddConditioning, BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
+import { BenchmarkCard, PickConditioningCard } from "./conditioning-picker";
 import type { BenchmarkState, PickPlan } from "@/lib/workouts/wod-run";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 import type { CardioEntry } from "@/lib/workouts/cardio-run";
@@ -194,7 +194,8 @@ export function DayLog({
   // "list" is Today's workouts, "plan" the planned workout, else a sport event.
   const [pick, setPick] = useState<string | null>(null);
   // + Additional → Family WOD (v0.679): set one (a parent) or suggest one.
-  const [fwodSheet, setFwodSheet] = useState<{ parent: boolean; people: { userId: string; name: string }[] } | null>(null);
+  // The day's Family WOD tile opens its page (v0.813).
+  const [fwodPage, setFwodPage] = useState(false);
   const [week, setWeek] = useState<{ days: WeekStripDay[]; overdue: string[]; today: string } | null>(null);
   // Other 8-day pages of the strip, fetched as it scrolls (v0.653).
   const [stripPages, setStripPages] = useState<Record<number, WeekStripDay[]>>({});
@@ -521,30 +522,19 @@ export function DayLog({
         ? [{ kind: "plan" as const, key: "plan", time: planTime }]
         : []),
     ...sports.map((sp) => ({ kind: "sport" as const, key: sp.eventId, time: sp.start, sport: sp })),
+    // Walks, runs, rucks and hikes tracked in the app (v0.813), done.
+    ...(state?.tracked ?? []).map((t, i) => ({
+      kind: "tracked" as const,
+      key: `track:${t.sessionId ?? i}`,
+      time: t.startAt ? (() => { const d = new Date(t.startAt); return d.getHours() * 60 + d.getMinutes(); })() : null,
+      item: t,
+    })),
   ]);
   // The day always opens on its workouts (v0.751), even with only one.
   const view: string =
-    blocks.length === 0 ? "plan" : pick && blocks.some((b) => b.key === pick) ? pick : "list";
+    blocks.length === 0 ? "plan" : pick && blocks.some((b) => b.key === pick && b.kind !== "tracked") ? pick : "list";
   const openSport = view !== "plan" && view !== "list" && !view.startsWith("prog:") ? sports.find((sp) => sp.eventId === view) ?? null : null;
   const reload = () => setTick((n) => n + 1);
-
-  // + Additional → Family WOD (v0.680): a full page in place of the day.
-  if (fwodSheet) {
-    return (
-      <FamilyWodEditor
-        mode={fwodSheet.parent ? "set" : "suggest"}
-        userId={userId}
-        todayISO={todayISO}
-        people={fwodSheet.people}
-        dateISO={date}
-        onBack={() => setFwodSheet(null)}
-        onDone={() => {
-          setFwodSheet(null);
-          setTick((n) => n + 1);
-        }}
-      />
-    );
-  }
 
   return (
     <div className="space-y-5">
@@ -1231,38 +1221,38 @@ export function DayLog({
           }}
         />
       )}
-      {/* The day's one Add button (v0.686, like the app's): a short pop-up of
-          kinds, each opening a full page. */}
+      {/* The day's buttons (v0.813, like the app's): Train and Tools tiles;
+          Log another opens a page of five choices. */}
       {data && (
         <div className="border-t border-hairline pt-5">
-        <AddConditioning
-                        key={`addc:${date}`}
-                        userId={userId}
-                        dateISO={date}
-                        completedOnISO={completedOnISO}
-                        onChanged={() => setTick((n) => n + 1)}
-                        writeOwn={writeOwn}
-                        logOther={extra ? (kind, done) => extra(date, kind, done) : undefined}
-                        addCardio={(done, back) => (
-                          <AddCardioPage
-                            userId={userId}
-                            dateISO={date}
-                            completedOnISO={completedOnISO}
-                            unitSystem={unitSystem}
-                            onSaved={done}
-                            onClose={done}
-                            onBack={back}
-                          />
-                        )}
-                        onFamilyWod={
-                          data.familyWod || date < todayISO
-                            ? undefined
-                            : () =>
-                                loadFamilyWod(userId)
-                                  .then((d) => setFwodSheet({ parent: d.parent, people: d.people }))
-                                  .catch(() => {})
-                        }
-                      />
+          <DayTools
+            key={`tools:${date}`}
+            userId={userId}
+            dateISO={date}
+            completedOnISO={completedOnISO}
+            onChanged={() => setTick((n) => n + 1)}
+            writeOwn={writeOwn}
+            logOther={extra ? (kind, done) => extra(date, kind, done) : undefined}
+            addCardio={(done, back) => (
+              <AddCardioPage
+                userId={userId}
+                dateISO={date}
+                completedOnISO={completedOnISO}
+                unitSystem={unitSystem}
+                onSaved={done}
+                onClose={done}
+                onBack={back}
+              />
+            )}
+            onFamilyWod={data.familyWod ? () => setFwodPage(true) : undefined}
+          />
+        </div>
+      )}
+      {fwodPage && (
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-ground p-4">
+          <div className="mx-auto max-w-2xl">
+            <FamilyWodPage userId={userId} todayISO={todayISO} onBack={() => setFwodPage(false)} />
+          </div>
         </div>
       )}
         </>

@@ -6,6 +6,7 @@ import { SportEditModal } from "./sport-edit";
 import { ChevronRightIcon } from "@/components/icons";
 import { confirmSportWorkout, declineSportWorkout } from "@/lib/actions/sport";
 import type { DaySport } from "@/lib/sport/day";
+import type { TrackedItem } from "@/lib/workouts/tracked-count";
 
 /**
  * A day's workouts as blocks (v0.744): the planned workout and each sport
@@ -14,7 +15,7 @@ import type { DaySport } from "@/lib/sport/day";
  */
 
 /** Workout type colours, as on Weekly training. */
-export const BLOCK_COLOR = { plan: "#4f46e5", sport: "#65a30d" } as const;
+export const BLOCK_COLOR = { plan: "#4f46e5", sport: "#65a30d", cardio: "#0ea5e9" } as const;
 
 export type DayBlock =
   | {
@@ -24,7 +25,9 @@ export type DayBlock =
       time: number | null;
       program?: { id: string; name: string; parts: string[]; doneCount: number; total: number; done: boolean; skipped: boolean };
     }
-  | { kind: "sport"; key: string; time: number; sport: DaySport };
+  | { kind: "sport"; key: string; time: number; sport: DaySport }
+  /** A walk, run, ruck or hike tracked in the app (v0.813): done, nothing to open. */
+  | { kind: "tracked"; key: string; time: number | null; item: TrackedItem };
 
 export function timeText(m: number): string {
   const h = Math.floor(m / 60) % 24;
@@ -81,7 +84,22 @@ export function DayWorkoutsList({
   return (
     <div className="space-y-3">
       {blocks.map((b) =>
-        b.kind === "plan" ? (
+        b.kind === "tracked" ? (
+          <div
+            key={b.key}
+            className="rounded-xl border border-hairline bg-surface px-4 py-3"
+            style={{ borderLeft: `5px solid ${BLOCK_COLOR.cardio}` }}
+          >
+            {b.time != null && <p className="tabular text-xs font-semibold text-muted">{timeText(b.time)} · tracked</p>}
+            <p className="mt-0.5 font-display text-lg font-semibold">{b.item.label}</p>
+            <p className="tabular text-sm text-muted">
+              {[b.item.distance, b.item.minutes != null ? `${b.item.minutes} min` : null].filter(Boolean).join(" · ") || "Logged"}
+            </p>
+            <div className="mt-2">
+              <Chip>Complete</Chip>
+            </div>
+          </div>
+        ) : b.kind === "plan" ? (
           <div
             key={b.key}
             className="rounded-xl border border-hairline bg-surface px-4 py-3"

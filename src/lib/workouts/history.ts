@@ -3,7 +3,8 @@
  * phone: what was trained ("Legs", "Chest · Back"), with conditioning, and the
  * program it was part of ("5/3/1 · Legs"), even when the program has changed
  * since. A warm-up never names the day unless it's all there was; cardio only
- * when it's the only thing. Pure: the queries pass the sessions and the
+ * when it's the only thing. A tracked walk, run, ruck or hike is listed on
+ * its own (v0.813), "Walk" with its distance and time. Pure: the queries pass the sessions and the
  * person's programs (each with the days it ran).
  */
 import { CARDIO_CATEGORIES } from "@/lib/workouts/blocks";
@@ -16,6 +17,8 @@ export type HistorySession = {
   result: string;
   isRest: boolean;
   category: string | null;
+  /** A walk, run, ruck or hike tracked in the app (v0.813): an entry of its own. */
+  own?: boolean;
 };
 
 /** A program and the days it ran: from startedOn up to (not including) endedOn. */
@@ -81,12 +84,16 @@ export function groupHistory(
   limit = 20,
 ): HistoryDay[] {
   const byDate = new Map<string, HistorySession[]>();
+  const out: HistoryDay[] = [];
   for (const s of sessions) {
+    if (s.own && !s.isRest) {
+      out.push({ id: s.id, ids: [s.id], date: s.date, label: s.label, result: s.result, isRest: false });
+      continue;
+    }
     const list = byDate.get(s.date) ?? [];
     list.push(s);
     byDate.set(s.date, list);
   }
-  const out: HistoryDay[] = [];
   for (const [date, list] of byDate) {
     const work = list.filter((s) => !s.isRest);
     if (work.length === 0) {

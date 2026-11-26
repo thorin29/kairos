@@ -4,7 +4,7 @@
  * quickest tell for a partial upload: a missing file usually shows up as a
  * missing migration.
  */
-export const APP_VERSION = "0.812.2";
+export const APP_VERSION = "0.813.0";
 
 export const MIGRATIONS = [
   "0_init",
@@ -201,6 +201,16 @@ export const MIGRATIONS = [
 export type Change = { version: string; summary: string[] };
 
 export const CHANGES: Change[] = [
+  {
+    version: "0.813.0",
+    summary: [
+      "One timer everywhere: Ring or Full color, a bar of rounds, now and next, and one settings sheet.",
+      "Workout day: Train and Tools buttons, a Log another page, Routines and a free Timer.",
+      "Tracked walks, runs and rucks show as Walk 2.1 mi on the home tile, the day and Recent.",
+      "History map: out-and-back walks draw side by side; walks and runs get their own icons.",
+      "All places: parents see who stopped at each unconfirmed spot.",
+    ],
+  },
   {
     version: "0.812.2",
     summary: ["Family map in the app: the menu swipe works anywhere off a map, History included."],

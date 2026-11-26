@@ -798,3 +798,57 @@ export function MotionIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+/** Running person — a tracked run (v0.813). */
+export function RunIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="15" cy="4.5" r="1.6" />
+      <path d="M8 21l3.2-5.5 2.8 2V21" />
+      <path d="M11.2 15.5l1.6-6" />
+      <path d="M5.5 11l3-2.8 4.3-.2 2.4 3.3 3.3.7" />
+      <path d="M12.8 9.5l-4.8 3.2-3 .3" />
+    </svg>
+  );
+}
+
+/** Backpack — a tracked ruck or a backpacking day (v0.813). */
+export function BackpackIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M9 5V4a3 3 0 0 1 6 0v1" />
+      <rect x="5" y="5" width="14" height="16" rx="4" />
+      <path d="M8.5 13h7v4h-7z" />
+      <path d="M9 9h6" />
+    </svg>
+  );
+}
+
+/** Mountain — a tracked hike (v0.813). */
+export function HikeIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 20l6.5-11 3.5 5.5L15.5 11 21 20Z" />
+      <path d="M7.7 12l1.8 1.5 1.6-1.4" />
+    </svg>
+  );
+}
+
+/** Calculator — the weight calculator (v0.813). */
+export function CalculatorIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" />
+    </svg>
+  );
+}
+
+/** Lightning bolt — conditioning (v0.813). */
+export function BoltIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M13 3 5 14h6l-1 7 8-11h-6l1-7z" />
+    </svg>
+  );
+}

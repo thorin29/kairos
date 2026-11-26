@@ -30,8 +30,6 @@ import { versionMoves } from "@/lib/workouts/wod-library";
 import type { BenchmarkState, MoveLine, PickPlan, WodChoice } from "@/lib/workouts/wod-run";
 import { ConditioningTimer } from "./conditioning-timer";
 import { Modal } from "./plan-file-panel";
-import { ExtraPicker } from "./additional-picker";
-import type { DayExtraKind } from "@/lib/workouts/day-extras";
 
 type Version = "RX" | "SCALED";
 
@@ -521,99 +519,6 @@ function BuildOne({
 // --- the day page's cards ------------------------------------------------------
 
 type Opened = "pick" | "build" | "own" | null;
-
-/**
- * "+ Additional" (v0.667; v0.686 the day's one Add button, like the app's): a
- * short pop-up of kinds, each opening a full page — Conditioning (Pick ·
- * Generator), the Family WOD, Strength, Cardio, Sport, Mobility, Stretching,
- * Isometrics, or Something else (every category).
- */
-export function AddConditioning({
-  userId,
-  dateISO,
-  completedOnISO,
-  onChanged,
-  writeOwn,
-  onFamilyWod,
-  logOther,
-  addCardio,
-}: {
-  userId: string;
-  dateISO: string;
-  completedOnISO?: string;
-  onChanged: () => void;
-  writeOwn?: (dateISO: string, onDone: () => void) => React.ReactNode;
-  /** "Family WOD" (v0.679): set one for the day, or suggest one. */
-  onFamilyWod?: () => void;
-  /** Strength, Sport or Something else: the log form (v0.686). */
-  logOther?: (kind: "strength" | "sport" | "other", onDone: () => void) => React.ReactNode;
-  /** Cardio: the Cardio card's Add page (v0.686). */
-  addCardio?: (onDone: () => void, onBack: () => void) => React.ReactNode;
-}) {
-  type Page = "conditioning" | "cardio" | "strength" | "sport" | "other" | DayExtraKind;
-  const [menu, setMenu] = useState(false);
-  const [page, setPage] = useState<Page | null>(null);
-  const done = () => {
-    setPage(null);
-    onChanged();
-  };
-  const back = () => {
-    setPage(null);
-    setMenu(true);
-  };
-  const go = (p: Page) => {
-    setMenu(false);
-    setPage(p);
-  };
-  const LOG_TITLE = { strength: "Strength", sport: "Sport", other: "Log a workout" } as const;
-  const item = (label: string, onClick: () => void) => (
-    <button key={label} type="button" onClick={onClick} className={QUIET + " justify-center"}>
-      {label}
-    </button>
-  );
-  return (
-    <>
-      <button type="button" onClick={() => setMenu(true)} className={`${SECONDARY_BTN} w-full justify-center`}>
-        + Additional
-      </button>
-      {menu && (
-        <Modal small title="Additional" onClose={() => setMenu(false)}>
-          <div className="grid gap-2">
-            {item("Conditioning", () => go("conditioning"))}
-            {onFamilyWod &&
-              item("Family WOD", () => {
-                setMenu(false);
-                onFamilyWod();
-              })}
-            {logOther && item("Strength", () => go("strength"))}
-            {addCardio && item("Cardio", () => go("cardio"))}
-            {logOther && item("Sport", () => go("sport"))}
-            {(["mobility", "stretching", "iso"] as DayExtraKind[]).map((k) =>
-              item(k === "mobility" ? "Mobility" : k === "stretching" ? "Stretching" : "Isometrics", () => go(k)),
-            )}
-            {logOther && (
-              <button type="button" onClick={() => go("other")} className="h-10 text-sm font-semibold text-muted hover:text-ink">
-                Something else
-              </button>
-            )}
-          </div>
-        </Modal>
-      )}
-      {page === "conditioning" && (
-        <ConditioningPage userId={userId} dateISO={dateISO} completedOnISO={completedOnISO} onDone={done} onClose={() => setPage(null)} writeOwn={writeOwn} />
-      )}
-      {page === "cardio" && addCardio?.(done, back)}
-      {(page === "strength" || page === "sport" || page === "other") && logOther && (
-        <Modal title={LOG_TITLE[page]} onClose={() => setPage(null)} onBack={back}>
-          {logOther(page, done)}
-        </Modal>
-      )}
-      {(page === "mobility" || page === "stretching" || page === "iso") && (
-        <ExtraPicker userId={userId} dateISO={dateISO} kind={page} onDone={done} onBack={back} onClose={() => setPage(null)} />
-      )}
-    </>
-  );
-}
 
 /**
  * Conditioning, one full page (v0.686, like the app's): a Pick · Generator

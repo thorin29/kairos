@@ -1,15 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  LEADS,
-  clockText,
-  cuesAt,
-  resultFromTimer,
-  timerAt,
-  timerPlanFor,
-  type Cue,
-} from "@/lib/workouts/timer";
+import { clockText, cuesAt, resultFromTimer, timerAt, timerPlanFor, type Cue, type TimerPlan } from "@/lib/workouts/timer";
+import { TimerFace, useTimerCues, useTimerSettings, type TimerButton, type TimerState } from "./timer-kit";
 import type { ConditioningPlan } from "@/lib/workouts/conditioning-run";
 
 type Phase = "idle" | "lead" | "run" | "paused" | "done";
@@ -65,9 +58,15 @@ export const TIMER_THEME_KEY = "kairos.timer.theme";
 export function usePalette(): Palette {
   const [p, setP] = useState<Palette>(DARK);
   useEffect(() => {
-    const pref = readPref(TIMER_THEME_KEY, "dark");
-    const appDark = document.documentElement.classList.contains("dark");
-    setP(pref === "light" || (pref === "app" && !appDark) ? LIGHT : DARK);
+    const read = () => {
+      const pref = readPref(TIMER_THEME_KEY, "dark");
+      const appDark = document.documentElement.classList.contains("dark");
+      setP(pref === "light" || (pref === "app" && !appDark) ? LIGHT : DARK);
+    };
+    read();
+    // Timer settings changed in the sheet (v0.813).
+    window.addEventListener("kairos-timer-settings", read);
+    return () => window.removeEventListener("kairos-timer-settings", read);
   }, []);
   return p;
 }
@@ -111,9 +110,14 @@ export const DIGIT_COLOR: Record<string, string> = {
 export function useDigits(C: Palette): { fontFamily?: string; color?: string } {
   const [d, setD] = useState<{ fontFamily?: string; color?: string }>({});
   useEffect(() => {
-    const font = readPref(TIMER_FONT_KEY, "standard");
-    const color = readPref(TIMER_COLOR_KEY, "plain");
-    setD({ fontFamily: FONT_FAMILY[font], color: color === "accent" ? C.accent : DIGIT_COLOR[color] });
+    const read = () => {
+      const font = readPref(TIMER_FONT_KEY, "standard");
+      const color = readPref(TIMER_COLOR_KEY, "plain");
+      setD({ fontFamily: FONT_FAMILY[font], color: color === "accent" ? C.accent : DIGIT_COLOR[color] });
+    };
+    read();
+    window.addEventListener("kairos-timer-settings", read);
+    return () => window.removeEventListener("kairos-timer-settings", read);
   }, [C]);
   return d;
 }
@@ -134,133 +138,79 @@ export function writePref(key: string, value: string) {
 }
 
 /**
- * The full-screen conditioning timer (the mockup's Timer): get ready, then the
- * format's clock with its sounds, "+1 round" on an AMRAP, Done on a stopwatch,
- * and the result filled in at the end. Sound, vibration and the get-ready
- * length are kept on this device. The screen is kept awake while it runs.
+ * The full-screen conditioning timer: get ready, then the format's clock on
+ * the shared face, sounds and settings (v0.813, timer-kit), "+1 round" on an
+ * AMRAP, Done on a stopwatch, and the result filled in at the end. `custom`
+ * runs a timer of its own (the free Timer) and `logging` false leaves out the
+ * result. A Family WOD (`family`) uses its own look.
  */
 /** What the timer needs: a planned workout, a picked one or a built one. */
 export type TimerWorkout = Pick<ConditioningPlan, "name" | "type" | "capSec" | "movements" | "resultLabel" | "today">;
 
 export function ConditioningTimer({
-  userId,
   workout,
   lastText,
   onLog,
   onClose,
   logLabel = "Log",
+  family = false,
+  custom,
+  logging = true,
 }: {
-  userId: string;
+  userId?: string;
   workout: TimerWorkout;
   lastText: string | null;
   onLog: (value: number, notes: string) => Promise<void>;
   onClose: () => void;
   /** The done step's button: "Log", or "Use time" for a timed set (v0.619). */
   logLabel?: string;
+  family?: boolean;
+  custom?: TimerPlan;
+  logging?: boolean;
 }) {
-  const C = usePalette();
-  const D = useDigits(C);
   const plan = useMemo(
-    () => timerPlanFor(workout.type, workout.capSec, workout.movements.map((m) => m.name)),
-    [workout],
+    () => custom ?? timerPlanFor(workout.type, workout.capSec, workout.movements.map((m) => m.name)),
+    [workout, custom],
   );
-  const soundKey = `kairos.timer.sound.${userId}`;
-  const leadKey = `kairos.timer.lead.${userId}`;
-  const [sound, setSound] = useState(true);
-  const [lead, setLead] = useState(10);
+  const [settings] = useTimerSettings();
+  const cues = useTimerCues(settings);
+  const lead = settings.lead;
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
-  const [leadLeft, setLeadLeft] = useState(10);
+  const [leadLeft, setLeadLeft] = useState(lead);
   const [rounds, setRounds] = useState(0);
   const [extra, setExtra] = useState("");
   const [result, setResult] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const ac = useRef<AudioContext | null>(null);
-  const wake = useRef<{ release: () => Promise<void> } | null>(null);
   // Running time is measured from the clock, not counted by the interval, so
   // a slow tab never drifts: `base` is the time banked before the last start.
   const runStart = useRef(0);
   const base = useRef(0);
   const lastSecond = useRef(0);
   const leadStart = useRef(0);
-  const soundRef = useRef(true);
-  soundRef.current = sound;
 
   useEffect(() => {
-    setSound(readPref(soundKey, "on") !== "off");
-    const l = Number(readPref(leadKey, "10"));
-    const ok = (LEADS as readonly number[]).includes(l) ? l : 10;
-    setLead(ok);
-    setLeadLeft(ok);
-  }, [soundKey, leadKey]);
+    if (phase === "idle") setLeadLeft(lead);
+  }, [lead, phase]);
 
-  const beep = useCallback((freq: number, ms: number) => {
-    if (!soundRef.current || !ac.current) return;
-    try {
-      const a = ac.current;
-      const o = a.createOscillator();
-      const g = a.createGain();
-      o.frequency.value = freq;
-      o.type = "sine";
-      g.gain.setValueAtTime(0.3, a.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + ms / 1000);
-      o.connect(g);
-      g.connect(a.destination);
-      o.start();
-      o.stop(a.currentTime + ms / 1000);
-    } catch {
-      /* no audio */
-    }
-  }, []);
-  const buzz = (ms: number | number[]) => {
-    try {
-      navigator.vibrate?.(ms);
-    } catch {
-      /* no vibration */
-    }
-  };
   const cue = useCallback(
-    (c: Cue) => {
-      if (c === "TICK") {
-        beep(880, 150);
-      } else if (c === "CHANGE") {
-        beep(1320, 450);
-        buzz(250);
-      } else if (c === "HALF") {
-        beep(990, 300);
-        buzz(150);
-      } else {
-        beep(660, 1400);
-        buzz([400, 150, 400]);
-      }
+    (c: Cue, second: number) => {
+      if (c === "TICK") cues.tick();
+      // Into work high, into rest low (v0.813, as the warm-up timer).
+      else if (c === "CHANGE") (timerAt(plan, second).work ? cues.work : cues.rest)();
+      else if (c === "HALF") cues.half();
+      else cues.finish();
     },
-    [beep],
+    [cues, plan],
   );
-
-  const keepAwake = async (on: boolean) => {
-    try {
-      if (on && !wake.current && "wakeLock" in navigator) {
-        wake.current = await (navigator as unknown as { wakeLock: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock.request("screen");
-      } else if (!on && wake.current) {
-        await wake.current.release();
-        wake.current = null;
-      }
-    } catch {
-      /* not allowed here */
-    }
-  };
-  useEffect(() => () => void keepAwake(false), []);
 
   const finish = useCallback(
     (at: number) => {
       setPhase("done");
-      void keepAwake(false);
       const r = resultFromTimer(plan, at, rounds);
-      setResult(
-        r == null ? "" : plan.result === "TIME" ? clockText(r) : String(r),
-      );
+      setResult(r == null ? "" : plan.result === "TIME" ? clockText(r) : String(r));
     },
     [plan, rounds],
   );
@@ -274,15 +224,14 @@ export function ConditioningTimer({
         const left = lead - Math.floor((now - leadStart.current) / 1000);
         if (left !== leadLeft) {
           if (left <= 0) {
-            beep(1320, 700);
-            buzz(300);
+            cues.work();
             runStart.current = now;
             base.current = 0;
             lastSecond.current = 0;
             setLeadLeft(0);
             setPhase("run");
           } else {
-            if (left <= 3) beep(880, 150);
+            if (left <= 3) cues.tick();
             setLeadLeft(left);
           }
         }
@@ -290,33 +239,23 @@ export function ConditioningTimer({
       }
       const sec = Math.floor(base.current + (now - runStart.current) / 1000);
       if (sec === lastSecond.current) return;
-      for (let s = lastSecond.current + 1; s <= sec; s++) cuesAt(plan, s).forEach(cue);
+      for (let x = lastSecond.current + 1; x <= sec; x++) cuesAt(plan, x).forEach((c) => cue(c, x));
       lastSecond.current = sec;
       setElapsed(sec);
       if (plan.totalSec != null && sec >= plan.totalSec) finish(plan.totalSec);
     }, 250);
     return () => window.clearInterval(t);
-  }, [phase, lead, leadLeft, plan, cue, beep, finish]);
+  }, [phase, lead, leadLeft, plan, cue, cues, finish]);
 
   const start = () => {
-    if (!ac.current) {
-      try {
-        const A = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        ac.current = new A();
-      } catch {
-        ac.current = null;
-      }
-    }
-    void ac.current?.resume?.();
-    void keepAwake(true);
+    cues.unlock();
     if (phase === "idle") {
       if (lead > 0) {
-        beep(880, 80);
         leadStart.current = performance.now();
         setLeadLeft(lead);
         setPhase("lead");
       } else {
-        beep(1320, 700);
+        cues.work();
         runStart.current = performance.now();
         base.current = 0;
         lastSecond.current = 0;
@@ -331,7 +270,6 @@ export function ConditioningTimer({
   const pause = () => {
     if (phase === "run") base.current = base.current + (performance.now() - runStart.current) / 1000;
     setPhase("paused");
-    void keepAwake(false);
   };
   const reset = () => {
     setPhase("idle");
@@ -343,13 +281,26 @@ export function ConditioningTimer({
     setExtra("");
     setResult("");
     setError("");
-    void keepAwake(false);
   };
 
   const at = timerAt(plan, elapsed);
   const leading = phase === "lead" || (phase === "paused" && leadLeft > 0 && elapsed === 0 && lead > 0);
   const status =
-    phase === "idle" ? "Ready" : leading ? "Get ready" : phase === "paused" ? "Paused" : phase === "done" ? "Time" : at.label || "Go";
+    phase === "idle"
+      ? "Ready"
+      : leading
+        ? "Get ready"
+        : phase === "paused"
+          ? "Paused"
+          : phase === "done"
+            ? plan.kind === "STOPWATCH"
+              ? "Done"
+              : "Time"
+            : plan.kind === "INTERVALS"
+              ? at.work
+                ? "Work"
+                : "Rest"
+              : "Go";
 
   const save = async () => {
     let value: number | null = null;
@@ -376,235 +327,155 @@ export function ConditioningTimer({
   };
 
   const clock = leading ? String(leadLeft) : clockText(at.clock);
-  const restNow = phase === "run" && !at.work;
+  const seg = plan.segments[at.index];
+  const progress: number | null = leading
+    ? lead > 0
+      ? leadLeft / lead
+      : 1
+    : phase === "idle"
+      ? 1
+      : plan.kind === "STOPWATCH"
+        ? null
+        : plan.kind === "COUNTDOWN"
+          ? plan.totalSec
+            ? at.clock / plan.totalSec
+            : null
+          : seg && seg.sec > 0
+            ? at.clock / seg.sec
+            : null;
+  const works = plan.segments.filter((x) => x.work).length;
+  const bar: [number, number] | null =
+    plan.kind === "INTERVALS" && works > 1 ? [phase === "done" ? works : plan.segments.slice(0, at.index).filter((x) => x.work).length, works] : null;
+  const showsList = plan.kind === "INTERVALS" && phase !== "done";
+  const nowText = showsList ? (phase === "idle" ? plan.segments[0]?.label : at.label) || null : null;
+  const nextText = showsList ? plan.segments[phase === "idle" ? 1 : at.index + 1]?.label || null : null;
+  const state: TimerState =
+    phase === "idle" ? "idle" : leading ? "ready" : phase === "paused" ? "paused" : phase === "done" ? "done" : at.work ? "work" : "rest";
+  const nowRun = () => (phase === "run" ? Math.floor(base.current + (performance.now() - runStart.current) / 1000) : elapsed);
+  const buttons: TimerButton[] = [{ label: "Reset", onClick: reset }];
+  if (phase !== "done") {
+    buttons.push({
+      label: phase === "idle" ? "Start" : phase === "paused" ? "Resume" : "Pause",
+      filled: true,
+      grow: 1.4,
+      onClick: () => (phase === "run" || phase === "lead" ? pause() : start()),
+    });
+  }
+  if (phase === "run" || phase === "paused") {
+    buttons.push({
+      label: plan.kind === "STOPWATCH" ? "Done" : "End",
+      onClick: () => {
+        const now = nowRun();
+        if (plan.kind === "STOPWATCH") cues.finish();
+        setElapsed(now);
+        finish(now);
+      },
+    });
+  }
 
   return (
-    <div
-      role="dialog"
-      aria-label={`${workout.name} timer`}
-      className="fixed inset-0 z-[60] flex flex-col overflow-y-auto"
-      style={{ background: C.bg, color: C.ink }}
+    <TimerFace
+      family={family}
+      label={`${workout.name} timer`}
+      caption={logging ? `${workout.name} · ${plan.title}` : plan.title}
+      heading={logging ? null : workout.name && workout.name !== plan.title ? workout.name : null}
+      clock={clock}
+      state={state}
+      word={status}
+      progress={progress}
+      bar={bar}
+      now={nowText}
+      next={nextText}
+      buttons={buttons}
+      onBack={onClose}
     >
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <header className="flex items-center justify-between px-3 pt-2">
-          <button
-            type="button"
-            onClick={() => {
-              void keepAwake(false);
-              onClose();
-            }}
-            className="inline-flex min-h-[44px] items-center gap-1 px-2 text-sm font-semibold"
-            style={{ color: C.accent }}
-          >
-            ‹ Back
-          </button>
-          <button
-            type="button"
-            aria-pressed={sound}
-            onClick={() => {
-              setSound(!sound);
-              writePref(soundKey, sound ? "off" : "on");
-            }}
-            className="inline-flex min-h-[44px] items-center rounded-full border px-3 text-sm font-semibold"
-            style={{ borderColor: C.line, color: C.soft }}
-          >
-            {sound ? "Sound on" : "Sound off"}
-          </button>
-        </header>
-
-        <div className="flex flex-col items-center gap-1.5 px-4 pb-2 pt-3 text-center">
-          <span className="text-sm" style={{ color: C.soft }}>
-            {workout.name} · {plan.title}
-          </span>
-          <span
-            className="tabular font-bold leading-none"
-            style={{
-              fontSize: 84,
-              letterSpacing: "-0.02em",
-              fontFamily: D.fontFamily,
-              color: leading ? C.ready : restNow ? C.rest : (D.color ?? C.ink),
-            }}
-          >
-            {clock}
-          </span>
-          <span className="text-base font-semibold" style={{ color: leading ? C.ready : C.soft }}>
-            {status}
-          </span>
-        </div>
-
-        {phase === "idle" && (
-          <div className="flex items-center justify-center gap-1.5 pb-2">
-            <span className="text-sm" style={{ color: C.soft }}>
-              Get ready
-            </span>
-            {LEADS.map((v) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={lead === v}
-                onClick={() => {
-                  setLead(v);
-                  setLeadLeft(v);
-                  writePref(leadKey, String(v));
-                }}
-                className="min-h-[36px] min-w-[44px] rounded-full border text-sm font-semibold"
-                style={{
-                  borderColor: lead === v ? C.accent : C.line,
-                  background: lead === v ? C.accent : "transparent",
-                  color: lead === v ? C.onAccent : C.soft,
-                }}
-              >
-                {v}s
-              </button>
-            ))}
-          </div>
-        )}
-
-        {workout.movements.length > 0 && (
-          <div className="mx-4 flex flex-col gap-2 rounded-2xl px-3.5 py-3" style={{ background: C.panel }}>
-            {workout.movements.map((m, i) => (
-              <div key={i} className="flex items-center gap-2.5 text-base">
-                <span className="tabular w-9 font-bold">{m.reps ?? (m.distance != null ? `${m.distance}` : "")}</span>
-                <span className="flex-1">{m.name}</span>
-                <span className="tabular text-sm" style={{ color: C.soft }}>
-                  {m.weight != null ? `${m.weight} lb` : ""}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4">
+      {(ink) => (
+        <>
+          {workout.movements.length > 0 && !showsList && (
+            <div className="flex w-full flex-col gap-2 rounded-[14px] border px-3.5 py-3 text-left" style={{ borderColor: ink.line }}>
+              {workout.movements.map((m, i) => (
+                <div key={i} className="flex items-center gap-2.5 text-base">
+                  <span className="tabular w-9 font-bold">{m.reps ?? (m.distance != null ? `${m.distance}` : "")}</span>
+                  <span className="flex-1">{m.name}</span>
+                  <span className="tabular text-sm" style={{ color: ink.soft }}>
+                    {m.weight != null ? `${m.weight} lb` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           {plan.rounds && (
-            <>
-              <span className="text-xs uppercase tracking-widest" style={{ color: C.soft }}>
-                Rounds{lastText ? ` · last time ${lastText}` : ""}
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <span className="text-xs uppercase tracking-widest" style={{ color: ink.soft }}>
+                Rounds{logging && lastText ? ` · last time ${lastText}` : ""}
               </span>
               <button
                 type="button"
                 aria-label={`Add a round, now ${rounds}`}
                 onClick={() => setRounds((r) => r + 1)}
-                className="flex h-40 w-40 flex-col items-center justify-center rounded-full border-[3px]"
-                style={{ borderColor: C.accent, background: C.strong, color: C.ink }}
+                className="flex h-36 w-36 flex-col items-center justify-center rounded-full border-[3px]"
+                style={{ borderColor: ink.state, background: "rgba(127,127,127,.08)", color: ink.text }}
               >
                 <span className="tabular text-6xl font-bold leading-none">{rounds}</span>
-                <span className="text-sm font-semibold" style={{ color: C.accent }}>
-                  +1 round
-                </span>
+                <span className="text-sm font-semibold">+1 round</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setRounds((r) => Math.max(0, r - 1))}
-                className="min-h-[40px] px-3 text-sm font-semibold"
-                style={{ color: C.soft }}
-              >
+              <button type="button" onClick={() => setRounds((r) => Math.max(0, r - 1))} className="min-h-[40px] px-3 text-sm font-semibold" style={{ color: ink.soft }}>
                 Undo round
               </button>
-            </>
+            </div>
           )}
-          {!plan.rounds && lastText && (
-            <span className="text-sm" style={{ color: C.soft }}>
+          {logging && !plan.rounds && lastText && (
+            <span className="mt-3 text-sm" style={{ color: ink.soft }}>
               Last time {lastText}
             </span>
           )}
-        </div>
-
-        {phase === "done" && (
-          <div className="mx-4 mb-3 flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <label className="flex items-center gap-2 text-sm" style={{ color: C.soft }}>
-                {plan.result === "ROUNDS" ? "Rounds" : workout.resultLabel}
-                <input
-                  value={result}
-                  inputMode="numeric"
-                  onChange={(e) => setResult(e.target.value.replace(/[^\d:]/g, ""))}
-                  placeholder={plan.result === "TIME" ? "mm:ss" : "0"}
-                  className="tabular h-11 w-24 rounded-xl border px-3 text-base outline-none"
-                  style={{ borderColor: C.line, background: C.panel, color: C.ink }}
-                />
-              </label>
-              {plan.result === "ROUNDS" && (
-                <label className="flex items-center gap-2 text-sm" style={{ color: C.soft }}>
-                  Extra reps
+          {logging && phase === "done" && (
+            <div className="mt-3 flex w-full flex-col gap-2 text-left">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <label className="flex items-center gap-2 text-sm" style={{ color: ink.soft }}>
+                  {plan.result === "ROUNDS" ? "Rounds" : workout.resultLabel}
                   <input
-                    value={extra}
+                    value={result}
                     inputMode="numeric"
-                    onChange={(e) => setExtra(e.target.value.replace(/\D/g, ""))}
-                    placeholder="0"
-                    className="tabular h-11 w-20 rounded-xl border px-3 text-base outline-none"
-                    style={{ borderColor: C.line, background: C.panel, color: C.ink }}
+                    onChange={(e) => setResult(e.target.value.replace(/[^\d:]/g, ""))}
+                    placeholder={plan.result === "TIME" ? "mm:ss" : "0"}
+                    className="tabular h-11 w-24 rounded-xl border bg-transparent px-3 text-base outline-none"
+                    style={{ borderColor: ink.line, color: ink.text }}
                   />
                 </label>
+                {plan.result === "ROUNDS" && (
+                  <label className="flex items-center gap-2 text-sm" style={{ color: ink.soft }}>
+                    Extra reps
+                    <input
+                      value={extra}
+                      inputMode="numeric"
+                      onChange={(e) => setExtra(e.target.value.replace(/\D/g, ""))}
+                      placeholder="0"
+                      className="tabular h-11 w-20 rounded-xl border bg-transparent px-3 text-base outline-none"
+                      style={{ borderColor: ink.line, color: ink.text }}
+                    />
+                  </label>
+                )}
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void save()}
+                  className="ml-auto min-h-[48px] rounded-full px-6 text-base font-bold disabled:opacity-50"
+                  style={{ background: ink.text, color: ink.bg }}
+                >
+                  {saving ? "Saving…" : logLabel}
+                </button>
+              </div>
+              {workout.today && (
+                <p className="text-sm" style={{ color: ink.soft }}>
+                  Logging replaces today&rsquo;s {workout.today}.
+                </p>
               )}
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => void save()}
-                className="ml-auto min-h-[48px] rounded-full px-6 text-base font-bold disabled:opacity-50"
-                style={{ background: C.accent, color: C.onAccent }}
-              >
-                {saving ? "Saving…" : logLabel}
-              </button>
+              {error && <p className="text-sm text-red-500">{error}</p>}
             </div>
-            {workout.today && (
-              <p className="text-sm" style={{ color: C.ready }}>
-                Logging replaces today&rsquo;s {workout.today}.
-              </p>
-            )}
-            {error && <p className="text-sm" style={{ color: C.rest }}>{error}</p>}
-          </div>
-        )}
-
-        <div className="flex gap-2.5 px-4 pb-5">
-          <button
-            type="button"
-            onClick={reset}
-            className="min-h-[52px] flex-1 rounded-full border text-base font-semibold"
-            style={{ borderColor: C.line, color: C.ink }}
-          >
-            Reset
-          </button>
-          {phase !== "done" && (
-            <button
-              type="button"
-              onClick={() => (phase === "run" || phase === "lead" ? pause() : start())}
-              className="min-h-[52px] flex-[2] rounded-full text-base font-bold"
-              style={{ background: C.ink, color: C.bg }}
-            >
-              {phase === "idle" ? "Start" : phase === "paused" ? "Resume" : "Pause"}
-            </button>
           )}
-          {plan.kind === "STOPWATCH" && (phase === "run" || phase === "paused") && (
-            <button
-              type="button"
-              onClick={() => {
-                const now = phase === "run" ? Math.floor(base.current + (performance.now() - runStart.current) / 1000) : elapsed;
-                beep(660, 900);
-                setElapsed(now);
-                finish(now);
-              }}
-              className="min-h-[52px] flex-1 rounded-full text-base font-bold"
-              style={{ background: C.accent, color: C.onAccent }}
-            >
-              Done
-            </button>
-          )}
-          {plan.kind !== "STOPWATCH" && (phase === "run" || phase === "paused") && (
-            <button
-              type="button"
-              onClick={() => {
-                const now = phase === "run" ? Math.floor(base.current + (performance.now() - runStart.current) / 1000) : elapsed;
-                setElapsed(now);
-                finish(now);
-              }}
-              className="min-h-[52px] flex-1 rounded-full border text-base font-semibold"
-              style={{ borderColor: C.line, color: C.ink }}
-            >
-              End
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </TimerFace>
   );
 }

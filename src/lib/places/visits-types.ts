@@ -35,6 +35,9 @@ export type PlacesListRow = {
   radiusM: number | null;
   /** Named for one person only. */
   justOne: boolean;
+  /** Who stopped at an unconfirmed spot (v0.813), for parents and anyone who
+   *  confirms everyone's places, so they can ask. */
+  who?: string[];
 };
 
 export type PlacesList = { rows: PlacesListRow[]; toConfirm: number; whichOne: number };

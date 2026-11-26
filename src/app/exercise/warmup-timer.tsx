@@ -1,32 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { LEADS, clockText } from "@/lib/workouts/timer";
-import {
-  WARMUP_GAPS,
-  warmupAt,
-  warmupIntervals,
-  warmupSchedule,
-  warmupTotal,
-  type FirstSide,
-  type WarmupStep,
-} from "@/lib/workouts/warmup-library";
-import { readPref, useDigits, usePalette, writePref } from "./conditioning-timer";
+import { clockText } from "@/lib/workouts/timer";
+import { WARMUP_GAPS, warmupAt, warmupIntervals, warmupSchedule, warmupTotal, type WarmupStep } from "@/lib/workouts/warmup-library";
+import { readPref, writePref } from "./conditioning-timer";
+import { TimerFace, useTimerCues, useTimerSettings, type TimerButton, type TimerState } from "./timer-kit";
 
 type Phase = "idle" | "run" | "paused" | "done";
 
-const LEAD_KEY = "kairos.warmup.lead";
 const GAP_KEY = "kairos.warmup.gap";
-const SOUND_KEY = "kairos.warmup.sound";
-const SIDE_KEY = "kairos.warmup.side";
 
 /**
- * The warm-up countdown (v0.625): full screen in the timer's colours, the
- * step's name and time, then each timed step after it (both sides of an
- * each-side step), with a pause between them chosen before it starts. Beeps
- * the last three seconds and at each change; the steps it ran are ticked off
- * at the end.
+ * The warm-up countdown (v0.625; on the shared timer face v0.813): each
+ * timed step after the one picked (both sides of an each-side step), a bar of
+ * steps, now and next, 3-2-1 and a tone at each change, Reset, Pause and
+ * Skip. Get ready, the side to start on and the pause between sides come from
+ * Timer settings; the rest between steps is chosen here. The steps it ran are
+ * ticked off at the end.
  */
 export function WarmupTimer({
   steps,
@@ -40,107 +30,42 @@ export function WarmupTimer({
   onFinished: (stepIndexes: number[]) => void;
   onClose: () => void;
 }) {
-  const C = usePalette();
-  const D = useDigits(C);
-  const [side, setSide] = useState<FirstSide>("left");
+  const [settings] = useTimerSettings();
+  const cues = useTimerCues(settings);
+  const side = settings.rightFirst ? "right" : "left";
   const intervals = useMemo(() => warmupIntervals(steps, from, side), [steps, from, side]);
-  // Each-side steps in this run: the timer asks which side to start on.
-  const hasSides = intervals.some((iv, i) => intervals[i + 1]?.step === iv.step);
-  const [lead, setLead] = useState(5);
   const [gap, setGap] = useState(10);
-  const [sound, setSound] = useState(true);
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsed, setElapsed] = useState(0);
-  const schedule = useMemo(() => warmupSchedule(intervals, lead, gap), [intervals, lead, gap]);
+  const schedule = useMemo(() => warmupSchedule(intervals, settings.lead, gap, settings.sideGap), [intervals, settings.lead, gap, settings.sideGap]);
   const total = warmupTotal(schedule);
 
-  const ac = useRef<AudioContext | null>(null);
-  const wake = useRef<{ release: () => Promise<void> } | null>(null);
   const runStart = useRef(0);
   const base = useRef(0);
   const lastSecond = useRef(0);
-  const soundRef = useRef(true);
-  soundRef.current = sound;
 
   useEffect(() => {
-    const l = Number(readPref(LEAD_KEY, "5"));
-    setLead((LEADS as readonly number[]).includes(l) ? l : 5);
     const g = Number(readPref(GAP_KEY, "10"));
     setGap((WARMUP_GAPS as readonly number[]).includes(g) ? g : 10);
-    setSound(readPref(SOUND_KEY, "on") !== "off");
-    setSide(readPref(SIDE_KEY, "left") === "right" ? "right" : "left");
   }, []);
-
-  const beep = useCallback((freq: number, ms: number) => {
-    if (!soundRef.current || !ac.current) return;
-    try {
-      const a = ac.current;
-      const o = a.createOscillator();
-      const g = a.createGain();
-      o.frequency.value = freq;
-      o.type = "sine";
-      g.gain.setValueAtTime(0.3, a.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + ms / 1000);
-      o.connect(g);
-      g.connect(a.destination);
-      o.start();
-      o.stop(a.currentTime + ms / 1000);
-    } catch {
-      /* no audio */
-    }
-  }, []);
-  const buzz = (ms: number | number[]) => {
-    try {
-      navigator.vibrate?.(ms);
-    } catch {
-      /* no vibration */
-    }
-  };
-  const keepAwake = async (on: boolean) => {
-    try {
-      if (on && !wake.current && "wakeLock" in navigator) {
-        wake.current = await (
-          navigator as unknown as { wakeLock: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }
-        ).wakeLock.request("screen");
-      } else if (!on && wake.current) {
-        await wake.current.release();
-        wake.current = null;
-      }
-    } catch {
-      /* not allowed here */
-    }
-  };
-  useEffect(() => () => void keepAwake(false), []);
 
   const finish = useCallback(() => {
     setPhase("done");
-    void keepAwake(false);
-    beep(660, 1400);
-    buzz([400, 150, 400]);
+    cues.finish();
     onFinished([...new Set(intervals.map((i) => i.step))]);
-  }, [beep, intervals, onFinished]);
+  }, [cues, intervals, onFinished]);
 
-  // Cues for each second passed: 3-2-1 before a change, a high tone to go and
-  // a low one at the end of each interval.
+  // Each second passed: high into work, low into a pause, a tick for each of
+  // the last three seconds.
   const cuesFor = useCallback(
     (sec: number) => {
       const now = warmupAt(schedule, sec);
       const prev = warmupAt(schedule, sec - 1);
       if (now.done) return;
-      if (now.segment !== prev.segment) {
-        const seg = schedule[now.segment];
-        if (seg.kind === "WORK") {
-          beep(1320, 600);
-          buzz(250);
-        } else {
-          beep(660, 700);
-          buzz(250);
-        }
-      } else if (now.left <= 3) {
-        beep(880, 150);
-      }
+      if (now.segment !== prev.segment) (schedule[now.segment].kind === "WORK" ? cues.work : cues.rest)();
+      else if (now.left <= 3) cues.tick();
     },
-    [schedule, beep],
+    [schedule, cues],
   );
 
   useEffect(() => {
@@ -157,27 +82,12 @@ export function WarmupTimer({
   }, [phase, total, cuesFor, finish]);
 
   const start = () => {
-    if (!ac.current) {
-      try {
-        const A =
-          window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        ac.current = new A();
-      } catch {
-        ac.current = null;
-      }
-    }
-    void ac.current?.resume?.();
-    void keepAwake(true);
+    cues.unlock();
     if (phase === "idle") {
       base.current = 0;
       lastSecond.current = 0;
       setElapsed(0);
-      if (schedule[0]?.kind === "WORK") {
-        beep(1320, 600);
-        buzz(250);
-      } else {
-        beep(880, 80);
-      }
+      if (schedule[0]?.kind === "WORK") cues.work();
     }
     runStart.current = performance.now();
     setPhase("run");
@@ -185,7 +95,12 @@ export function WarmupTimer({
   const pause = () => {
     base.current = base.current + (performance.now() - runStart.current) / 1000;
     setPhase("paused");
-    void keepAwake(false);
+  };
+  const reset = () => {
+    setPhase("idle");
+    setElapsed(0);
+    base.current = 0;
+    lastSecond.current = 0;
   };
   // Straight on to the next interval's work (from a get-ready, its own).
   const skip = () => {
@@ -202,7 +117,7 @@ export function WarmupTimer({
     lastSecond.current = to;
     runStart.current = performance.now();
     setElapsed(to);
-    beep(1320, 600);
+    cues.work();
   };
 
   if (intervals.length === 0) return null;
@@ -210,178 +125,63 @@ export function WarmupTimer({
   const seg = schedule[at.segment];
   const current = intervals[seg.interval];
   const ready = phase !== "idle" && phase !== "done" && seg.kind === "READY";
-  const next = phase === "idle" ? intervals[1] : seg.kind === "READY" ? null : intervals[seg.interval + 1];
+  const sideSwitch = ready && seg.interval > 0 && intervals[seg.interval - 1].step === current.step;
+  const nextIv = phase === "idle" ? intervals[1] : intervals[seg.interval + 1];
   const shown = phase === "idle" ? intervals[0].seconds : phase === "done" ? 0 : at.left;
   const status =
-    phase === "idle" ? "Ready" : phase === "done" ? "Done" : phase === "paused" ? "Paused" : ready ? "Get ready" : "Go";
-  const chip = (on: boolean) => ({
-    borderColor: on ? C.accent : C.line,
-    background: on ? C.accent : "transparent",
-    color: on ? C.onAccent : C.soft,
-  });
+    phase === "idle" ? "Ready" : phase === "done" ? "Done" : phase === "paused" ? "Paused" : sideSwitch ? "Switch sides" : ready ? "Get ready" : "Work";
+  const state: TimerState = phase === "idle" ? "idle" : phase === "done" ? "done" : phase === "paused" ? "paused" : ready ? "ready" : "work";
+  const progress = phase === "idle" ? 1 : phase === "done" ? 0 : seg.seconds > 0 ? at.left / seg.seconds : 0;
+  const buttons: TimerButton[] =
+    phase === "done"
+      ? [{ label: "Close", filled: true, onClick: onClose }]
+      : [
+          { label: "Reset", disabled: phase === "idle", onClick: reset },
+          { label: phase === "idle" ? "Start" : phase === "paused" ? "Resume" : "Pause", filled: true, grow: 1.4, onClick: () => (phase === "run" ? pause() : start()) },
+          ...(phase !== "idle" ? [{ label: "Skip", onClick: skip }] : []),
+        ];
 
-  // On the page itself, not inside the window it was opened from.
-  return createPortal(
-    <div
-      role="dialog"
-      aria-label={`${current.name} timer`}
-      className="fixed inset-0 z-[70] flex flex-col overflow-y-auto"
-      style={{ background: C.bg, color: C.ink }}
+  return (
+    <TimerFace
+      label={`${current.name} timer`}
+      caption={intervals.length > 1 && phase !== "done" ? `${seg.interval + 1} of ${intervals.length}` : ""}
+      heading={phase === "done" ? "Warm-up done" : current.name}
+      clock={clockText(shown)}
+      state={state}
+      word={status}
+      progress={progress}
+      bar={intervals.length > 1 ? [phase === "done" ? intervals.length : seg.interval, intervals.length] : null}
+      now={phase === "done" ? null : `${current.name} · ${clockText(current.seconds)}`}
+      next={phase === "done" || !nextIv ? null : `${nextIv.name} · ${clockText(nextIv.seconds)}`}
+      buttons={buttons}
+      onBack={onClose}
     >
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <header className="flex items-center justify-between px-3 pt-2">
-          <button
-            type="button"
-            onClick={() => {
-              void keepAwake(false);
-              onClose();
-            }}
-            className="inline-flex min-h-[44px] items-center gap-1 px-2 text-sm font-semibold"
-            style={{ color: C.accent }}
-          >
-            ‹ Back
-          </button>
-          <button
-            type="button"
-            aria-pressed={sound}
-            onClick={() => {
-              setSound(!sound);
-              writePref(SOUND_KEY, sound ? "off" : "on");
-            }}
-            className="inline-flex min-h-[44px] items-center rounded-full border px-3 text-sm font-semibold"
-            style={{ borderColor: C.line, color: C.soft }}
-          >
-            {sound ? "Sound on" : "Sound off"}
-          </button>
-        </header>
-
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-6 text-center">
-          {intervals.length > 1 && phase !== "done" && (
-            <span className="tabular text-sm" style={{ color: C.soft }}>
-              {seg.interval + 1} of {intervals.length}
+      {(ink) =>
+        phase === "idle" && intervals.length > 1 ? (
+          <>
+            <span className="text-sm" style={{ color: ink.soft }}>
+              Rest between steps
             </span>
-          )}
-          <span className="text-2xl font-bold">{phase === "done" ? "Warm-up done" : current.name}</span>
-          <span
-            className="tabular font-bold leading-none"
-            style={{ fontSize: 96, letterSpacing: "-0.02em", fontFamily: D.fontFamily, color: ready ? C.ready : (D.color ?? C.ink) }}
-          >
-            {clockText(shown)}
-          </span>
-          <span className="text-base font-semibold" style={{ color: ready ? C.ready : C.soft }}>
-            {status}
-          </span>
-          {next && phase !== "done" && (
-            <span className="mt-2 rounded-full px-4 py-1.5 text-sm font-semibold" style={{ background: C.panel }}>
-              Next: {next.name} · {clockText(next.seconds)}
-            </span>
-          )}
-        </div>
-
-        {phase === "idle" && (
-          <div className="flex flex-col items-center gap-3 pb-4">
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
-              <span className="w-24 text-right text-sm" style={{ color: C.soft }}>
-                Get ready
-              </span>
-              {LEADS.map((v) => (
+            <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+              {WARMUP_GAPS.map((v) => (
                 <button
                   key={v}
                   type="button"
-                  aria-pressed={lead === v}
+                  aria-pressed={gap === v}
                   onClick={() => {
-                    setLead(v);
-                    writePref(LEAD_KEY, String(v));
+                    setGap(v);
+                    writePref(GAP_KEY, String(v));
                   }}
                   className="min-h-[36px] min-w-[44px] rounded-full border text-sm font-semibold"
-                  style={chip(lead === v)}
+                  style={{ borderColor: gap === v ? ink.text : ink.line, background: gap === v ? ink.text : "transparent", color: gap === v ? ink.bg : ink.soft }}
                 >
                   {v}s
                 </button>
               ))}
             </div>
-            {hasSides && (
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                <span className="w-24 text-right text-sm" style={{ color: C.soft }}>
-                  Start on
-                </span>
-                {(["left", "right"] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    aria-pressed={side === v}
-                    onClick={() => {
-                      setSide(v);
-                      writePref(SIDE_KEY, v);
-                    }}
-                    className="min-h-[36px] min-w-[64px] rounded-full border px-3 text-sm font-semibold"
-                    style={chip(side === v)}
-                  >
-                    {v === "left" ? "Left" : "Right"}
-                  </button>
-                ))}
-              </div>
-            )}
-            {intervals.length > 1 && (
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                <span className="w-24 text-right text-sm" style={{ color: C.soft }}>
-                  Between
-                </span>
-                {WARMUP_GAPS.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    aria-pressed={gap === v}
-                    onClick={() => {
-                      setGap(v);
-                      writePref(GAP_KEY, String(v));
-                    }}
-                    className="min-h-[36px] min-w-[44px] rounded-full border text-sm font-semibold"
-                    style={chip(gap === v)}
-                  >
-                    {v}s
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex gap-2.5 px-4 pb-5">
-          {phase === "done" ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="min-h-[52px] flex-1 rounded-full text-base font-bold"
-              style={{ background: C.accent, color: C.onAccent }}
-            >
-              Close
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => (phase === "run" ? pause() : start())}
-                className="min-h-[52px] flex-[2] rounded-full text-base font-bold"
-                style={{ background: C.accent, color: C.onAccent }}
-              >
-                {phase === "idle" ? "Start" : phase === "paused" ? "Resume" : "Pause"}
-              </button>
-              {phase !== "idle" && (
-                <button
-                  type="button"
-                  onClick={skip}
-                  className="min-h-[52px] flex-1 rounded-full border text-base font-semibold"
-                  style={{ borderColor: C.accent, color: C.accent }}
-                >
-                  Skip
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body,
+          </>
+        ) : null
+      }
+    </TimerFace>
   );
 }

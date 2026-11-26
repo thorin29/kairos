@@ -196,3 +196,53 @@ export function resultFromTimer(plan: TimerPlan, elapsed: number, rounds: number
       return null;
   }
 }
+
+/** The free Timer's kinds (v0.813; Timer.kt FREE_TIMERS). */
+export const FREE_TIMERS = [
+  ["STOPWATCH", "Stopwatch"],
+  ["COUNTDOWN", "Countdown"],
+  ["AMRAP", "AMRAP"],
+  ["EMOM", "EMOM"],
+  ["TABATA", "Tabata"],
+  ["INTERVALS", "Intervals"],
+] as const;
+export type FreeTimerKind = (typeof FREE_TIMERS)[number][0];
+
+/**
+ * A timer of its own from the Timer button (v0.813; Timer.kt freeTimerPlan):
+ * `minutes` for Countdown, AMRAP and EMOM; `work`, `rest` (seconds) and
+ * `rounds` for Intervals. Tabata is 8 rounds of 20 s on, 10 s off.
+ */
+export function freeTimerPlan(type: FreeTimerKind, minutes: number, work: number, rest: number, rounds: number): TimerPlan {
+  const sec = Math.max(1, Math.round(minutes)) * 60;
+  switch (type) {
+    case "COUNTDOWN":
+      return { kind: "COUNTDOWN", totalSec: sec, segments: [{ label: "", sec, work: true }], result: "TIME", rounds: false, title: `Countdown · ${mins(sec)}` };
+    case "AMRAP":
+      return timerPlanFor("AMRAP", sec, []);
+    case "EMOM":
+      return timerPlanFor("EMOM", sec, []);
+    case "TABATA":
+      return timerPlanFor("TABATA", null, []);
+    case "INTERVALS": {
+      const n = Math.min(50, Math.max(1, Math.round(rounds)));
+      const w = Math.min(3600, Math.max(5, Math.round(work)));
+      const r = Math.min(3600, Math.max(0, Math.round(rest)));
+      const segments: Segment[] = [];
+      for (let i = 1; i <= n; i++) {
+        segments.push({ label: `Round ${i} of ${n}`, sec: w, work: true });
+        if (i < n && r > 0) segments.push({ label: "Rest", sec: r, work: false });
+      }
+      return {
+        kind: "INTERVALS",
+        totalSec: segments.reduce((a, s) => a + s.sec, 0),
+        segments,
+        result: "REPS",
+        rounds: false,
+        title: `Intervals · ${n} × ${w}s${r > 0 ? ` / ${r}s` : ""}`,
+      };
+    }
+    default:
+      return { kind: "STOPWATCH", totalSec: null, segments: [], result: "TIME", rounds: false, title: "Stopwatch" };
+  }
+}

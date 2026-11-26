@@ -1,5 +1,39 @@
 # Decisions
 
+## 2026-11 — One timer, the workout day's buttons, tracked workouts by name (v0.813.0, app 0.585.0)
+
+- Every timer (Conditioning, warm-ups and routines, the each-side timer, the
+  free Timer, the Family WOD) uses one face (`TimerFace` in
+  `src/app/exercise/timer-kit.tsx`, the app's `TimerKit.kt`), one set of
+  sounds and one ⚙ settings sheet. Looks: Ring and Full color, chosen
+  separately for your workouts and the Family WOD (Full color by default).
+  Under either: a bar of rounds or steps and the now/next list.
+- The fixes that came with it: one Sound switch and one Get ready (was 10 s
+  on Conditioning, 5 s on warm-ups, none on each-side); a get-ready and
+  3-2-1 before each side; vibration only at changes; the same end tone; the
+  screen kept awake on all of them (each-side wasn't on the web); one Start
+  side and one Pause between sides (warm-ups now use it when a step switches
+  sides). Into work is a high tone and into rest a low one everywhere.
+- Settings live on the device: `kairos.timer2.*` (web, read from the old keys
+  once) and `kairos_timer` `t_*` keys (app).
+- The workout day: Train (Start a… on the phone, the day's Family WOD, Log
+  another) and Tools (Timer, Routines, Calculator), the Workouts page's
+  buttons. Log another is a page of five choices (Strength, Cardio, Sport,
+  Conditioning, Something else); Start a… and Family WOD left it, and
+  Mobility, Stretching and Isometrics moved to Routines (a warm-up starts now,
+  the others are added to today). Setting a Family WOD from the day is gone:
+  the Family WOD page does that. `additional-picker.tsx` is deleted.
+- A tracked walk, run, ruck or hike is named by what it was and how far
+  (`trackedItems` in `tracked-count.ts`): "Walk · 2.1 mi" on the home tile,
+  a done card in the cardio color with distance and minutes in the day's
+  workouts (`tracked` on the day API), and its own entry in Recent
+  (`own` in `groupHistory`). It's left out of Additional.
+- History map: tracked and slow walks draw their dashes 2.5 px to the right
+  of the way they went (`KEEP_RIGHT`), so going out and back shows two lines.
+  The legs list uses the activity's icon.
+- All places: for those who confirm everyone's places, each unconfirmed spot
+  lists who stopped there (`who`).
+
 ## 2026-11 — Menu swipe off the map (v0.812.2, app 0.584.0)
 
 - `useMapEdge` reports the topmost map's band (`mapBand(top, bottom)`; a

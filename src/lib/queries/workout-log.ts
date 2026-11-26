@@ -1,5 +1,5 @@
 import "server-only";
-import { trackedCount } from "@/lib/workouts/tracked-count";
+import { trackedItems, type TrackedItem } from "@/lib/workouts/tracked-count";
 import { repeatsByPlan } from "@/lib/workouts/day-repeats";
 import { planDow, swapsFor } from "@/lib/workouts/day-swap-run";
 import { swapName } from "@/lib/workouts/day-swap";
@@ -1030,6 +1030,7 @@ export async function loadWorkoutProgress(
         isRest: true,
         category: true,
         sourceEventId: true,
+        track: { select: { activity: true } },
         sets: {
           orderBy: { setNumber: "asc" },
           select: {
@@ -1336,7 +1337,7 @@ export async function loadWorkoutProgress(
   // help. This way the array being sorted is the typed one.
   const games = await sportLabels(recent.map((s: (typeof recent)[number]) => (s as { sourceEventId?: string | null }).sourceEventId ?? null));
   const sessions: HistorySession[] = recent.map((s: (typeof recent)[number]) => {
-    const x = s as unknown as { category?: string | null; sourceEventId?: string | null };
+    const x = s as unknown as { category?: string | null; sourceEventId?: string | null; track?: { activity: string } | null };
     return {
       id: s.id,
       // The day it was done, not the day it counts for.
@@ -1345,6 +1346,7 @@ export async function loadWorkoutProgress(
       result: s.isRest ? "" : historyResult(s.sets),
       isRest: s.isRest,
       category: x.category ?? null,
+      own: !!x.track,
     };
   });
   // One entry per day, newest first by the date shown, named by what was
@@ -2457,6 +2459,9 @@ export type DayLogState = {
    *  — so a past day always shows what was done (v0.623). Cardio and
    *  conditioning are left out: their own cards show them. */
   loggedOther: LoggedOther[];
+  /** Walks, runs, rucks and hikes tracked in the app and trip days (v0.813):
+   *  listed with the day's workouts, done, in the cardio color. */
+  tracked: TrackedItem[];
   /** Anything at all logged that day (not a rest). */
   /** Areas marked sore (v0.675): Adjust today opens Hurt on the first. */
   sore: string[];
@@ -2504,6 +2509,7 @@ async function loggedOtherFor(
       name: true,
       category: true,
       sourceEventId: true,
+      track: { select: { id: true } },
       sets: {
         orderBy: [{ setNumber: "asc" }, { createdAt: "asc" }],
         select: {
@@ -2524,6 +2530,7 @@ async function loggedOtherFor(
     name: string | null;
     category: string | null;
     sourceEventId: string | null;
+    track?: { id: string } | null;
     sets: {
       poolExerciseId: string | null;
       swappedFromId: string | null;
@@ -2553,6 +2560,8 @@ async function loggedOtherFor(
     if (!everything && r.category && (CARDIO_CATEGORIES.includes(r.category) || r.category === "HIIT")) continue;
     // A sport from the calendar is its own workout (v0.744), on its own page.
     if (r.sourceEventId) continue;
+    // So is a tracked walk, run, ruck or hike (v0.813): `tracked` lists it.
+    if (r.track) continue;
     // A warm-up isn't part of what's listed as done, unless it's all there was.
     if (r.category === "WARMUP" && !onlyWarmup) continue;
     const name = r.name?.trim() || (r.category ? (CATEGORY_LABEL as Record<string, string>)[r.category] ?? "Workout" : "Workout");
@@ -2765,6 +2774,7 @@ export async function loadDayLogState(
     swappedWith: swapName(await swapsFor(userId), dateISO),
     planIds,
     loggedOther: logged.other,
+    tracked: await trackedItems(userId, dateISO),
     loggedAny: logged.any,
     asLogged: planned
       .filter((p) => p.asLogged)
@@ -2831,7 +2841,8 @@ export async function workoutBlocksFor(
   // Two programs that day (v0.749): each counts as its own workout.
   const progs = planned ? await dayProgramBlocks(userId, dateISO) : [];
   // A walk, run, ruck or hike tracked in the app (v0.777) is a workout of its own.
-  const tracked = await trackedCount(userId, dateISO);
+  const trackedList = await trackedItems(userId, dateISO);
+  const tracked = trackedList.length;
   const total = (progs.length ? progs.length : planned ? 1 : 0) + sports.length + tracked;
   const skippedSports = allSports.filter((x) => x.state === "skipped");
   // A day that had two workouts keeps its list after one is skipped (v0.810).
@@ -2848,7 +2859,8 @@ export async function workoutBlocksFor(
         ? [{ name: null, done: !!planDone, plan: true }]
         : []),
     ...sports.map((x) => ({ name: kinds.get(x.eventId) ?? x.title, done: x.state !== "open" })),
-    ...Array.from({ length: tracked }, () => ({ name: "Tracked workout", done: true })),
+    // By what it was and how far (v0.813): "Walk · 2.1 mi".
+    ...trackedList.map((t) => ({ name: t.name, done: true })),
     ...skippedSports.map((x) => ({ name: kinds.get(x.eventId) ?? x.title, done: false, skipped: true })),
   ];
   return { done, total, items };

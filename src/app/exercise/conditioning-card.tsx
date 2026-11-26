@@ -1,5 +1,6 @@
 "use client";
 
+import { isFamilyPlanId } from "@/lib/workouts/family-wod";
 import { MovementInfo } from "@/components/movement-info";
 import { SECONDARY_BTN } from "./buttons";
 import { useState, useTransition } from "react";
@@ -209,6 +210,7 @@ export function ConditioningCard({
           lastText={workout.last}
           onLog={log}
           onClose={() => setTiming(false)}
+          family={isFamilyPlanId(workout.plannedWorkoutId)}
         />
       )}
     </div>

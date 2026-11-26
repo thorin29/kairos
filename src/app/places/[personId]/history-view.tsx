@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
-import { CarIcon, DumbbellIcon, MapIcon, MotionIcon, WalkIcon } from "@/components/icons";
+import { BackpackIcon, CarIcon, DumbbellIcon, HikeIcon, MapIcon, MotionIcon, RunIcon, WalkIcon } from "@/components/icons";
 import { changeStopNow, mapLoaded, placesHref, useEmbed, useMapEdge, type StopChange } from "../embed-context";
 import type { DayData, DayItem, DayLegItem, DayStopItem } from "@/lib/places/history-types";
 import { drawTrips, loadMaps, touchInline } from "../map-kit";
@@ -562,7 +562,18 @@ export function HistoryView({
                   {it.motion === "drive" ? (
                     <CarIcon className="h-4 w-4" />
                   ) : it.motion === "workout" ? (
-                    <DumbbellIcon className="h-4 w-4" />
+                    // The activity's own icon (v0.813), not a weight bar.
+                    it.activity === "Walk" ? (
+                      <WalkIcon className="h-4 w-4" />
+                    ) : it.activity === "Run" ? (
+                      <RunIcon className="h-4 w-4" />
+                    ) : it.activity === "Ruck" || it.activity === "Backpacking" ? (
+                      <BackpackIcon className="h-4 w-4" />
+                    ) : it.activity === "Hike" ? (
+                      <HikeIcon className="h-4 w-4" />
+                    ) : (
+                      <DumbbellIcon className="h-4 w-4" />
+                    )
                   ) : it.motion === "walk" ? (
                     <WalkIcon className="h-4 w-4" />
                   ) : (

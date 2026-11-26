@@ -1152,6 +1152,12 @@ a routine is a `simple[]` entry, both with `extra: true` and a
 accepts. Extras never count toward the day being done. `POST
 workouts/extras/remove { id }` takes one off.
 
+v0.813: `GET /api/v1/workouts` adds `tracked: [ { sessionId, activity, name,
+label, distance, minutes, startAt } ]`: walks, runs, rucks and hikes tracked
+in the app (and backpacking trip days), listed with the day's workouts and
+left out of `loggedOther`. The home card's workout names use `name`
+("Walk · 2.1 mi").
+
 v0.623: `GET /api/v1/workouts` adds `loggedOther: [ { name, lines: [ { name,
 summary } ] } ]` (logged that day outside its plans, cardio and conditioning
 left out) and `loggedAny` (anything logged). A target set adds `supplemental:
@@ -1965,7 +1971,8 @@ map. Web sign-in is for parents, so the device hands itself over:
   place, address, confirmed, placeKey, choices }], total, more }` (50 a page, newest first; `placeKey` is
   `name:<id>`, `spot:<id>` or `zone:<name>`; `choices` = two places when it's "Which one?").
   `GET /api/v1/places/view/places?from=YYYY-MM-DD&to=YYYY-MM-DD` → `{ rows: [{ key, name, address, confirmed,
-  kind, type, visits, last, lat, lng, radiusM, justOne }], toConfirm, whichOne }` (v0.812: dates count only
+  kind, type, visits, last, lat, lng, radiusM, justOne, who? }], toConfirm, whichOne }` (v0.813: `who`, the names of
+  who stopped at an unconfirmed spot, for those who confirm everyone's places) (v0.812: dates count only
   visits in them; people who can't confirm everyone's places get only spots they stopped at).
   `POST /api/v1/places/view/visits` (header `x-kairos-embed: 1`): `{ op: "confirm", spotId, kind?, size? }`
   (parents, people in the `places.confirmAll` setting, or someone who stopped there; otherwise

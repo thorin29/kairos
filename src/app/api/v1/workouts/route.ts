@@ -149,6 +149,8 @@ export async function GET(req: NextRequest) {
     // v0.623: what was logged that day outside its plans (an older plan, a
     // one-off), so a past day shows what was done; and whether anything was.
     loggedOther: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedOther ?? [],
+    // v0.813: walks, runs, rucks and hikes tracked in the app, listed with the day's workouts.
+    tracked: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.tracked ?? [],
     loggedAny: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.loggedAny ?? false,
     // v0.624: the day was marked a rest day.
     rested: (dayState as Awaited<ReturnType<typeof loadDayLogState>> | null)?.rested ?? false,

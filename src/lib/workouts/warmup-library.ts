@@ -692,10 +692,12 @@ export const WARMUP_GAPS = [0, 1, 2, 3, 5, 10] as const;
 export type WarmupSegment = { kind: "READY" | "WORK"; interval: number; seconds: number };
 
 /** The whole countdown: get-ready before the first, the gap before each next. */
-export function warmupSchedule(intervals: readonly WarmupInterval[], lead: number, gap: number): WarmupSegment[] {
+/** `sideGap` (v0.813): the pause when an each-side step switches sides, the
+ *  same as the each-side timer's; `gap` between steps. */
+export function warmupSchedule(intervals: readonly WarmupInterval[], lead: number, gap: number, sideGap: number = gap): WarmupSegment[] {
   const out: WarmupSegment[] = [];
   intervals.forEach((iv, i) => {
-    const wait = i === 0 ? lead : gap;
+    const wait = i === 0 ? lead : intervals[i - 1].step === iv.step ? sideGap : gap;
     if (wait > 0) out.push({ kind: "READY", interval: i, seconds: wait });
     out.push({ kind: "WORK", interval: i, seconds: iv.seconds });
   });
