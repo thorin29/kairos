@@ -1244,7 +1244,8 @@ export function DayLog({
                 onBack={back}
               />
             )}
-            onFamilyWod={data.familyWod ? () => setFwodPage(true) : undefined}
+            onFamilyWod={() => setFwodPage(true)}
+            hasFamilyWod={!!data.familyWod}
           />
         </div>
       )}

@@ -1,2140 +1,4840 @@
 # Decisions
 
-## 2026-11 — Home: stale refreshes no longer undo a tap (0.586.2)
-
-- Seen: tap Bible reading, the check shows then vanishes, the next tap does
-  nothing, and after a restart it's done. A refresh that began before the tap
-  (on resume, or `tasksChanged`) came back after it with the old state and
-  replaced the optimistic one; the second tap was ignored because the first
-  was still saving. `HomeViewModel` now keeps the time of the last tap start
-  or finish (`touched()`, on every `busyIds` change) and `freshIfCurrent()`
-  drops a fetch that began before it, or while another tap is saving. Only
-  one load runs at a time; a refresh asked for meanwhile rides on it.
-- The thin bar along the top is any GET in flight (`RefreshTracker`), not a
-  sync; it stays as long as a request is slow.
-
-## 2026-11 — Pick lists open over the page (0.586.1)
-
-- `RollPicker` (Assign a task's For and Ends, Add school work's For and Type,
-  Create a workout's Type and Add an exercise, the block builder's Garage
-  length) and Create a workout's saved-workouts list are `DropdownMenu`s as
-  wide as their field, over the page, instead of expanding in place. Sections
-  that open in place on purpose (Completed tasks, hockey sections, the
-  calendar's month) stay as they are.
-
-## 2026-11 — The Cardio page's activity picker (0.586.0, web 0.814.0)
-
-- `ActivityPicker` in `EnduranceCharts.kt`: icon-over-name segments ordered by
-  last done (`orderActivities`, the web's); up to five recent ones as
-  buttons, else four and More. More is a `DropdownMenu` (over the page) with
-  Last 12 weeks and Older. New icons: Rower, Bike, JumpRope, Heart; hiking
-  uses Mountain.
-
-## 2026-11 — Weekly bars you can read (0.585.4)
-
-- `WeekBars` takes a `tip`: each bar gets its value on top (2.5k, 800, 12.4)
-  and a tap picks a week, dims the others and spells it out underneath
-  ("Week of Nov 16 · 2,500 m"; this week to start). Used for the Cardio
-  page's distance or minutes per week and Conditioning's sessions per week;
-  the web's charts already show the same on tap or hover.
-
-## 2026-11 — Family goal pill says Vote (0.585.3)
-
-- The home Family goal pill said Pick when the server's `homeNudge` was
-  "pick"; the web has said Vote either way since 0.804. Now the app does too.
-
-## 2026-11 — Family WOD always a button; no Something else (0.585.2, web 0.813.1)
-
-- `DayTiles` always shows Family WOD (`hasFamilyWod` adds Today) and opens
-  the Family WOD screen. `LogAnotherPage` has four choices; Something else
-  only repeated them.
-
-## 2026-11 — Timer settings build fix (0.585.1)
-
-- `TimerSettings` had `var sound … private set` beside `fun setSound()`: the
-  JVM names clash. The setters are `saveSound()` and so on. A Compose state
-  property with a private setter can't also have a hand-written `setX`.
-
-## 2026-11 — One timer, the workout day's buttons, tracked workouts (0.585.0, web 0.813.0)
-
-- `TimerKit.kt`: every timer (Conditioning, warm-ups, each-side, the free
-  Timer, the Family WOD) draws `TimerFace` and plays `TimerCues`, with one
-  `TimerSettings` in the `kairos_timer` prefs (`t_*` keys, read from the old
-  per-timer keys once). Looks: Ring and Full color, chosen separately for
-  your workouts and the Family WOD (a card whose plannedWorkoutId starts
-  "fwod_"). The floating window and notification work for every timer,
-  the each-side one included.
-- Fixed with it: one Sound and one Get ready (Conditioning 10 s, warm-ups 5 s,
-  each-side none before); 3-2-1 into each side; vibration only at changes;
-  one end tone; one Start side and Pause between sides (warm-ups use it when
-  a step switches sides); into work high, into rest low on every timer.
-- The day's buttons are `DayTiles` (the Workouts page's `ActionCard` /
-  `ActionGroup`, now internal). `AdditionalMenu` and `ExtraPickerPage` are
-  gone: Log another is `LogAnotherPage`, routines are `RoutinesPage`.
-- Tracked walks, runs, rucks and hikes come from the day's `tracked` (server
-  0.813) as done cards in `CARDIO_COLOR`; nothing to open.
-
-## 2026-11 — Menu swipe off the map (0.584.0, web 0.812.2)
-
-- The Family map page now reports the band its map takes (`KairosPlaces.mapBand(top, bottom)`,
-  0,0 for none) instead of only where the map ends. A rightward swipe anywhere off the band opens
-  the menu, so History, All places and the place lists swipe everywhere; the place sheet's map and
-  the add-stop pin picker keep their swipes for panning. Older pages still call `mapBottom`.
-
-## 2026-11 — Watch how on warm-up steps (0.583.0)
-
-- A warm-up step's ⓘ shows on every step and opens `MovementInfoDialog`
-  (its cue and Watch how).
-
-## 2026-11 — The list stays; didn't-go greyed (0.582.0)
-
-- With a `workoutCard`, the tile shows its list before "Complete for today!",
-  so a finished day still reads each workout (done in green). A skipped
-  practice or game (`skipped`) is greyed; "N of M workouts" only shows with two
-  or more counted.
-
-## 2026-11 — In progress; green when done (0.581.0)
-
-- The Workouts tile no longer lists the remaining parts of a started
-  workout: the name and "In progress" (italic, where its details go). With
-  several workouts the finished one's name and bullet are green.
-
-## 2026-11 — Didn't go isn't a workout (0.580.0)
-
-- The day page's heading counts blocks except a sport answered "didn't go";
-  that event stays listed so the answer can be changed. The tile and the
-  greeting chip come from the server (0.808).
-
-## 2026-11 — Smaller workout details (0.579.0)
-
-- The detail under a workout's name on the tile is 10sp.
-
-## 2026-11 — Details under the workout (0.578.0)
-
-- `WorkoutCardItemDto.detail` shows under its workout's name, lined up with
-  the name; the 3dp bullet is faint, green once done. With an older server
-  (no detail) the kinds line stays at the end.
-
-## 2026-11 — Workout bullets (0.577.0)
-
-- The tile's workout lines use a 5dp bullet (green when done) instead of a
-  ring and check. The Chores page's get-ahead explanation is removed.
-
-## 2026-11 — Late work gets its own page (0.576.0)
-
-- School and Chores no longer list overdue work inline: `LateCard` (red
-  outline, count, oldest date, up to three classes or chores) opens
-  `LateWorkPage`, shown in place of the area page with Back returning to it.
-  School filters by class (the subtitle's first part); checked rows stay put
-  until the next refresh. No card once nothing is still late.
-
-## 2026-11 — Log another workout up front; how it felt (0.575.0)
-
-- The day's Add button (now "Log another workout") and what was logged
-  besides the plan moved to Today's workouts, under the list. The day page
-  keeps them only when there's no list (nothing planned).
-- The log flow ends on "How did it go?": `EffortChooser`, saved with the
-  existing feedback endpoint. Slot: the pool movement's id, `hiit:<id>`, or
-  `custom:<category>`. Done or Back leaves.
-- Log it's value step is on a surface card; the picked metric chip is filled.
-
-## 2026-11 — Workouts tile lists each workout (0.574.0)
-
-- With server 0.798's `workoutCard`, two or more workouts read one per line
-  at the title size, each with a ring that turns into a green check when done,
-  then the plan's kinds ("Core · Cardio · Isometric") on one line. No event
-  times (they're in Today's schedule). Over three: the first two and
-  "+N more", so the tile doesn't grow. Older servers fall back to the old lines.
-
-## 2026-11 — Release publishing survives GitHub errors (v0.573.0, server 0.795.0)
-
-- 0.572.0's Release run failed twice with HTTP 500 from GitHub on creating the
-  release. The publish step now retries (4 tries, 15/30/45 s apart), treats a
-  half-made release as existing (uploads with `--clobber`), and finishes with
-  `gh release edit --draft=false`, so a leftover draft gets published — the
-  in-app updater reads only published releases.
-- The Places page and the map-style button are the web pages' (server 0.795);
-  the app shows them in the Family map as they come. No Kotlin changed.
-
-## 2026-11 — Menu swipe below the Family map (v0.572.0, server 0.793.0)
-
-- `PlacesScreen` adds a `KairosPlaces` JS interface (`MapEdge.mapBottom`, CSS px,
-  volatile) that the embed pages call with the map's bottom edge. The WebView's
-  touch listener still keeps every touch for the page, but a drag that starts
-  below the map and goes right more than 56dp (and over twice its vertical
-  drift) calls `onOpenDrawer`. Swipes on the map still pan it.
-- The locked map / scrolling list and the history page's compact top are the
-  web pages' own layout (server 0.793); the app shows them as they come.
-
-## 2026-11 — Area colors made distinct (v0.571.0, server 0.792.0)
-
-- `APP_SECTIONS`: Workouts `0xFF9F1239` (was the late red `0xFFDC2626`),
-  Game time `0xFFA21CAF` (was nearly School's indigo), Ice time `0xFF1E3A8A`
-  (was nearly Reading's cyan), Chores `0xFFEA580C` (was close to Summary's
-  gold). The Chores detail screen takes `sectionFor("chores").color` instead
-  of its own literal. Same values as the web sidebar.
-- The doubled readings/workouts at midnight were server-side duplicate rows,
-  fixed in server 0.792; nothing changed in the app for it.
-
-## 2026-11 — Reading bars the same length (v0.570.0)
-
-- The % after each home reading bar has a fixed 36dp width (right-aligned),
-  so "0%" and "68%" no longer give the bars different lengths.
-
-## 2026-11 — Plates on bar lifts; Log with missed sets (v0.569.0, server 0.791.0)
-
-- `MovementLogDto.bar` ("barbell" / "ez" / null, server 0.791) goes into
-  `MovementSetsUi.bar` (and follows a swap). A WEIGHT movement with a bar sets
-  `SetCard(strict = …)`, which only decides plates vs remove; the VM's
-  `strict()` (program-fixed weights) is unchanged. `bar == "ez"` also picks
-  the EZ bar in the calculator alongside the name check.
-- "Finish early?" became "Log with missed sets?" with Keep going / Log; Log
-  is the old `leave(logTyped = true)` (finishing, `open = false`).
-  `CoreWorkoutScreen` now asks the same before `finish(true)` when any
-  non-skipped movement has sets not done.
-
-## 2026-11 — Home page corrected to the chosen mockup (v0.568.0)
-
-- 0.567 used layout 2 (greeting with a bar); the owner chose layout 1,
-  "Greeting with the ring", in "Kairos: Home page, chosen pieces". Fixed per
-  "Kairos: Home page, corrected" (reading B, family goal B).
-- `GreetingCard` is a row: date, greeting and `AreaChip`s on the left,
-  `DayRing` (a 56dp drawn ring, "done/total") on the right. No Material
-  `LinearProgressIndicator` on the home page any more: its end-stop dot read
-  as a progress marker at the wrong end, so bars are plain filled boxes.
-- Tiles: `TILE_MIN` (124dp) minimum height on every tile so all rows match;
-  title `bodyLarge` SemiBold in `onSurface`, text under it `bodyMedium` /
-  `bodySmall` / `labelSmall`.
-- Workouts: a single workout titled "Program · Lifts" shows the lifts as the
-  line and the program plus the day's extras under it.
-- Reading: per book, the title on its own line, then the bar with the % at its
-  end (red when behind).
-- Family goal: surface white, 1.5dp gold outline at 35%, an inner glow from
-  three stacked edge strokes at 5% (clipped to the shape), trophy, "N ideas
-  waiting" and a gold Pick/Vote pill that opens the goal page.
-
-## 2026-11 — The home page as tiles (v0.567.0)
-
-- Mockups "Kairos: Home page, chosen pieces" (layout 2) and "Kairos: Home
-  tiles, states and counts". `GreetingCard` replaces the header and the bars:
-  date, "Morning / Afternoon / Evening, name" (4–11, 12–4, 5 PM–3 AM), a bar
-  with "N of M done" from the categories, and an `AreaChip` per area.
-- Each area is a `HomeTile` in `TileGrid`: two across at equal width (a row
-  is `IntrinsicSize.Min` high so both match), an odd last one full width.
-  Chores, School, Workouts and Reading keep their own logic inside a tile;
-  list areas (Bible, Tasks…) are a `TaskTile`: one item and the tile taps to
-  toggle it, several and each line taps.
-- States: DONE (green 10% wash, check), OVERDUE (red 6% wash, red count);
-  reading behind is "N% behind" in red. Prompts sit under the greeting; the
-  family goal (now with a gold wash) follows the tiles; the schedule keeps no
-  colored edge.
-
-## 2026-11 — Grey stripes' words; Summary gold (v0.566.0, server 0.789.0)
-
-- A background block whose color is nearly grey (`isGreyish`: channels
-  within 0.12) gets #2B2F36 words. Summary's color is #CA8A04; the family goal
-  card's outline is it at 50%.
-
-## 2026-11 — Work and backpacking behind the day (v0.565.0, server 0.788.0)
-
-- `DayColumn` lays out `background` events on their own and draws them first:
-  a 7% wash, diagonal stripes at 16% and a 3 dp edge, all in the event's color
-  (the server's grey when others are grey). Others' events are placed over
-  them as if they weren't there, set in 6 dp where they overlap one.
-- Names (`whoLabel`) under the title on others' events, never on an event
-  that's only yours.
-
-## 2026-11 — Trip tile, Start a…, home edges (v0.564.0, server 0.787.0)
-
-- `BackpackCard` on a trip day is the trip tile: `TileHeader` (now internal)
-  on a 8% primary tint, `TileButtons`: Track/Pause (TripTrack start/end),
-  Camp/Hike (`TripTrack.camp`/`hike` send the service's actions), Finished on
-  the last day (`markFinished`, `{finish:true}`), Map (Family map), Trip
-  (`CalendarOpen.ShowEventId`, which moves the calendar to the day if needed).
-- Start a… → Backpacking trip: `CalendarOpen.NewTrip`, an all-day draft on the
-  type with `backpacking`. `BackpackStart` ("Back on") removed.
-- Home cards: `Modifier.sectionEdge(key)` draws a 4 dp edge in the section's
-  side-menu color; Today's schedule has none.
-
-## 2026-11 — Workouts tabs and groups (v0.563.0, server 0.786.0)
-
-- Progress | Train tabs (`ChooserTabs`), Progress first; the tab is
-  `rememberSaveable` and each tab has its own scroll state. The tour's stops
-  switch to the tab they point at.
-- The page's loaded data (progress, week, training, programs) lives in
-  `WorkoutsHomeState`, a ViewModel on the nav entry. With plain `remember` the
-  page came back empty, the restored scroll was clamped to 0 and it opened at
-  the top. The spinner shows only before anything has loaded.
-- The nine buttons are three `ActionGroup`s (tinted `TileHeader`, a row of
-  `ActionCard`s with the accent outline). The plan card's actions are one row
-  of `TileButton`s, the icon over the label; `KairosIcons.Stop` is End's.
-- The week strip's labels match Workout days' (9 sp, two lines, centred).
-
-
-
-## 2026-11 — Back to the workout; program tile (v0.562.0, server 0.784.0)
-
-- The day's opened workout (`pick`) is saved state (`dayPick` delegate over
-  two `rememberSaveable` values, kept per date). It was `remember`, lost when
-  a movement's screen replaced the day page, so Log came back to the list.
-- Program tile, option B: `TileHeader` (accent band: PROGRAM or PLAN, name,
-  week) and `TileButtons` (outlined, two to a row) on WorkoutsScreen.
-
-## 2026-11 — 5/3/1's 7th week; the lift page line (v0.561.0, server 0.783.0)
-
-- `ProgramInfoDto.seventhAsk` → `WorkoutLogUiState.programAsk`: a card on the
-  day page with Deload and TM test (`POST workouts/programs/seventh`).
-- The lift page shows `targetTitle` (the program line), or the sets when
-  there's none, without "Today".
-
-## 2026-11 — Trip GPS (v0.559.0, server 0.779.0)
-
-- `TripService` (location foreground service) runs through the trip's last
-  day: GPS every 30 s hiking, 5 min stopped (still 20 min), 15 min at camp
-  ("At camp for the night?" after 3 PM, once a day; actions go to the
-  service). Moving 150 m+ from a stop or camp is hiking again.
-- Points go to a line-per-point file (`trip-points.jsonl`) and are sent 400
-  at a time every 5 min with `X-Kairos-No-Queue` (the trip keeps its own
-  unsent points instead of the offline queue, which caps at 500 writes).
-- Started by Start trip, or Yes / Turn on on the Workouts trip card (until
-  the trip's last day from the server's day/of); restored on app start.
-- The card shows the last finished trip's summary for two weeks.
-
-
-## 2026-11 — Start pages; backpacking trips (v0.558.0, server 0.778.0)
-
-- Every activity opens its Start page (no starting on the tap); the
-  long-press shortcuts open the same page.
-- Backpacking uses no phone GPS (owner's call): "Backpacking trip" in Go for
-  a… posts `workouts/backpacking { start, until }` (the server makes the
-  calendar event); `BackpackCard` on Workouts shows the day, miles and
-  "Hiking today?" (`{ hiking }`). The server logs each day from Family map
-  locations.
-
-
-## 2026-11 — Go for a walk, run, ruck or hike (v0.557.0, server 0.777.0)
-
-- Tracked with the phone's own GPS (`LocationManager` GPS provider, 2 s) in a
-  `location` foreground service (`TrackService`), started only from the app,
-  so no background location permission. No Play Services dependency.
-- `ActivityTrack` holds the outing (start, pauses, points, distance) and
-  writes it to `filesDir/track.json` (every 15 s and on each change); the app
-  restores it on start and restarts the GPS if it was still going.
-- Points: fixes over 30 m accuracy, steps under 5 m, and jumps faster than
-  4.5 m/s (9 m/s running) are skipped; each resume starts a new segment and no
-  distance is counted across a pause.
-- Pause asks first; the notification has no Pause (it can't ask), only Finish,
-  which opens the summary (Resume is still there).
-- Saved with `POST workouts/track` (clientId makes a resend harmless; offline
-  it queues like any write). Route thinned to 4,000 points.
-- Entry points: a Workouts tile next to Log workout (Saved plans moved to the
-  plan card to keep nine tiles), + Additional on today's log page, and dynamic
-  long-press shortcuts (Walk, Run, Ruck) that route through `pendingRoute`
-  ("track:walk" …; "track" / "track-finish" from the notification).
-
-
-## 2026-11 — Your reminders on any event (v0.556.0, server 0.774.0)
-
-- Event detail's "Your reminders" chips now show on every stored event (not
-  only feed events): they start as the event's own; tapping saves the
-  person's own list (all off = muted for them). "Use the event's reminders"
-  resets when they had their own (`reset: true`).
-- The event form edits the event's own reminders (`eventReminders`, falling
-  back to `reminders` on older servers); "Remind me about this" is gone — the
-  reminders go to everyone on the event and each person can mute theirs.
-- Default reminders (`ReminderDefaults`) are saved in the person's choices on
-  the server (`reminderDefaults`): a new phone takes them; a phone with its own
-  and none saved sends them up; changing one pushes it.
-
-
-## 2026-11 — More optional news (v0.555.0, server 0.773.0)
-
-- Switches: "My turn on shared chores" (morning), "Family workouts I'm in",
-  parents' "Money and suggestions to approve". All start off. They arrive on
-  the "Kairos updates" channel; a tap opens Money / Workouts / Chores (the
-  notification's link → section key via `pendingRoute`).
-
-
-## 2026-11 — Instant sync, three calendar switches (v0.554.0, server 0.772.0)
-
-- A Firebase `{k: "sync"}` data message (server: debounced 20 s after any
-  write to Event, EventParticipant, Task, SubscribedReminder, RecurringTask;
-  normal priority) runs `NotificationWorker` now and
-  `SyncManager.remoteChanged()` (evict the HTTP cache, bump `revision`, so
-  open screens reload). Reminders still fire from local exact alarms.
-- Calendar choices are My events / Family events / Others' events I'm on (a
-  reminder only ever comes when the event's reminders name the person).
-- "When someone gives me a task" (`assigned`), off until turned on.
-- Push channel stays one ("Family map" id `places`) for now; task alerts
-  from the server use it too.
-
-
-## 2026-11 — Notifications are each person's own (v0.553.0, server 0.771.0)
-
-- Settings → Notifications is the one place: calendar "Reminders on my
-  events" / "Reminders others set for me", task alerts, Family map "Tell me
-  when …" (who, place, arrives/leaves), Safety for parents (per child speed;
-  no update for N hours; battery below N%), quiet hours (presets). Saved on
-  the server (`GET/POST notify/prefs`); the phone keeps only its two
-  scheduler switches (`NotifPrefs.enabled` = either calendar choice,
-  `tasksEnabled`) in step via `NotifySync`.
-- First run after the update: if the server has nothing for the person, the
-  phone sends its own current switches (both calendar choices = the old
-  Calendar switch), so nobody gains or loses alerts. A new phone takes the
-  saved choices.
-- `NotifPrefs` lost its unused fields (scope, per-type, birthday).
-- Server-side filtering: the upcoming feed drops reminders the person turned
-  off, so the scheduler code is unchanged.
-
-
-## 2026-11 — Places → Family map (v0.552.0, server 0.766.0)
-
-- Labels only: menu, screen title, messages, and the notification channel's
-  name (`createNotificationChannel` with the same id renames it and keeps the
-  person's settings). Section key `places`, packages and the `places` channel
-  id stay.
-
-
-## 2026-11 — Places touches, redirects, diagnostics (v0.551.0, server 0.762.0+)
-
-- The menu's swipe-to-open (Material ModalNavigationDrawer, anywhere on the
-  screen) stole sideways drift from the Places WebView and cancelled the
-  page's gesture, so panning the map and scrolling the list were choppy and
-  opened the menu. The WebView now calls
-  `parent.requestDisallowInterceptTouchEvent(true)` on ACTION_DOWN, which
-  Compose's AndroidView interop honours: the page owns its touches, and the
-  menu still opens from the logo or the top bar. Drawer gestures stay on
-  elsewhere (Calendar remains the one screen with them off).
-- An off-origin navigation without a tap (a redirect, e.g. Authelia's portal
-  in front of the server) is no longer handed to the browser; the screen says
-  Places was sent elsewhere. Tapped outside links still open in the phone's
-  apps.
-- Diagnostics get `places …` breadcrumbs: link ok/failed/off, pages loaded,
-  main-frame HTTP errors, load errors, redirects away.
-
-
-## 2026-11 — Places and Kairos notifications (v0.550.0, server 0.762.0)
-
-- **Places is the web page in a WebView** (`ui/places/PlacesScreen.kt`), not a
-  native map: same Google map, tracks, History and replay as the web, no Maps
-  SDK. The device token never enters the page: the app asks
-  `POST places/web` for a one-time link (60 s), the WebView opens it and gets
-  a 12-hour cookie for the `/places/embed` pages only. A main-frame 401 gets a
-  fresh link (at most 3 per visit). Links away from Places open in the
-  phone's apps. "Not right?" stays on the web.
-- **Notifications are an inbox with a ping** (`data/push/Push.kt`). The server
-  keeps each notification; with Firebase it sends a content-free
-  `{k: "inbox"}` data message and the app collects `GET push/inbox`.
-  Firebase is started in code from `GET push/config` values remembered in
-  SharedPreferences (Application.onCreate starts it from them, so a ping can
-  start the app); `FirebaseInitProvider` is removed and there is no
-  google-services plugin or json, so nothing about any server's Firebase is
-  in the APK. A changed Firebase project applies at the next app start.
-- Without Firebase, or without Play services (token fails), the inbox is
-  checked every 15 minutes (WorkManager); with pings, every 2 hours as a
-  safety net. The app also checks on start.
-- `firebase-messaging` pinned at 25.0.2: 25.1.0 deprecates `getToken` /
-  `onNewToken` for installation-ID registration, which the server's
-  token-based send doesn't use.
-- Android 13+: Places asks for the notification permission once.
-
-
-## 2026-11 — Endurance days, finishers, 5/3/1 misses (v0.549.0, server 0.754.0)
-
-- 0.548.0 didn't compile: a private `clockOf` in ProgramsScreen clashed with
-  the internal `clockOf` in MovementSetsScreen (a private name doesn't hide
-  an internal one from the same package). Renamed `enduranceClock`; 0.548.0
-  never shipped. Before packaging, check new top-level names against
-  internal ones across ui/workout, not just against other private ones.
-
-- Other days: Endurance with its window (Long steady / Intervals / Circuit),
-  picks in the web's format (`EndurancePick`, `enduranceIds`).
-- `FinishersStep` gains a row per lift day (None / Core / Holds / Carries,
-  each opening `OtherDayWindow`); `StartProgramRequest.finishers`,
-  `CurrentSetupDto.finishers`.
-- `rotationWord` and the movement filter know `endurance` and `carry`.
-- What's next shows a drop (amber, "−15") when `suggest` is negative.
-
-## 2026-11 — Rest days; Other days windows (v0.547.0, server 0.753.0)
-
-- `RestSquare` (Canvas: pale slate square, a moon cut from two circles), on
-  Workout days for `HeatMapDto.restDays` and in This week for `rest` days.
-- `OtherDaysStep` opens `OtherDayWindow` for an add: `coreWorkouts(kind)`,
-  `warmupRoutines(kind)` or the pool's WEIGHTS movements of a group. Picks go
-  on the kind (`splitOther` / `joinOther`, the web's format); labels and the
-  review read the kind without them.
-
-## 2026-11 — Plateau card (v0.546.0, server 0.752.0)
-
-- `ProgramsDto.plateau` (`PlateauDto`); `PlateauCard` under the plan card on
-  Workouts. Answers go to `POST workouts/plateau`; the card hides at once and
-  the page reloads (Swap then opens Your plan).
-- Try → Preview → Start opens `Route.ProgramsStart(key)`: `ProgramsScreen`
-  with `startKey` picks that program once its list loads (asking Your
-  version / Default first when there is one). New plan opens Change.
-
-## 2026-11 — Day page: always the list, plainer states (v0.545.0, server 0.751.0)
-
-- `view` is "list" unless a block is picked; no auto-open of the only open
-  workout. `programInView` follows the pick only.
-- `DayHeader(late = …)`: the date is in `strip.overdue` (replaces the
-  logged/planned guess). `time`/`onTime`, `TimeChip` and
-  `WorkoutTimeDialog` are gone; the plan card shows its usual time as text.
-- `DayWorkoutsList(future = …)` hides progress; Complete / Logged · N min /
-  Skipped / Didn't go; Did you go? only when `DaySportDto.ended`.
-
-## 2026-11 — Two programs at once, part 2 (v0.544.0, server 0.750.0)
-
-- `WorkoutPlanDto.programBlocks` (`DayProgramBlockDto`), kept in the UI state
-  only with two or more. Each becomes a `DayBlockUi` keyed `prog:<id>` with
-  its own name, parts, progress, Done or Skipped.
-- `programInView` picks the open program (the one tapped, else the only one
-  still open when no sport is); the screen narrows `blocks`, `simple`,
-  `picks` and `conditioning` to its `plannedWorkoutIds`, so everything below
-  works unchanged. The collected state is `uiAll`; `ui` is the narrowed copy.
-- Skip / Unskip calls `POST workouts/program-skip`.
-
-## 2026-11 — Two programs at once, part 1 (v0.543.0, server 0.749.0)
-
-- `ProgramsDto.also` (each a `ProgramInfoDto` with `setup`), `id` on every
-  program; `StartProgramRequest.add` / `programId`; `programId` on end and
-  next-block requests.
-- ProgramsScreen: extra programs under the first with What's next and End,
-  Add program (`adding`: programs only, setups with `alongside`, which hide
-  the plan-wide steps; a third asks first), `startAdding` (Route.ProgramsAdd)
-  and `editProgramId` (Route.ProgramsEdit(programId)). Ending the first with
-  another running takes only its days.
-- The setups step by name (`steps` / `cur`), so alongside can drop steps.
-- Plan card lists extra programs with What's next; Add program; End with
-  two running opens Programs. Your plan has a Program section per program.
-
-## 2026-11 — Other days and What's next (v0.542.0, server 0.748.0)
-
-- Shared setup steps in ProgramsScreen.kt: `OtherDaysStep`, `WarmupStep`,
-  `CardioStep`, `FinishersStep`, `ReviewWeek`, with `startOther` (same
-  program keeps each day; a new one keeps rest days) and `otherPayload`
-  (sends `other`, adds cardio and conditioning picks to those days). The
-  classic setup and `BlockBuilder` both use them; the builder's Days step
-  no longer offers Core or Rest.
-- `WhatsNextDialog` replaces `CycleEndDialog`: per-lift +step / Same from
-  `ProgramInfoDto.check`, Continue, New plan, and the harder program's
-  preview.
-- The day page waits on `programWait` (program.blockDone): a card with
-  What's next? opening Programs (`onWhatsNext`, Route.Programs), which
-  bumps `programsChanged` so the day reloads.
-- Success marks: the plan card's cycle and "↑ Cycle N done" line, and
-  `MovementTargetDto.up` on the lift page.
-
-## 2026-11 — Plan card and one setup style (v0.541.0, server 0.747.0)
-
-- `PlanCard` (WorkoutsScreen) replaces `ProgramSummaryCard` and the Edit plan
-  button: program or My plan, `WeekStrip` from `ProgramsDto.plan`, Edit /
-  Change / End (End program asks Go back / Keep; End my plan sets the plan's
-  end to today). Saved plans (`SavedPlansScreen`, `Route.SavedPlans`) holds
-  `PlanLibrary` and `PlanFileActions`, moved from the plan editor.
-- EditPlanScreen ("Your plan") has a Program section; Change movements opens
-  `Route.ProgramsEdit` (`ProgramsScreen(startEditing = true)`), which edits
-  any program in place (classic setups take `editMode`), then bumps
-  `planChanged` so the plan reloads.
-- `SetupStepHeader` and `ExtrasStep` are shared by the classic setup and
-  `BlockBuilder` (which gains an Extras step). Rotation reads Rolling plan.
-
-## 2026-11 — Cardio colours and x of y (v0.540.0, server 0.745.0)
-
-- `WeekBars` (EnduranceCharts.kt) takes `parts`: each week's kinds stacked
-  bottom first with 1dp white seams. Colours come from the server as hex
-  (`CardioPartDto.color`, `CardioLineDto.color`, `CardioActivityDto.color`),
-  parsed by `cardioKindColor`, which falls back to the one Cardio blue.
-- `WorkoutSummaryCard` takes `blocks` (`DashboardDto.workoutBlocks`): with it,
-  "N of M workouts" heads the remaining or the names, Complete for today!
-  needs all of them done or skipped, and Rest day doesn't show.
-- Weekly training draws the Planned line from `plannedParts` (null: none);
-  `planned` stays for "x of y planned days".
-- Cardio kinds add Hike and Walk (distance).
-
-## 2026-11 — Build fix for workouts as blocks (v0.539.0, server 0.744.0)
-
-- 0.538.0 did not compile: `DayWorkouts.kt` declared `clockText(min)` and
-  `SectionLabel`, which clash with `clockText(sec)` in Timer.kt and the
-  internal `SectionLabel` in CardioBlock.kt (same package). Renamed to
-  `timeOfDayText` and `BlockSectionLabel`; the weekday list is
-  `WEEKDAY_NAMES`. New top-level names in `ui/workout` are checked against the
-  package first.
-
-## 2026-11 — Workouts as blocks (v0.538.0, server 0.744.0)
-
-- `DayWorkouts.kt`: `DayBlockUi`, `orderDayBlocks`, `DayWorkoutsList` (cards
-  with a coloured edge per type), `SportPage`, `WorkoutTimeDialog` (Material
-  TimePicker, as elsewhere in the app) and `UsualTimesScreen` (Settings →
-  Workouts → Usual workout time, `Route.SettingsWorkoutTimes`).
-- `WorkoutLogScreen` decides the view from the day's blocks: the list while
-  two or more are open, else the single open one; system back and
-  "← Today's workouts" return to the list. The planned page no longer offers
-  the sport warm-up or the "warm up for the sport" switch; both live on the
-  sport page.
-- `WorkoutLogViewModel`: `sports`, `workoutTime`, `setWorkoutTime`,
-  `answerSport`. Weekly training adds Core and Isometric kinds.
-
-## 2026-11 — ⓘ on every movement list (v0.537.0, server 0.743.0)
-
-- `MovementInfoByName` (MovementInfo.kt): the ⓘ for lists that only carry a
-  name. The how-to comes from the shared pool (`workouts/pool`), loaded once
-  per app run. Added to ConditioningCard, ConditioningPicker (both lists),
-  Family WOD (day and choice, using `moveNames`) and the core workout peek.
-
-## 2026-11 — Faster Summary weeks (v0.536.0, server 0.740.0)
-
-- `SummaryViewModel` keeps the ranges seen this visit (view|from|filter),
-  shows a cached one at once and refreshes it quietly, prefetches the range
-  before the one shown, and asks with `goal=0` after the first load (the family
-  goal is kept from that load). Only the newest request updates the screen.
-- `SummaryDto.familyGoal` is nullable; an older server always sends it.
-
-## 2026-11 — A side menu that never scrolls (v0.535.0, server 0.739.0)
-
-- `KairosRail`: the section list sits in a `BoxWithConstraints`; row pitch is
-  `(maxHeight - 8dp) / sections`, held between 36 and 48dp (rows 32–44). The
-  scroll stays as a fallback below that. "Update available" takes ~36dp and
-  the rows absorb it.
-- Header 64 → 56dp. The open footer is one row: avatar, name with
-  `v${VERSION_NAME}` under it, switch, collapse; the separate Collapse/version
-  row is gone. Collapsed is unchanged.
-
-## 2026-11 — Repeat wording, again (v0.534.0, server 0.738.0)
-
-- `repeatLine` now says "…was removed because it is in another workout today."
-  The other workout may not be done yet, so "already completed" was wrong.
-
-## 2026-11 — Repeat wording (v0.533.0, server 0.737.0)
-
-- `repeatLine` now builds "X was removed because it was already completed
-  today." (or "X and Y were…"); the card shows it on its own line.
-
-## 2026-11 — One movement, one card a day (v0.532.0, server 0.736.0)
-
-- The server marks a movement already on an earlier card that day with
-  `repeatOf`. The day page leaves it out of that card's group screen (so its
-  sets and "how did it feel" aren't loaded there), and the card's line and the
-  group screen say "Hollow hold in Core". `Route.CoreWorkout` gains `note`.
-
-## 2026-11 — Docs match the app (v0.531.0, server 0.735.0)
-
-- README, ARCHITECTURE and RELEASING checked against the code: stack versions
-  (AGP 9.4.0, Gradle 9.6.0, SDK 37, Compose BOM 2026.09.00), Room, CameraX
-  and ZXing, nine colours and eight backgrounds, Summary, the QR join and the
-  tour. Open work is listed only at the top of the web repo's ROADMAP.md.
-
-## 2026-11 — Garage length, bodyweight rows, work calendars (v0.530.0, server 0.734.0)
-
-- `BlockBuilder` takes `garageFeet` / `onGarage` (null when the phone can't
-  change it, from `canEditGarage`); a RollPicker of 10–60 ft sits at the end
-  of the finisher card and saves through `POST /workouts/garage`.
-- Lift rows add " reps" for a bodyweight series (`unit == "reps"`).
-- `MonthChip` draws an external event solid when its kind is WORK.
-
-## 2026-11 — Summary screen (v0.529.0, server 0.733.0)
-
-- New "summary" section (last in `APP_SECTIONS`) → `SummaryScreen` in
-  ui/character: `FamilyGoalCard` (moved off Characters, now internal) and
-  the completion card from `GET /summary`: Week / Month, area chips, ‹ ›.
-  More than one person: a row each (month as compact squares); one person:
-  their week row, or their month as a calendar. Tapping a day opens a bottom
-  sheet from `GET /summary/day` with "Done Mon" / "From Sun" tags.
-- The Characters tour line no longer mentions the shared reward. No tour stop
-  for Summary.
-
-## 2026-11 — Odd squad builder and progress charts (v0.528.0, server 0.732.0)
-
-- A program with `builder` opens `BlockBuilder` (new file) instead of
-  `ProgramSetup`: Days (a weekday picker dialog per day), Blocks, Movements,
-  Review, the same as the web. It keeps the plan's warm-up, cardio and
-  conditioning days as they are and sends `coreDay`. Edit on the running
-  program's card reopens it on `setup` (same week); the cycle's "with
-  changes" opens it too.
-- `WorkoutChart`: `liftTrend` follows est. max for a program's main lift
-  (`program`), reps for a `fixed` movement, else the top weight; Holding /
-  Stopped replace Flat. The lift page adds the trend and weeks-in-a-row chips,
-  an Est. max / Top weight / Volume switch (Reps / Density / Time when fixed)
-  with dashed top-weight and training-max lines, and a 12-week consistency row.
-- A shuttle carry's reps field reads "Lengths". The garage length is set on
-  the web (Admin → Workouts → Equipment).
-
-## 2026-11 — Preview a future day's movements (v0.527.0, server 0.731.0)
-
-- The future day page no longer swallows every tap: `DaySectionView(preview)`
-  lets a movement card open; Core cards, removes, block cards and the other
-  sections still consume taps. `MovementSetsScreen` treats a date after today
-  as a preview: faded rows that don't react, "Preview · <day>" under the name,
-  no Swap, no bottom bar, no suggestion, and Back leaves without `leave()` (so
-  nothing saves).
-
-
-## 2026-11 — Start over in Edit plan (v0.526.0, server 0.730.0)
-
-- Start over left the Bible pages: personal is a text button at the bottom of
-  `PlanOverview` (Edit plan); family is web-only. The Bible buttons use
-  `outlinedButtonColors(containerColor = Color.White)`. The Start over page's
-  box is "NOTE" with bullets.
-
-
-## 2026-11 — Bible round 3 in the app (v0.525.0, server 0.729.0)
-
-- The ⋮ PlanMenu is gone (its style didn't fit). Family (admins): Add readings
-  and Start over buttons. Personal: a 2×2 of Edit plan, Log, Add readings,
-  Import / export; Start over is a text button beside "Progress since".
-  Family import / export are web-only.
-- `BooksPage`: full screen, a card per section, three tiles a row; opened from
-  the Bible / OT / NT cards and the Sections card. The dialog is gone.
-- `AddReadingsPage` is three steps: What (testament → section → book →
-  chapters with a breadcrumb, or typed), How (`ChoiceCard`s: Additional
-  readings / Insert into the plan, the insert end date from a preview), Review
-  (server preview of the chosen mode).
-- `StartOverPage`: keep the plan, or (personal) end it — `deleteReadingPlan`
-  then start over — and open a fresh `PlanWizard` (NEW_PLAN, so the old plan
-  can't seed it).
-
-
-## 2026-11 — Tracker books in a dialog (v0.524.0, server 0.727.0)
-
-- The book grid moved into an AnimatedDialog opened from the Bible / OT / NT
-  cards (clickable OutlinedCard) or a section row; it scrolls (max 520dp).
-  Milestone filter chips are gone — the server sends at most five, rolled up.
-
-
-## 2026-11 — Start over (v0.523.0, server 0.726.0)
-
-- Plan ⋮ menu: Start over (family for admins, and mine), confirmed in an
-  AnimatedDialog → `POST reading/tracker {action:"startOver"}`. The bars come
-  from the server, so a started-again book needs nothing here.
-
-
-## 2026-11 — Bible tracker in the app (v0.522.0, server 0.724.0)
-
-- `BibleTracker.kt` `TrackerSection` mirrors the web tracker: Bible / OT / NT
-  cards with ×counts and progress, sections with ×pills, a book tile grid,
-  milestones with filter chips and bests. It replaces `ErasCard` (deleted) and
-  shows once `GET reading/tracker` loads; until then the old cards show.
-- Log reading: `ManualRunRow` with Reset (AnimatedDialog confirm) →
-  `POST reading/tracker {action:"reset"}`. "Start a new era" is gone from the
-  ⋮ menu. The tracker calls are never queued offline.
-- `MarkReadingRequest.iso` sends the day's date, so a day with an extra is
-  marked as that day.
-- Add readings hides the fit choices when the plan ends when its readings are
-  done (`family.endsWhenDone`, `plan.endKind == "DONE"`).
-
-
-## 2026-11 — Bible eras, adding readings, import / export (v0.521.0, server 0.723.0)
-
-- `BibleEras.kt` `ErasCard` mirrors the web ReadingEras: this era's sections
-  (thick bar) against any earlier era (thin, faded, picked from a menu), OT
-  purple and NT blue, the passes badge and the list of eras. It replaces the
-  plain sections card once `GET reading/eras` loads (family, and mine when
-  there's a personal view); until then the old card shows.
-- A ⋮ plan menu: on "Family reading" for admins (role ADMIN, the server's rule)
-  and next to Edit plan / Log for everyone. Add readings, Import a plan, Export,
-  Start a new era (confirmed in an AnimatedDialog).
-- `PlanEdit.kt`: Add readings — pick chapters (tap = a day, long press = the
-  last reading's day) or type passages; push back / add to days / some of each.
-  Preview and save go to `reading/plan/add`, so the server's rule is the only
-  one. Import — paste or open a text file; start date and weekdays appear only
-  when no line is dated. Export saves through the system file picker
-  (CreateDocument). Parents get a Family plan / My plan switch on both.
-- All of it is online only (not queued).
-
-
-## 2026-11 — Who voted on the family goal (v0.520.0, server 0.720.0)
-
-- `CoopProposalDto.voterNames` (parents only, from server 0.720); the Family
-  goal screen adds "Voted: …" under an idea's vote count when it has any.
-- The game warm-up's change is server-side only (it no longer counts toward
-  the workout), so the home card simply stops listing it.
-
-## 2026-11 — In-app QR scanning (v0.519.0, server 0.719.0)
-
-- CameraX (preview + ImageAnalysis) with ZXing core's `QRCodeReader` on the
-  brightness plane, in our own full-screen `QrScanDialog`
-  (`ui/auth/QrScan.kt`), not the maintenance-mode zxing-android-embedded.
-  Apache 2.0, no Play services, so it works on GrapheneOS. Pinned CameraX
-  1.4.2 and zxing core 3.5.3; bump only those lines if Gradle flags them.
-- CAMERA is asked for only when Scan code is tapped (`uses-feature` camera
-  not required); refusing it leaves typing the code.
-- `parseJoin` reads a bare code, a pasted link or the QR
-  (`kairos://join?token=…&server=…`). Set up: Scan code sets the code and, with
-  a server in the QR, fills the address and connects, then the invitation
-  opens. Set up / Reconnect (AuthFlow): Scan code fills the code; a server in
-  it is ignored there. A `kairos://join` link opened by the phone's camera
-  passes its server through `pendingJoinServer`, used only before a server is
-  set.
-- Home workout card: "Left" → "Remaining".
-
-## 2026-11 — The tour resumes where it was (v0.518.0)
-
-- Replaces 0.517's "seen as it starts". Each stop is saved as it comes up
-  (`tour_at_<person>`: "full:<stop id>" or "new:<stop id>"); Done or Skip marks
-  the tour seen and clears it. On the next open a saved stop restarts that tour
-  at that stop (the first stop if it no longer exists). Replaying from Settings
-  works the same way.
-
-## 2026-11 — "Logged" means finished; the tour never replays itself (v0.517.0, server 0.717.0)
-
-- Exercises carry `open` (server 0.717). The day page's Logged chips, the
-  Core/Arms card's "Logged" and count, a block's tick and the day's progress
-  treat an open movement (sets left, Log not pressed) as not done. A save
-  updates `open` locally right away.
-- The tour is marked seen when it starts, not when it ends: an app closed
-  mid-tour no longer shows it again. Tours after updates (`WHATS_NEW`) are
-  added only for big updates, with the owner's approval.
-
-## 2026-11 — Workout "Left" list and a smoother tour (v0.516.0, server 0.716.0)
-
-- Set saves send `open` (sets left, Log not pressed); Log saves once more
-  with `open` off even when nothing changed, so the movement counts as
-  finished. The home workout card shows "Left" and `workoutRemaining` once the
-  day is started and not finished.
-- Tour: the box stays hidden while a page opens and scrolls (until its target
-  holds still for 100 ms, at most 1.6 s), then fades in where it belongs;
-  the dim level eases between stops. The box and its pointer get a 1.5 dp
-  accent edge so it stands out against a white card. Rail stops navigate home
-  without `go()` (its drawer close raced the open and won, so the Settings stop
-  showed Home with the menu shut). Calendar line names the sliders icon;
-  Reading's first line is "Add books and log reading."
-
-## 2026-11 — EZ bar sets get the plate calculator (v0.515.0)
-
-- A weighed movement whose name has "EZ bar" (`isEzBar`) shows the plates
-  button on each set in place of × (the same button a program's fixed sets
-  have), and its calculator opens on the EZ bar (19 lb) with that set's weight
-  loaded; Use puts the weight back into the set. Works on a movement's own page
-  and on the one-screen Arms/Core day.
-- `Route.WeightCalculator` gains `bar` ("ez" or ""); `WeightCalculatorScreen`
-  takes `startBar`. The Core day screen now wires the calculator at all
-  (`onOpenCalculator`, `usedWeight`), so a program's fixed sets there open it
-  too instead of doing nothing.
-- Name-based on purpose: no server change. An EZ bar set can't be removed
-  from the set list (like a program's fixed sets); Add set still works.
-
-## 2026-11 — No class approvals (v0.514.0, server 0.714.0)
-
-- Removed Settings › Parents › Class approvals (`SchoolApprovalsScreen`,
-  its ViewModel, `Route.SchoolApprovals`, the `school/approvals` calls and
-  DTOs) and the approvals dot on the menu's profile (it now only means an
-  update).
-- Add class: Semester is optional, with "No semester" first in the list, and
-  "+ Add a new semester" is gone (semesters live in the web admin).
-  "+ Add a new subject" only shows to admins; the server refuses a new subject
-  from anyone else. `CreateClassRequest` loses `newTermName/Start/End`.
-- Needs server 0.714 (the server drops the approvals route).
-
-## 2026-11 — The app tour (v0.513.0)
-
-- Mocked up and worded with the user on the design canvas first. A tour box
-  with a pointed edge sits over a dimmed screen and walks through the menu,
-  every page, the Workouts screen in seven parts, and Settings (Appearance,
-  Notifications). The box has "n of N", a progress bar, Skip tour, Back and
-  Next. Back (system) steps back; on the first stop it ends the tour.
-- `ui/tour/Tour.kt`: the stops (`TOUR_STOPS`), `Tour` (the running tour and
-  target rects), `Modifier.tourTarget(key)` (records bounds in root and scrolls
-  the target into view when its stop comes up) and `TourOverlay` (drawn last in
-  AppRoot, over the menu, swallowing taps underneath). AppRoot opens each
-  stop's page: "rail" opens the menu, "section:<key>" navigates there,
-  "settings" opens Settings.
-- A stop with a target cuts a hole around it; a page stop (Tasks, Chores,
-  Bible reading, Reading, School, Money, Game time, Ice time, Characters)
-  dims lightly so the page shows through, with the box near the bottom. A
-  target that isn't on screen (no data yet) falls back to the same.
-- Lines marked for parents only show to parents (`kind == PARENT` or ADMIN).
-  Pages hidden for someone (`navHidden`) are left out of their tour.
-- Seen state is per person on the phone (`tour_seen_<id>`, `tour_tips_<id>`).
-  0 = never: the full tour shows once on first open (everyone, after this
-  update). `WHATS_NEW` holds stops for later features, each with the
-  `TOUR_VERSION` that added it. After an update they show behind a "What's
-  new" intro, if tips are on. It's empty for now: bump `TOUR_VERSION` and add
-  stops with a release.
-- Settings › Help & about gains **Take the tour** and **Tips for new
-  features** (On/Off).
-- Not covered yet: the Log workout screen (warm-ups, sets, Switch). That
-  could be its own short tour.
-
-## 2026-11 — Overdue chores tinted (v0.512.0, server 0.713.0)
-
-- The server now keeps a superseded chore one extra day (overdue) so it can
-  still be logged. `ChoreCheckRow` gives overdue, unfinished, completable rows
-  the same light red tint as behind school work (`error` at 6%). Expired rows
-  (not completable) stay untinted.
-
-## 2026-11 — A one-day Switch picks from the plain list (v0.511.0, server 0.711.0)
-
-- The day window's Switch opened the plan's chooser, so a plan set to Match
-  the day opened on that tab with only Save (and saving "match" for one day
-  isn't valid). `WarmupChooser(oneOnly = true)` hides the Match / Rotation
-  switch and opens on the routine list, like the web's day Switch already
-  did. The plan builder's chooser is unchanged. No server change.
-
-## 2026-11 — Switching a day's warm-up is for that day only (v0.510.0, server 0.711.0)
-
-- The warm-up window's Switch posts `workouts/day-warmup { date,
-  plannedWorkoutId, warmup }` with the Workout log's date instead of
-  `workouts/plan/warmup`, so it no longer rewrites that weekday's plan entry
-  or replaces a rotation. `RoutinePicker` takes an optional `date`; without
-  one (the plan builder's routine line) it still saves to the plan.
-- Needs server 0.711; on an older server the Switch call fails with the
-  usual error line.
-
-## 2026-11 — Backgrounds, Graphite and a tidier Appearance screen (v0.509.0, server 0.710.0)
-
-- `BackgroundScheme` (CLASSIC, STONE, MIST, LINEN, SAGE, LAVENDER, BLUSH,
-  TWOTONE) picks the neutrals per phone (`background_scheme` in DataStore,
-  default CLASSIC), independent of `ThemeScheme`. `neutrals(b, dark)` returns
-  page, card, chip, muted, line, outline and ink; CLASSIC returns the app's
-  original constants exactly, so nothing changes until someone picks. The
-  outline of a new background sits 35% of the way from its line to its muted
-  text. Same names and colors as the web.
-- `ThemeScheme.GRAPHITE` (#4F4B46; dark #C9C4BC on #1C1A17).
-- `KairosTheme(background = …)`; MainActivity and WidgetAddActivity pass it.
-  The home-screen widget keeps the Classic neutrals.
-- Appearance: a live preview card, Light or dark (unchanged), Color as one row
-  of dots with the name on the right (replacing one row per color), and
-  Background as eight tiles in two rows of four, drawn in the current mode.
-
-## 2026-11 — Bodyweight work-up hints start from last time (v0.508.0, server 0.708.0)
-
-- A program's target filled every set's hint, so 5 × 10 pull-ups showed 10
-  in each box, and ticking an empty box logged 10, even for someone at 3.
-- `workUpHint` in `MovementSetsViewModel`: for a reps or timed movement (not
-  `WEIGHT`) and a target set with no weight and not a warm-up, the hint is
-  last time's reps (or seconds) for that set. The scheme line keeps the
-  target. First time, warm-ups and weighted sets are unchanged. Same rule as
-  the web (0.708); no API change.
-
-## 2026-11 — Monthly tests compare with the last test (v0.507.0, server 0.707.0)
-
-- The test card's "Last time" and the hints inside it came from the last day
-  the move was done. Isometric's holds are also in its regular workouts, so
-  that was usually a 3 × 30s day, not last month's max.
-- Server 0.707 sends the last test as `last` for test movements on the day
-  payload (the plank card needed no change), and `workouts/sets?test=1`
-  returns the last test as `last`.
-- The test card marks its block `isTest`; its moves carry `test` through the
-  Core screen route (a fifth field, so older routes still decode) to
-  `MovementSetsViewModel`, which asks with `test=1`. Its view-model key gets
-  `:test`, so a hold that's also in the day's workout keeps its own state.
-- The Isometric test card shows "Last time 1:35 · 1:02 · 0:48" before
-  anything is logged.
-
-## 2026-11 — ROG Ally on Game time (v0.506.0, server 0.706.0)
-
-- The game-time collector (5.0.0) adds a third source, `"ally"` (a ROG Ally
-  handheld, via Microsoft Family Safety). It arrives in the same `platforms`
-  list the screen already reads; no API change.
-- `PlatformIcons` now draws from one ordered list (Xbox, Steam, ROG Ally),
-  matching the web. The Ally has no logo of its own, so it shows the Republic
-  of Gamers mark from Simple Icons (`KairosIcons.Rog`, the same source as the
-  Steam glyph) in ROG red, described as "ROG Ally".
-- A value not in the list draws nothing, so a future source can't break the
-  row.
-
-## 2026-11 — Paused classes on the School card (v0.505.0, server 0.703.0)
-
-- Server 0.702 lets a parent pause a class for one student: no schedule, one
-  open lesson at a time. A paused class has no pace or finish date, so the
-  progress row would have shown nothing on the right.
-- `SchoolCardProgressDto` gains `paused`, `done` and `total` (server 0.703).
-  The home School card and the School screen show a grey "paused" tag and
-  done/total in place of "finishes …". Defaults (`false`, 0, 0) keep an older
-  server's rows exactly as before.
-
-## 2026-11 — Passwords need 8 characters (v0.504.0, server 0.699.0)
-
-- The join/reset screen asked for 6 characters while the server's
-  change-password asked for 8. Server 0.699 uses one `MIN_PASSWORD` (8)
-  everywhere, including `/auth/join`, so the app's check moves to 8 to match.
-  Without it, a 6–7 character password would pass the app and then be refused
-  by the server. Existing passwords are unaffected; this applies only when a
-  password is set.
-
-## 2026-11 — Every pop-up on AnimatedDialog (v0.503.0, server 0.696.0)
-
-- All 43 stock `AlertDialog`s in 22 files (workouts, Appearance, Default
-  reminders, Assign task, the calendar's discard / class prompts, Save address,
-  the sign-in Forgot / Recover dialogs) are now `AnimatedDialog`.
-  - It was a mechanical conversion: `title = { Text(x) }` became `title = x`,
-    the `text` slot became the content, and an empty `confirmButton = {}` was
-    dropped.
-  - No stock `AlertDialog` is left in the app; new pop-ups use
-    `AnimatedDialog`.
-- `AnimatedDialog` puts its content in `Column(Modifier.weight(1f, fill =
-  false))`. Long content (a Workout days breakdown, a program's choices) now
-  shrinks before the buttons leave the screen, as Material's dialog does.
-  Short dialogs look the same.
-- Server 0.696 needs no app change: full-body moves and the 12-week range
-  only change what the server sends inside the same shapes.
-
-## 2026-11 — Remaining sets removed; dead heat code removed (v0.502.0, server 0.695.0)
-
-- The −5 / 0 / +5 "Remaining sets" row on the log-a-movement screen is gone:
-  the row, `RoundStep`, `shiftBy`, `step` and `MovementSetsUi.shift`. It only
-  moved the grey hints of sets not entered yet, so hints are now last time's
-  or the program's weights, unchanged. `hintW(r)` is just `r.hintW`.
-- HeatView.kt lost the pre-0.664 range view: `HEAT_RANGES`, `HeatRangeChips`,
-  `heatFills`, `heatAvailable`, `heatShade`, `HeatKey`, `HeatDetailDialog`,
-  `HeatStat`. The 0.501 docs entry called them unused "range code", but
-  `HeatMapDto.ranges` (the "12w" range) still feeds `HeatGroupSummary`, so
-  the DTO and `HeatBests` stay.
-
-## 2026-11 — Docs brought current (docs only, no app release; server 0.695.0)
-
-- README and ARCHITECTURE caught up with 0.390–0.501. They now cover the
-  Settings layout, the home-screen widget, the background timer, programs,
-  the heat map, Family WOD and pauses.
-- ARCHITECTURE gained two sections. "Pages, not sheets" records the
-  `FullPage` rule (no `ModalBottomSheet` anywhere; some file names still say
-  Sheet). "Settings" records where a new setting goes.
-- RELEASING gained the positional-args check (237; must not rise).
-- No code changed, so `versionName`, `versionCode` and `CLIENT_BUILD` stay
-  at 0.501.0 / 573 / 573 and there's nothing to tag. `HeatRangeChips` /
-  `HEAT_RANGES` in HeatView.kt look unused since the 0.664 redesign. They
-  are noted, not removed.
-
-## 2026-11 — Settings reorganized (v0.501.0, no server change)
-
-- Settings: a profile card (PersonAvatar, name) on top, then grouped rows
-  under uppercase labels (`SettingsLabel`, shared by the settings pages):
-  Account (Password, Devices, Sign out or switch), Look & feel (Appearance),
-  Notifications (Notifications & reminders), Connected apps (Concept2),
-  Parents (Class approvals, admins only, count badge), Help & about (How
-  scoring works, Software update with the version or a "New" badge,
-  Diagnostics).
-- Devices had a route and screen but nothing navigated to it; Settings now
-  does. Sign out from Settings raises the rail's own "Sign out?" dialog.
-- Notifications & reminders: the old Default reminders screen is
-  `DefaultRemindersCard`, shown between the alert switches and Sound. Its
-  route stays and shows the same card on its own page.
-- Appearance keeps every control, regrouped: App (light or dark, colour
-  theme, time format), Home screen widget, Workout timer (look, numbers,
-  number colour, when you leave the app). The user chose to keep widget and
-  timer here rather than a separate "On this phone" group.
-- New icons: `KairosIcons.Phone`, `KairosIcons.Link`.
-
-## 2026-11 — Endurance ⓘ text (v0.500.0, server 0.690.0)
-
-- Only the ⓘ copy changes; carries and endurance scoring are server-side.
-
-## 2026-11 — Heat map earned by progress (v0.499.0, server 0.689.0)
-
-- Scoring is server-side; the app only adds `TrainGroupDto.since` (shown
-  small under the reason line) and the new ⓘ text. No map toggle.
-
-## 2026-11 — Admin pauses for one person (v0.498.0, server 0.688.0)
-
-- `WorkoutPauseDto.kind` can be "admin" (a parent's pause for this person,
-  from Admin → Calendar): listed as "set by a parent", no End or Remove.
-  The heat map's program and top-set fixes are server-side only.
-
-## 2026-11 — Reason line; midnight rollover (v0.497.0, server 0.687.0)
-
-- The map pop-up shows `TrainGroup.line` whenever there is one, rows or not.
-- AppRoot checks `LocalDate.now()` each minute; a new day bumps
-  `dataRevision` and `homeRefresh`, so Home and the section screens reload.
-
-## 2026-11 — Training-kind colours; plan end date (v0.496.0, server 0.686.0)
-
-- `WEEK_KINDS` and the endurance chart colours: Cardio 0xFF0EA5E9,
-  Conditioning 0xFFC026D3, Sport 0xFF65A30D; cardio effort shades follow.
-- Edit plan has Ends on under Starts on (`PlanResponse.weeklyEnd`,
-  `setWeeklyEnd` → `POST workouts/plan/start {end}`).
-- The heat map's sore holds need nothing new here: the server's lines and
-  levels already carry them.
-
-## 2026-11 — One Family WOD button; training maxes shown only (v0.495.0, server 0.685.0)
-
-- `FamilyWodScreen` shows New family WOD to a parent and Suggest one to
-  anyone else, never both.
-- `ActiveProgramCard`'s `MaxRow` is text only; `onSaveMax` is gone. Maxes
-  change through the cycle-end dialog or the program setup.
-
-## 2026-11 — Range calendar; nine buttons (v0.494.0, server 0.684.0)
-
-- `PauseRangeCalendar` on the pause page replaces the date dialogs and length
-  chips: tap the first day, then the last (180 days at most); a third tap
-  starts again.
-- Family WOD, Pause and Recent are a third row of `ActionCard`s (icons
-  Users, Pause, Clock); `familyWodLine` and `pauseLine` give their
-  subtitles. `FamilyWodCard` and `WorkoutPauseCard` are gone.
-
-## 2026-11 — Pie slices for any count (v0.493.0, server 0.683.0)
-
-- Workout days cells with 3+ groups are a sweep gradient with one hard-
-  stopped slice per group, no gaps and no cap (supersedes 0.492's tiles).
-  The tap-a-day pop-up is how a crowded day is read.
-
-## 2026-11 — Pages, not sheets; one Add flow (v0.492.0, server 0.682.0)
-
-- `ui/common/FullPage` (a full-screen Dialog holding a Scaffold + TopAppBar,
-  so it matches a navigated page) and `PageCard` (the white top card). Flows
-  opened from a screen use it instead of bottom sheets or list pop-ups:
-  `ConditioningPage` (Pick · Generator, replacing PickOneSheet/BuildOneSheet),
-  `AddCardioPage` (from the Cardio card and from + Additional),
-  `ExtraPickerPage`, `LogWorkoutPage` (was CustomWorkoutForm's window, now
-  narrowed by kind via `logCategoriesFor`), the plan file pages and both
-  swap-a-movement lists. WarmupScreens, CoreDays and EnduranceCharts' own
-  full-screen helpers delegate to it.
-- The day has one "+ Additional" button at the bottom; the Conditioning
-  section shows only when there's a pick to make or a one-off result.
-- Workout days cells with 3+ groups draw a tile grid (Column of weighted
-  Rows) instead of sweep or band gradients.
-
-## 2026-11 — Tap a day; Family WOD cards (v0.491.0, server 0.681.0)
-
-- A Workout days cell with work is clickable: an AlertDialog lists each
-  group (colour square, name) and that day's movements in it, from the
-  series points (`movesByDate`). Days fed only by `extraDays` show the group
-  without movements.
-- The Family WOD edit page wraps day + workout in one `OutlinedCard` and
-  who's in (or the note) in another; the workout list inside is a bordered
-  column, not a nested card. People order comes from the server.
-
-## 2026-11 — Full pages for Family WOD and pauses (v0.490.0, server 0.680.0)
-
-- Routes `FamilyWod`, `FamilyWodEdit(date, wodId, suggestionId, suggest)` and
-  `WorkoutPause`; the Workouts screen keeps `FamilyWodCard` and
-  `WorkoutPauseCard` as summaries that open them. A board opens in place on
-  the Family WOD page (Back returns). The edit page loads `?choices=1`, finds
-  the WOD or suggestion by id, and suggests instead of setting for someone
-  who isn't a parent. Saving sets `familyChanged` on the screen it came from,
-  so the day reloads.
-- Dates use `QuickDatePickerDialog`: a family WOD's day (today to 60 days),
-  a pause's first day (up to a year ahead) and last day (up to 180 days on).
-
-## 2026-11 — Family WOD (v0.489.0, server 0.679.0)
-
-- `WorkoutDayDto.familyWod` drives `FamilyWodDayCard` at the top of the
-  day: a member gets `ConditioningCard` with `badge` and `noSkip`, logged
-  and rated like any conditioning; anyone else gets Join. The board follows.
-- `FamilyWodPanel` on the Workouts screen loads `GET workouts/family-wod`
-  itself (next, Board, Suggest one; parents: Coming up and Suggestions).
-  "+ Additional → Family WOD" sets one for the day (a parent) or suggests it.
-- Parents come from the server's `parent` flag; days step one at a time,
-  today to 60 days on.
-
-## 2026-11 — Workout pauses (v0.488.0, server 0.678.0)
-
-- `WorkoutPausePanel` on the Workouts screen (it loads `GET workouts/pause`
-  itself): household pauses read-only, the person's own with End, or "Pause
-  workouts" (reason; 3 days, 1 week or 2 weeks from today). The day shows
-  `WorkoutDayDto.paused`. The strip needs nothing new: paused days come as
-  `restPlanned`.
-
-## 2026-11 — Weighted holds (v0.487.1, server 0.677.1)
-
-- A timed set row shows a weight box before the time when the movement log
-  has `holdUnit`; the weight goes out with the set.
-
-## 2026-11 — Swapped days, band-aid sore spots (v0.487.0, server 0.677.0)
-
-- `WorkoutDayDto.swappedWith` → "Swapped with Friday this week · Undo"
-  (`undoDaySwap`: suggestion answer `swap`/`undo`, then reload). The swap
-  itself is a game-card answer (`swap:<dow>`), which reloads like the other
-  `:` answers. Everything else follows the server's plan reads.
-- `SoreSpots` lost "+ Sore spot" and its dialog; a band-aid icon leads each
-  strip, and it draws nothing with no spots.
-
-## 2026-11 — Smarter suggestions (v0.486.0, server 0.676.0)
-
-- The new cards come through the same `SuggestionCard`; answers with a `:`
-  and `lightweek` reload the day (the plan changed). `editplan` and
-  `programs` also navigate (`WorkoutLogScreen(onEditPlan, onOpenPrograms)` →
-  `Route.EditPlan`, `Route.ProgramsChange`). `lightweek` shows the day as
-  lighter at once, like `light`.
-
-## 2026-11 — Build fix (v0.485.1)
-
-- `setSore` read `.sore` off the Retrofit `Response` inside `runAuthed`
-  instead of off the unwrapped body.
-
-## 2026-11 — Sore spots, hurt days rebuilt (v0.485.0, server 0.675.0)
-
-- `SoreSpots` under the body map (strips with Better, "+ Sore spot" pop-up),
-  `POST workouts/sore`; the map hatches each area (`BodyMap(soreFront,
-  soreBack)`, `SORE_PATHS` mirroring the web's indices).
-- Adjust today's Hurt uses the "Something hurt?" areas (Neck included),
-  opens on the first sore area (`WorkoutDayDto.sore`), and has "Add a
-  replacement for each move left out" (`AdjustRequest.replace`); stand-in
-  lines are tagged Added (`AdjustLineDto.standIn`).
-- A stand-in reaches the day as the slot's `loggedAs`, which the day and
-  the movement screen already treat as a swap. Answering a day suggestion
-  with `around:` reloads the day.
-
-## 2026-11 — Build fix (v0.484.2)
-
-- The recent-core-days DTO clashed with the existing `CoreDayDto` (core
-  days); it is `CoreRecentDayDto`. New DTO names are now checked against
-  every class in the app before packaging.
-
-## 2026-11 — Chart pages line up (v0.484.1, server 0.674.1)
-
-- Cardio's page gains a second row of tiles (Since best, Sessions, Last);
-  Conditioning's page and the Core page end with recent sessions / core
-  days, from the new server fields. Same order as a lift's page.
-
-## 2026-11 — Cardio and conditioning charts (v0.484.0, server 0.674.0)
-
-- `EnduranceCharts.kt`: `CardioChartCard` / `CardioPageDialog` and
-  `ConditioningChartCard` / `ConditioningPageDialog`, from
-  `heat.cardioCharts` / `heat.conditioningCharts` (worked out on the
-  server). Named `…ChartCard` because `ConditioningCard` is the day page's.
-- Shown after the muscle groups; `TrainDetailDialog(onOpenRow)` lets the
-  Endurance pop-up's Cardio and Conditioning rows open them.
-
-## 2026-11 — Core page order (v0.483.1, server 0.673.1)
-
-- `CoreOverviewDialog` puts the chart before the tiles, the same order as
-  `LiftPageDialog`.
-
-## 2026-11 — Core card and page, this week in the map pop-ups (v0.483.0, server 0.673.0)
-
-- Core is one card (`CoreCard`) from `heat.coreSummary`, worked out on the
-  server (`core-progress.ts`); it opens `CoreOverviewDialog` (tiles, the
-  progress line with plank tests, moves grouped Front / Sides and twist /
-  Leg raises and crunches, "Not done lately"). A move opens
-  `CorePageDialog` on top, now with Best, First and Change tiles;
-  `coreMoveChange` mirrors the server's `moveChange`.
-- `TrainDetailDialog` leads with `TrainGroupDto.week` (exact sets or
-  minutes this week, a row per movement or kind) and shows the warmth line
-  only when the week is empty. The bests list left it.
-- Older servers send no `coreSummary`: Core falls back to the plank bench.
-
-## 2026-11 — Steady body map, Core card, week strip snap (v0.482.0, server 0.672.0)
-
-Heat view keeps the BodyMap full width with the EnduranceHeart in a Box at
-TopCenter. Core: `CoreRows` is one card — a Plank test row (opens PlankBench
-full screen), then the six most recent `CoreRow`s without sparklines, the rest
-behind "All core movements (N)". `fillsFor` paints a LOWER_BACK series in its
-own colour on the deadlift's region, a deadlift winning. Additional cards show
-name and count; tap opens the lines in a dialog. The week strip's snap uses
-`SnapLayoutInfoProvider(snapPosition = SnapPosition.Start)` — the default
-centre snap left half days at both ends. Weekly training: dates row, category
-names, fixed colours. Lift rows only draw the sparkline and trend when there
-is one, so names get the room.
-
-## 2026-11 — Weekly training chart, Core rows, sport warm-up card (v0.481.0, server 0.671.0)
-
-`WeeklyTrainingCard` draws the server's `kinds` as stacked Canvas bars (lifting
-in the accent; conditioning, cardio, sport, mobility in fixed colours), a
-dashed line at `planned`, and the picked week's `dayList` as seven squares
-(two kinds split diagonally; dashed outline for planned, amber for missed).
-Core uses `heat.coreMoves` (`CoreRows`, `CorePageDialog`) instead of lift rows
-or the hard-sets summary. The hinge family now arrives grouped as Deadlift
-from the server. Day-card, lift-row, core-row and warm-up names allow two
-lines. `SportWarmupCard` is an OutlinedCard with Skip and a check (POST
-warmup-for `{ date, state }`, state always sent, "" clears).
-
-## 2026-11 — Lift rows and a page per lift (v0.480.0, server 0.670.0)
-
-WorkoutChart: each muscle group's lifts are an OutlinedCard of `LiftRow`s
-(best/last, a Canvas sparkline of the last 12 top sets, `liftTrend`), replacing
-`LiftBlock`'s six tiles and its "Additional charts". A row opens
-`LiftPageDialog`, a full-screen dialog: rep-range chips, the dot chart with
-light weeks shaded (points with intent LIGHT, by Monday), `heat.marks` as
-amber ticks at the foot (named in the key and the tapped point's label), the
-record ringed and `liftNext` (GET workouts/lift-next) drawn dashed ahead;
-then six tiles with est. max (`estimatedMax`, the server's formula), the
-rep-max card and the last five sessions. Lift progress left
-ProgressSummaryCards. Weekly training moved up under the Progress card.
-The Routines action card lost its subtitle: it wrapped to three lines in a
-fixed 88 dp card and the last was clipped.
-
-## 2026-11 — Custom recurrence is a full screen (v0.479.0)
-
-Too much for a pop-up: `CustomRecurrenceDialog` is now a full-screen dialog
-(the routine editor's pattern) with ← (drop) and Done (keep). Not a bottom
-sheet: its number boxes bring up the keyboard, which pushes a sheet around,
-and "On [date]" opens a date picker over it. Same settings as before.
-
-## 2026-11 — Task repeats (v0.478.0, server 0.668.0)
-
-AssignTaskScreen: with Repeat on, "First due" (the due date) shows and is sent
-as `startDate` (it used to be today). "Repeats" offers Daily / Weekly on
-<day> / Monthly on the <n> / Yearly on <date> (every one, from the first due
-date; weekly sends that date's weekday) and Custom…, a dialog with Repeats
-every N + day/week/month/year chips, weekdays for weeks, and Ends (Never / On
-/ After N occurrences). Ends stays on the form too. The "Every X" field, the
-monthly "Starts" field and the no-due-date notice are gone. A saved series
-with interval 1 (and, weekly, just its start's weekday) opens as its preset,
-otherwise as Custom. `taskRecurLabel` mirrors the server's `recurLabel`.
-Needs server 0.668 for Yearly and intervals over 52.
-
-## 2026-11 — "+ Additional" (v0.477.0, server 0.667.0)
-
-The Conditioning section's button is "+ Additional": `AdditionalMenu`
-(Conditioning opens the old Pick / Build / Write dialog; Mobility,
-Stretching, Isometrics open `ExtraPickerDialog`, which lists
-`warmupRoutines(kind)` or the new `coreWorkouts("iso")` and adds with
-`POST workouts/extras`). The server sends extras as ordinary day entries
-flagged `extra` (`WorkoutBlockDto.extra`, `SimplePlanDto.extra`), so their
-cards, the Core logger, sets, skips and Mark done work unchanged with the
-"extra_<id>" ids. Extras are left out of the progress bar; their cards show
-✕ (`removeExtra`) instead of Skip.
-
-## 2026-11 — Your version of a program (v0.476.0, server 0.666.0)
-
-`ProgramsDto.versions` (by program key; empty from an older server). A
-program with one shows an EDITED tag; picking it opens a dialog — Your
-version (date), Default, Forget my version. Your version opens
-`ProgramSetup` with `initial` = its setup, `current` = its extras,
-`nextMaxes` = its training maxes and `fromVersion = true` (button says
-"Start program"; a main lift without a saved max gets 90% of the best
-logged). The setup is wrapped in `key(programKey, fromVersion)` so its
-remembered state resets between Default and Your version. Forget calls
-`POST workouts/programs/version/forget` and opens the default setup.
-
-## 2026-11 — Back keeps drafts; warm-up ticks kept (v0.475.0, server 0.665.0)
-
-`MovementSetsViewModel.leave(logTyped)`: the Log tile and "Finish for now"
-pass true (logs typed, complete rows); Back (arrow, system back, the Core
-screen's back) passes false and stores typed-but-unticked values in
-`SetDrafts` (process memory, per date and slot), restored by `withDraft` on
-load. `WarmupSteps` keeps ticks in `WarmupTicks` per plan entry, routine and
-day.
-
-## 2026-11 — Training heat map (v0.474.0, server 0.664.0)
-
-The heat view reads `heat.training` (TrainingHeatDto): `trainFills` colours
-each group by level (TRAIN_WARM 1–5, TRAIN_COLD −1..−3, the figure's grey at
-0), `EnduranceHeart` draws the endurance level as a heart (path parsed from
-the web's SVG), `TrainKey` is the legend with ⓘ, and `TrainDetailDialog`
-shows the server's one-line reason plus the 12-week bests. The range chips
-are gone (the stored range preference is simply unused).
-
-## 2026-11 — Stretching; movement title fits (v0.473.0, server 0.663.0)
-
-Stretching routines reuse the warm-up screens with kind "stretching"
-(`routineKindOf`); a simple STRETCHING plan sits in the STRETCH section
-(`simpleSection`). The movement screen's title (`FitTitle`) drops a sp at a
-time from titleLarge to 15 sp while it overflows, then ellipsizes; Swap is
-`SwapIconButton` (outlined circle, content description "Swap"). The day's
-title comes from the server, which now names a non-program day by its plan.
-
-## 2026-11 — Warm-up on a sport day (v0.472.0, server 0.662.0)
-
-`sportDay` from `GET /workouts` drives it: the Warm-up window shows a
-Workout / sport switch (`SportChoice`, `SegmentSwitch`) that posts
-`workouts/warmup-for`; the Warm-up section always exists on a sport day and
-shows `SportWarmupCard` (view-only routine with timers) while the planned
-Warm-up isn't for the sport.
-
-## 2026-11 — Isometric days (v0.471.0, server 0.661.0)
-
-Isometric reuses the Core screens with kind "iso" (`rotationWord` names it):
-Add workout's Isometric category gets the Core-style switch (rotation or
-pick holds), the rotation editor offers isometric and timed movements, and
-the day groups iso entries under "Isometric". The month's test is read from
-`coreTests` / `coreTestName` (falling back to `coreTest`); more than one
-test movement shows as one card that opens them together.
-
-## 2026-11 — Day header date on one line; warm-up card trimmed (v0.470.0)
-
-The date row had the date at `weight(1f, fill = false)` and a
-`Spacer(weight(1f))` before the reset icon, so the two split the spare width
-and the date could use only about half the card ("Saturday, November" / "7").
-The spacer is gone; the row uses SpaceBetween so the date takes what it needs
-and the icon stays at the end. The warm-up card no longer lists its steps
-(0.468); they're inside when it's opened.
-
-## 2026-11 — Mobility (v0.469.0, server 0.659.0)
-
-Mobility reuses the warm-up screens with a `kind` ("warmup" | "mobility"):
-`WarmupChooser` (One routine / Rotation for Mobility), `RoutinePicker`,
-`RoutineEditor` (adds "How (optional)", a step's `cue`), `WarmupWindow` and
-`WarmupPlanLine`. The day shows a Mobility section with `WarmupCard`; the
-Workouts page's Warm-ups card is now Routines with a Warm-ups / Mobility
-switch. Steps with a `cue` show an ⓘ that opens it.
-
-## 2026-11 — Adjust today (v0.468.0, server 0.658.0)
-
-`AdjustTodayScreen` (AdjustToday.kt) replaces `GoLightScreen`: the start
-choices, then Low energy (preview, Confirm), Sick (Lighter / Easy day,
-Confirm), Hurt (area chips, preview, Confirm; Rest / skip when nothing is
-left to lift) or Short on time (time, picks with estimates, the can't-fit
-fixes, preview, Confirm / Change). Estimates and previews come from
-`POST /workouts/adjust`; the phone works nothing out itself. The day header
-shows the server's `adjusted.label` with Undo. The warm-up card lists the
-routine's steps under its name.
-
-## 2026-11 — Game "How hard?": the check mark finishes it (v0.467.0)
-
-Yes on a sport prompt shows the How hard? card again (0.466 dropped it by
-mistake); an effort chosen with the check mark saves and closes it. "Skip"
-remains; "Done" is gone.
-
-## 2026-11 — Snap, one-tap game confirm, Additional edit (v0.466.0)
-
-- The strip's LazyRow uses `rememberSnapFlingBehavior` (whole days).
-- Home: Yes on a sport prompt no longer opens the "How hard?" card.
-- Day page: "ADDITIONAL" (was LOGGED); a card with `sport` opens
-  `SportEditDialog` (EffortChooser, and a minutes field when `flexTime`) →
-  `POST /workouts/sport-session` (server 0.656+).
-- GoLightScreen: "Any" (0) time. WarmupChooser: Match rows get ⓘ; Rotation
-  rows copy CoreRotationPicker's numbered squares.
-
-## 2026-11 — Warm-up modes (v0.465.0)
-
-`WarmupChooser` gains a three-way switch (One warm-up / Match the day /
-Rotation). Match lists the routines it picks from (`MATCH_WARMUPS`) and saves
-"match"; Rotation numbers routines in tap order and saves "rot:<ids>". The
-plan line reads "Match the day" or "Rotation · N". The day page needs
-nothing: the server resolves the routine and adds Shoulder prep.
-
-## 2026-11 — Go light (v0.464.0)
-
-`GoLightScreen` (GoLight.kt, a CoreScreen full-screen dialog): question chips,
-then the suggestion and alternatives as selectable cards, "Use this" →
-`POST /workouts/go-light` apply. The day page shows "Go light" beside Rest /
-skip on today until chosen, and DayHeader shows "Light day · <option> ·
-Undo" from `goLight` (server 0.654+). The server trims the plan, so the cards
-and completion need nothing else.
-
-## 2026-11 — Week strip scrolls freely (v0.463.0)
-
-`ScrollingWeekStrip` is a LazyRow over every day in reach (STRIP_DAYS_BACK
-64, AHEAD 32), cells 1/8 of the width, no snap; ‹ › animate 7 items. The
-LazyListState lives in DayHeader (initial item puts the shown day at the
-right end) so a reset IconButton sits top-right of the card, shown only when
-off today. Missing days render from the date alone; pages in view are
-requested via `loadStripPage`, which now fetches each page once per day load
-(`stripFetched`, cleared in applyPlan). `StripDayCell` is the old WeekStrip
-cell, extracted.
-
-## 2026-11 — Week strip holds still; quieter network log (v0.462.0)
-
-- DayHeader owns the PagerState (initial page = the one holding the shown
-  day) so "Today" can be a text link at the end of the date line: no extra
-  row, no height change. PagedWeekStrip keeps a 56 dp floor per page.
-- `loadStripPage` always refetches (the old page stays until replaced) and
-  the page in view refetches whenever the day reloads (`LaunchedEffect(page,
-  first)`); applyPlan no longer clears the pages — clearing blanked the page
-  in view after tapping a coming day, and nothing asked for it again.
-- No progress bar on a coming day.
-- NetworkMonitor logs blocked/unblocked only while `foreground` (set in
-  MainActivity onResume/onPause); losses and evidence-based changes always.
-
-## 2026-11 — Week strip pages; Arms days (v0.461.0)
-
-- `PagedWeekStrip`: a HorizontalPager of 8-day pages (8 back, 4 ahead) with
-  ‹ › IconButtons and a "Today" TextButton; page 0 is the day's own strip,
-  others come from `GET /workouts/strip?page=` (`loadStripPage`, cleared on
-  each day load). The pager owns its swipe, like the Bible cards. A future
-  day's sections are faded (55%) with taps consumed; Rest / skip,
-  suggestion and benchmark are hidden.
-- Arms days ride Core's screens with a `kind`: AddWorkoutSheet offers an
-  Arms rotation when the muscle is Arms (`armsWorkouts`), CoreRotationDialog
-  / editor / picker take `kind` (no plank test, arms movements to choose
-  from, "New arms workout"), and CoreActions.save carries it. The day card
-  and logger need nothing new (the server marks an Arms entry `core`).
-
-## 2026-11 — Rest days look like rest days (v0.460.0)
-
-`WorkoutSummaryCard` takes the dashboard's `workoutRest` / `workoutExtraLogged`
-(server 0.650+): "Rest day!" in muted text, or "Complete for today!" for a
-skipped day with something else logged; the card is listed on a rest day even
-with no workout task. WeekStrip draws rest as a grey filled circle with the
-date (no moon); `stripState` treats rested + logged as done and reads
-`restPlanned`. A rested day's sections sit in a 40% alpha Column.
-
-## 2026-11 — Offline bar corrected by evidence; longer, folded diagnostics (v0.459.0)
-
-- "You're offline" came only from ConnectivityManager callbacks. After the
-  phone slept it could stay up while the app was talking to the server (the
-  log showed live requests going out under an "offline" bar) — most likely
-  Android unblocking the app's network without a fresh onAvailable — until a
-  screen change. NetworkMonitor is now a MutableStateFlow set by the
-  callbacks (plus onBlockedStatusChanged) and also by evidence: any server
-  answer through OfflineInterceptor (`onAnswer`), MainActivity.onResume
-  (`recheck`), and SyncManager's 15 s probe, which now also runs while the bar
-  says offline but the system reports a network.
-- Each network change is a breadcrumb naming its cause ("network offline:
-  lost", "network online: server answered"), so a stuck bar can be traced.
-- Breadcrumbs: 150 lines (was 30, which a night of half-hourly widget draws
-  filled), a date on each line, and an event repeated back to back updates one
-  line ("widget draw ×6 since 11-06 03:19:07"). Diagnostics lines are 10 sp
-  monospace — they're for copying.
-- Ice time's "updated N min ago" is the rinks' check time carried in the
-  data, so it stays right when the screen shows a saved copy: no change.
-
-## 2026-11 — One minimum height for home cards (v0.458.0)
-
-`HOME_CARD_MIN` (64 dp, the Workouts card's minimum since v0.436) now sets
-the floor for every section card on Home: Chores, School, Workouts, Reading,
-and the category blocks (Bible and the like, and Today's schedule, whose
-"Nothing scheduled" line was the short one). Content centres vertically when
-the card is taller than it. Prompts (money, family goal, sport) are taller
-already and are left as they are.
-
-## 2026-11 — Hockey renamed Ice time (v0.457.0)
-
-Section label, screen title and empty-state text read "Ice time"; the icon
-(`KairosIcons.Hockey`, name kept) is now an ice skate. The section id stays
-"hockey", so saved section order and visibility carry over.
-
-## 2026-11 — A planned rest day is a rest day (v0.456.0)
-
-`restPlanned` (server 0.646+) hides Rest / skip, the suggestion and benchmark
-cards, and every section (+ Conditioning included) on the day page; the title
-comes from the server ("Rest day") and Logged lists whatever was done, rows
-and conditioning included. Log an additional workout is unchanged.
-
-## 2026-11 — "Logging late" only while nothing is logged, on every screen (v0.455.0)
-
-v0.431 fixed the day page, but the set logger and the core workout screen
-still showed "logging late" for any past day, from the route's `late` flag
-alone. Both now show it only while none of the screen's sets are saved, the
-same rule as the day page. (`late` itself still drives the completed-on date.)
-
-## 2026-11 — Workout plan: "Saved" after each change, Done (v0.454.0)
-
-Every plan change already saves at once. `EditPlanUiState.savedAt` moves on
-each successful write (`act`, core workout save/delete, section order, the
-warm-up picker's reload) and a Snackbar shows "Saved"; the Scaffold's bottom
-bar is a full-width Done (the rotation page's Save style) that goes back. No
-discard warning, since nothing is ever held unsaved.
-
-## 2026-11 — Plank test card, Core plan line, plank tiles (v0.453.0)
-
-- `WorkoutBlockDto.coreTest` (server 0.644+): on a core day with the monthly
-  plank test, `DaySectionView` draws a "Plank test" MovementCard that opens
-  CoreWorkoutScreen with just the plank, and the CoreDayCard leaves it out.
-- `CorePlanLine` is now the warm-up's shape: the row reads "Core" and the
-  workout's name is an accent link opening the rotation.
-- `PlankBench` reuses WorkoutChart's `StatTile` (now internal) with a plain
-  title, no frame — the same look as a lift's record tiles.
-- The rotation fix (moves on at the next core day) is server-side only.
-
-## 2026-11 — Plank test shows with Core's charts (v0.452.1)
-
-`PlankBench` was only in the summary (no-charts) branch of WorkoutChart; Core
-with a weighted carry is a charted group, so it never drew. Now it leads the
-CORE block in both branches, and shows "No plank logged yet." when empty.
-
-## 2026-11 — Plank test as core's benchmark (v0.452.0)
-
-Core's summary under the body map leads with `PlankBench` (PlankBench.kt):
-best, last, change, time to 3:45, days since best, test count, and a Canvas
-chart of every test with dashed 1:10 / 3:45 lines. Data is `heat.plank`
-(server 0.643+); an older server sends none and the card is simply absent.
-
-## 2026-11 — Widget too big to send (v0.451.0)
-
-The 0.450 breadcrumb caught it: `TransactionTooLargeException`, 1.2 MB. Every
-event line's tap carried the whole event as JSON (notes, attendees, member
-lists…) in its intent, and the widget sends a copy of its layout for each size
-the launcher asks for — the Pixel launcher asks for more than one, so a busy
-week passed Android's 1 MB limit there and not on GrapheneOS. A tap now
-carries only the event's id and day (`EXTRA_EVENT_ID`, `EXTRA_EVENT_DAY`);
-MainActivity finds the event in the widget's cached week (`WidgetStore`). The
-old whole-event extra is still read, for taps from a widget drawn before the
-update. The list also stops at 60 lines ("More in Kairos") so an unusually
-busy week can't hit the limit another way.
-
-
-## 2026-11 — Widget errors in Diagnostics (v0.450.0)
-
-"Can't show content" on the widget is Glance 1.1's own error layout: drawing
-the widget threw in the app's process (not a launcher problem). Glance says
-nothing more, and a stock phone has no logcat to hand, so `KairosWidget`
-overrides `onCompositionError` to drop a breadcrumb — the root exception's
-class, message (160 chars) and the first frame in the app — then shows
-Glance's default as before. Each draw also drops "widget draw" (and a failed
-refresh), so Diagnostics shows whether the widget ran at all.
-
-
-## 2026-11 — m:ss entry, narrower set boxes, SidesTimer (v0.449.0 / web 0.642.0)
-
-`ClockField` shows a timed set as m:ss and reads typed digits from the right
-(`secondsFromTyped`), keeping seconds in the row. Set boxes have fixed widths
-(weight 88, reps 68, distance 76, time 96 dp) with a spacer before ✓ / ✕.
-On the Core day screen, Timer picks the next movement with open timed sets;
-one with `sides` (from `MovementLogDto.sides`) opens `SidesTimer` (Start on
-Left/Right, 1/2/3 s pause, Switch keeps each side's time), and the times fill
-that movement's open sets via `fillSeconds`. Others use the stopwatch, filling
-one set.
-
-
-## 2026-11 — Public skate's event type (v0.448.0 / web 0.641.0)
-
-`HockeySectionDto` adds `kind` and `eventTypeId`. "Add" uses the section's own
-type when the server sends `kind` (a public skate gets a skating type or
-none), and the top-level `eventTypeId` from older servers.
-
-
-## 2026-11 — Core day screen like 5/3/1; carry distance (v0.447.0 / web 0.640.0)
-
-`CoreWorkoutScreen` drops the per-movement bordered blocks: `CoreMoveSection`
-is a heading row (name, target, ⓘ) over the set cards, so the page reads
-background → cards, like 5/3/1's sections. The bottom bar has Skip (every
-movement), Timer (fills the next open timed set down the page via
-`openToolFor(null)` + `useSeconds`) and Log. One `FeedbackCard` at the end
-sets every movement's effort. No "Same as last time" there. `SetCard` takes
-`repsUnit` ("yd" for a carry, from `MovementLogDto.repsUnit`) and labels the
-reps field with it; record chips are off for carries.
-
-
-## 2026-11 — Core day on one screen (v0.446.0 / web 0.639.0)
-
-`WorkoutBlockDto.core` marks a Core day; the day page draws it as one
-`CoreDayCard`, which opens `Route.CoreWorkout` → `CoreWorkoutScreen`
-(MovementSetsScreen.kt). The screen holds one `MovementSetsViewModel` per
-movement, keyed exactly as each movement's own page, and draws a
-`CoreMoveSection` each (name, ⓘ, Skip, today's target, set cards, Add set,
-Timer for holds, how it felt). One Log calls every `leave()` and goes back
-once all are done. The moves travel in the route as `encodeCoreMoves`
-(tab/line separated). "Strength" comes from the server's labels.
-
-
-## 2026-11 — Progress focus and the warm-up chooser (v0.445.0 / web 0.638.0)
-
-`WorkoutChart` opens on `focusGroups(planDays, today)`: today's groups, else
-the next planned day's, never the last one trained. Groups with no weight
-charts (Core of holds and reps) get their region when planned or trained
-(`summaryGroups`) and a `HeatGroupSummary` block (12-week hard sets a week
-and bests, from `heat`). `HeatBests` is shared with the heat pop-up.
-Add workout → Warm-up shows `WarmupChooser` (WarmupScreens.kt) — the Core
-rotation's layout, single choice — and sends `AddPoolRequest.warmup`; the
-plan line's Warm-up screen uses the same chooser. The home card's lines are
-the server's.
-
-
-## 2026-11 — 0.444.1: CoreActions is public
-
-`AddWorkoutSheet` is public and takes a `CoreActions`, so the interface can't
-be internal ("public function exposes its internal parameter type").
-
-
-## 2026-11 — Core days (v0.444.0 / web 0.637.0)
-
-Add workout → Weights → Core offers Core rotation / Pick movements
-(`CoreModeSwitch`); the rotation picker (`CoreRotationPicker`, CoreDays.kt)
-numbers workouts in tap order, ⓘ lists a workout's movements, and "New core
-workout" / the pencil open `CoreWorkoutEditor` (movement, Reps / Hold /
-Weight, sets × min–max). A Core day's plan line (`CorePlanLine`) shows the
-workout planned now and a Rotation button (`CoreRotationDialog`). Writes go
-through `EditPlanViewModel` (`setCoreDay`, `saveCoreWorkout`,
-`deleteCoreWorkout`, handed to the screens as `CoreActions`); the options
-reload after a save so the new workout shows. The server picks the workout
-due and writes its movements, so the day page and logger need nothing new
-except hold targets: `TargetSetDto.seconds` fills the time hint. Older
-servers send no `coreWorkouts`, and the switch doesn't show.
-
-
-## 2026-11 — Core days and the two-row legend (v0.443.0 / web 0.636.0)
-
-`ProgressSummaryCards` takes `heat.days` (`HeatDayDto`): a day a group was
-trained without weights gets that group's square, so a core day of planks
-shows in amber like any lifting day. The legend is four to a row in equal
-columns (`chunked(4)`), so a seventh group starts a lined-up second row. The
-heat pop-up shows holds as m:ss with a plank's PFT points (`HeatBestDto.pft`).
-The counting is the server's (web DECISIONS, v0.636).
-
-
-## 2026-11 — Body-map heat view (v0.442.0 / web 0.635.0)
-
-`WorkoutChart` takes the progress payload's `heat` (`HeatMapDto`). A flame
-toggle (`HeatToggle`, top-left of the map) swaps the primary/secondary view
-for hard sets a week per muscle; range chips 1 wk / 4 wk / 12 wk (default) /
-6 mo / All. Both kept in `SettingsStore` (`heatOn`, `heatRange`). One hue at
-three strengths (`heatShade`, the theme primary blended toward the figure's
-fade), a key with an ⓘ pop-up, and a tap opens `HeatDetailDialog` (sets a
-week, heavy sets a week, bests then → now). The server does all the counting
-(see the web's DECISIONS, v0.635), so the phone just draws it. Older servers
-send no `heat`, and the flame doesn't show.
-
-
-## 2026-11 — Progress is history, not the plan (v0.441.0 / web 0.634.0)
-
-`WorkoutChart`'s universe was the plan's tracked movements whenever any were
-tracked, so a muscle no longer programmed dropped off the body map, records
-and Workout days. It's now every series with logged points; the plan still
-picks what the map opens on.
-
-
-## 2026-11 — Timer looks as they look; black floating window (v0.440.0 / web 0.632.0)
-
-`TimerLookPicker` (TimerLive.kt) replaces the Numbers and Number colour
-drop-downs in Appearance: each choice is "1:30" in its font and colour on a
-dark tile. Colours are neon (`timerColorFor`; new PINK and ORANGE keys, old
-keys kept). `PipTimer` draws on black: a picture-in-picture window is always
-an opaque tile, so black is the least there can be behind the digits.
-
-
-## 2026-11 — Leaving a lift early keeps the rest; build fix (v0.439.0 / web 0.631.0)
-
-Mirrors web 0.631.0: `MovementSetsViewModel.rowsFrom` appends the target sets
-after today's logged ones; `unfinishedCount()` and a "Finish early?" dialog on
-Log. Build fix: `PipTimer` read `maxHeight` inside a `Column` (its scope hides
-`BoxWithConstraintsScope`); it's read before the Column now.
-
-
-## 2026-11 — The timer outside the app; number font and colour (v0.438.0 / web 0.630.0)
-
-**Outside the app:** `TimerLive` (ui/workout/TimerLive.kt) holds what a
-running timer shows; `ConditioningTimer` and `WarmupTimer` publish it when
-their step, phase or get-ready changes (not every second) and clear it when
-they finish or close.
-- **Notification:** `TimerService`, a foreground service (type `specialUse`,
-  silent `workout_timer` channel), posts it with a chronometer counting down
-  to the step's end (`setChronometerCountDown`) or up for a stopwatch, so it
-  ticks without the app; paused shows the time as text. On Android 16+ it asks
-  to be a Live Update (`setRequestPromotedOngoing`, called by name so older
-  SDKs skip it; `POST_PROMOTED_NOTIFICATIONS`), the status-bar chip. As a
-  foreground service it also keeps the process running, so the beeps don't
-  stop when the phone would otherwise freeze the app in the background.
-- **Floating window:** picture-in-picture. `MainActivity` sets auto-enter
-  (Android 12+) while a timer runs, or enters on `onUserLeaveHint` before
-  that, at 16:9; `TimerLive.inPip` makes the timer draw only `PipTimer` (the
-  time sized to the window, a word of status). A floating window can't be
-  see-through: Android draws it as a solid tile, so it's the digits on the
-  timer's background. The activity now handles size and orientation changes
-  itself (`configChanges`), so entering the window doesn't restart it and
-  lose the timer.
-- `SettingsStore.timerAway`: BOTH (default), NOTIFY, FLOAT or OFF.
-
-**Numbers:** `timerFont` (Standard, Condensed, Monospace, Serif) and
-`timerColor` (Plain, Theme colour, Amber, Green, Red, Blue), under Settings →
-Appearance → Workout timer; get-ready and rest keep their colours.
-
-
-## 2026-11 — Warm-up check; first side (v0.437.0 / web 0.629.0)
-
-`WarmupCard` (CardioBlock.kt): Mark done is a 40 dp hollow accent check circle,
-filled when done; the card opens `WarmupWindow`. `WarmupTimer`: "Start on"
-Left / Right when the run has an each-side step (`warmup_right_first` in the
-timer prefs); `warmupIntervals(…, rightFirst)`; `ChipRow` takes a label and
-width. Push-ups and the like ask for reps only once the server sends REPS
-(web 0.629); the set logger already handled REPS.
-
-
-## 2026-11 — Thinner outlines; one-row Cardio card; home workout card (v0.436.0 / web 0.628.0)
-
-`AccentOutlinedButton` and the set logger's / Swap pills use a 1 dp outline
-(2 dp read as heavy). `CardioBlock` with nothing logged is one row like the
-Warm-up card: the title with "Check Concept2" under it, then Skip and Add.
-`WorkoutSummaryCard` shows each workout task's `subtitle` (server 0.628+) under
-the title in the Chores card's second-line style, and is at least 64 dp tall.
-
-
-## 2026-11 — One button style; Recent workouts by day (v0.435.0 / web 0.627.0)
-
-Mirrors web 0.627.0. Plain `OutlinedButton`s in the workout screens are
-`AccentOutlinedButton` (timers, Delete and Stop rotation excepted); the set
-logger's pills (Add set, Same as last time) and the Swap pills have the 2 dp
-accent outline. `WarmupTimer`'s pauses are 0/1/2/3/5/10 s. `DayHeader` takes
-`planned`: no "logging late" on a day with nothing planned.
-`WorkoutHistoryDto.ids`: an entry is a day, and `RecentWorkoutsViewModel.delete`
-deletes each of its sessions. Titles and the past day's program come from the
-server.
-
-
-## 2026-11 — ⓘ on picks; next cycle with changes; a banner that clears (v0.434.0 / web 0.626.0)
-
-Mirrors web 0.626.0: `ProgramOptionDto.about` and `PlanMovementDto.about`;
-`PickedInfo` (ⓘ + `MovementInfoDialog`) beside main and companion picks in
-`ProgramSetup`; ⓘ on the plan editor's movement rows; the Log an additional
-workout exercise list opens the how-to under a row. `CycleEndDialog` adds
-"Next cycle, with changes" (when `ProgramsDto.setup` is the running program):
-`ProgramSetup(initial, nextMaxes)` opens on the plan as it is, the Maxes step
-edits the raised training maxes, and it starts with `next = true`. "Save,
-share or export" uses `AccentOutlinedButton`.
-
-**"Kairos server unavailable" while it wasn't:** the flag is set by a 502/503/504
-(or a write that never reached the server) and cleared only by the next live
-success, so a screen that had finished loading kept the banner up after one
-bad answer. `SyncManager` now asks `meta` every 15 s while the flag is up and
-clears it on a 2xx. Setting and clearing it drop a breadcrumb with the method,
-path and status (no query or body), so Diagnostics shows what set it.
-
-
-## 2026-11 — Visible buttons; Conditioning in its place; warm-up countdown (v0.433.0 / web 0.625.0)
-
-Mirrors web 0.625.0.
-- `ui/common/AccentOutlinedButton`: a 2 dp primary outline and primary text
-  on the surface colour. Used for Rest / skip day, + Conditioning and Log an
-  additional workout; a plain OutlinedButton's grey outline read as disabled.
-- `WorkoutLogScreen`: CONDITIONING is always among the day's section kinds,
-  so its section (empty or not) sits where the person's order puts it, and
-  the one-off conditioning list and + Conditioning render inside it.
-- Day header: the server's `title` is the program's name on a program day,
-  else the kinds of work; `programLine` is just the week label.
-  `LoggedOtherDto.label` (a game's event type) titles a past day.
-- `WarmupTimer.kt`: `warmupIntervals` / `warmupSchedule` / `warmupAt` mirror
-  warmup-library.ts. A timed step's Timer runs that step and the timed steps
-  straight after it (an each-side step twice), get-ready before the first
-  (`TIMER_LEADS`), a chosen pause between (`WARMUP_GAPS`), tones on the alarm
-  stream and a buzz at each change, Pause and Skip; the steps it ran are
-  ticked. Colours from `timerPalette()` (now internal). Replaces the
-  count-up StepTimer.
-- `RoutineRow` has a surface background.
-
-
-## 2026-11 — Companion exercises; Warm-ups screen; plan tools; rotation (v0.432.0 / web 0.624.0)
-
-Mirrors web 0.624.0. `ProgramsScreen`: Lifts in weekday order, "Companion
-exercises", "+ Add exercise", a library option shown "· new"
-(`ProgramOptionDto.add`), "Training max 120" with an ⓘ AlertDialog, and a
-Rotation card under Programs (`onOpenRotation` → `Route.Rotation`).
-`WarmupsScreen` (`Route.Warmups`) from the Workouts page's Warm-ups card,
-which replaces Rest / skip; "HIIT / CrossFit" with "Create / edit" under it.
-`WorkoutLogScreen`: "Rest / skip day" until something is logged or the day is
-rested (`rested`, server 0.624+). `EditPlanScreen`: no Rotation action; the
-plan's tools are one "Save, share or export" button at the foot opening a
-sheet (Save to My plans, Share with the household, Export, Import;
-`KairosIcons.Upload` added).
-
-## 2026-11 — Grouped sets; past days; sync that doesn't stick (v0.431.0 / web 0.623.0)
-
-**Grouped sets and past days:** mirrors web 0.623.0 — `MovementSetsScreen`
-heads Warm-up / Main sets / "5 × 10" and numbers each from 1
-(`SetRow.supplemental`); `WorkoutLogScreen` lists `loggedOther` under
-"Logged", titles a day with nothing planned by what was logged, and drops
-"logging late" when `loggedAny`.
-
-**"Waiting to sync" that never cleared:**
-- Opening Workouts POSTs the Concept2 check. When the phone briefly reported
-  no network (right after the app returns from the background the system can
-  answer "no active network" for a moment), the write interceptor queued it,
-  so "1 change waiting to sync" appeared with nothing changed. `concept2/sync`
-  (and any request with `X-Kairos-No-Queue`) is never queued now.
-- `NetworkMonitor.isOnline()` is the fresh read OR the callback-tracked state,
-  so that moment no longer counts as offline.
-- The retry loop could die on an unexpected (non-IO) error and never run
-  again until restart; passes now go through `safeReplay`, the retry runs every
-  15 s while something waits, and the app replays on every resume.
-
-**Stall watchdog:** the "MAIN THREAD STALLED 600–1000 s at nativePollOnce"
-breadcrumbs were the app being frozen in the background (the watchdog thread
-slept through it too). When its own sleep overruns, it now starts over instead
-of reporting.
-
-## 2026-11 — Warm-up routines; timer look (v0.430.0 / web 0.622.0)
-
-Mirrors web 0.622.0. `WarmupScreens.kt`: `WarmupWindow` (steps, a tick each,
-`StepTimer` count-up on timed ones, Switch, Mark done), `RoutinePicker`,
-`RoutineEditor` (a ready-made one saves your own copy) and `WarmupPlanLine`
-(the plan editor's Warm-up entry), all full-screen Dialogs with a back arrow.
-`WarmupCard`: tapping the name opens the window; the check still completes it.
-`SimplePlanDto.routine`, `PlanWorkoutDto.warmup`, `ProgramsDto.warmups`,
-`CurrentExtrasDto.warmupRoutine`, `StartProgramRequest.warmupRoutine`; new
-calls `workouts/warmups` (GET, POST), `warmups/delete`, `plan/warmup`. The
-setup's Extras Warm-up is a `Dropdown` (None / Just a check / routines).
-`ConditioningTimer` takes a `TimerPalette` from `SettingsStore.timerTheme`
-(DARK default, LIGHT, APP); Settings → Appearance → Workout timer.
-
-## 2026-11 — Warm-up sets; setup labels and maxes; group order; Add workout full screen (v0.429.0 / web 0.621.0)
-
-Mirrors web 0.621.0. `SetRow.warmup` shows "W" and the working sets number
-from 1. `ProgramsScreen`: white (`containerColor = surface`); companion rows
-show their type label above and "Time" for a timed option
-(`ProgramOptionDto.timed`); the last step is Maxes (best pre-filled, TM under
-it, the TM sent). `WorkoutChart`: today's groups first in the plan's
-order, then A–Z; each `LiftBlock` names its movement. `CardioBlock`: the title
-keeps one line; Skip / Add cardio sit on their own row when nothing is logged.
-`AddWorkoutSheet` is a full-screen Dialog with a back arrow and the Add button
-pinned at the bottom, not a ModalBottomSheet (dragging the list closed it).
-
-## 2026-11 — Program setup steps; My plans; end of cycle; + sets (v0.428.0 / web 0.620.0)
-
-Mirrors web 0.620.0 (see its DECISIONS for the programs). `ProgramsScreen`:
-the chooser has Programs / My plans / Household tabs (`PlanLibrary`: list,
-preview in an AlertDialog with Replace / Add, and for My plans Save, Rename
-and Delete); a program is set up in four steps (Days, Lifts, Extras, Training
-maxes) with Back / Next pinned at the bottom; pickers are `Dropdown` (the
-full-screen `OptionPickerOverlay`). Starting navigates to Edit plan. The
-end-of-cycle AlertDialog opens on its own when the cycle is done: a raise per
-lift (from `TrainingMaxDto.step`), Next cycle, Repeat, Switch program. A
-target set's `plus` shows the reps hint as "5+". New calls:
-`workouts/plan/saved` (GET, POST), `saved/rename`, `saved/delete`;
-`StartProgramRequest` and `NextBlockRequest` gain optional fields (omitted
-when null, so an older server ignores them).
-
-## 2026-11 — Deadlift group; 5/3/1 logger; timer; + Conditioning (v0.427.0 / web 0.619.0)
-
-Mirrors web 0.619.0. Deadlift is a muscle group (colour 0xFF9C6B3C); the body
-map's posterior-hip paths take the Deadlift fill. A target set with `pct` is a
-5/3/1 set: the set column shows the % (34 dp wide) instead of TOP, × becomes a
-plates button that opens the weight calculator with `startTotal` (switching the
-bar reloads the plates via `platesFor`), and Remaining sets is hidden. A
-DURATION movement's tile is Timer, which opens `ConditioningTimer` (for time);
-its result fills the next set's seconds. + Conditioning on the day opens an
-AlertDialog (Pick one / Build one / Write your own) reusing the conditioning
-sheet; what's logged lists as extras. Change program is a button on the
-Workouts program card (`Routes.ProgramsChange` opens Programs already
-picking). Program setup pre-fills Top weight from the option's `best`. The
-Workout days chart rows are plan days plus weekdays logged in the last 16
-weeks.
-
-## 2026-10 — Effort slider; one Cardio card (v0.426.1 / web 0.618.1)
-
-`EffortChooser` (MovementSetsScreen.kt) is a Material Slider (4 stops, thumb
-and active track in the primary colour, grey until answered) with a check
-(OutlinedIconButton → FilledIconButton once saved) and a bandage IconButton
-opening the hurt areas in an AlertDialog. Every caller (sets, cardio,
-conditioning, the home sport prompt) gets it unchanged. `CardioBlock` is one
-OutlinedCard: title, ⟳ Concept2 (`KairosIcons.Sync`) and + on it; no trash on
-a Concept2 row. New icons: `KairosIcons.Sync`, `KairosIcons.Bandage`.
-
-## 2026-10 — Export, import and household plans on the phone (v0.426.0 / web 0.618.0)
-
-The plan screen gets four buttons under "Starts on": Household plans, Share
-this plan, Export and Import, each a ModalBottomSheet (`PlanFileSheets.kt`).
-Export asks the server for the file as text (`ResponseBody`, so it's saved
-exactly as sent) and writes it where the person picks with the system's
-CreateDocument; Import reads a picked file (OpenDocument) and sends its text,
-first for a preview, then with Replace (confirmed in a dialog) or Add.
-Approving shared plans stays on the web's Admin.
-
-## 2026-10 — Pick one, Build one, Rx/Scaled, monthly benchmark (v0.425.0 / web 0.617.0)
-
-A "pick on the day" Conditioning plan comes in the day read's `picks` (it has
-no movements, so it isn't in `workouts`) and adds the Conditioning section
-like Warm-up and Cardio do. Its card opens Pick one or Build one as
-ModalBottomSheets; tapping a workout shows it in the same sheet with Rx /
-Scaled (ChoicePills), Start (the existing ConditioningTimer, fed a
-ConditioningPlanDto) and Log a result. Write your own opens the personal
-workout screen. Build one asks the server to build (`workouts/conditioning/
-build`) rather than porting the generator, and sends the workout back as is
-to log or save. Every conditioning result, planned ones included, now logs
-through `workouts/conditioning/log` with the version, so the session is named
-after the workout like the web's. The plan sheet's HIIT Workout list starts
-with "Pick on the day" (an add-pool with category HIIT, no movements, name
-Conditioning). The benchmark card sits under the suggestion card.
-
-## 2026-10 — Pickers, Add cardio sheet, replace warning (v0.424.1 / web 0.616.1)
-
-`ui/common/OptionPickerOverlay` is the calendar's full-screen radio list made
-shared; the plan screen's `Dropdown`, Sets and Copy from use it instead of a
-DropdownMenu. Add cardio is a ModalBottomSheet like Add workout. "Start again"
-on a conditioning workout logged today asks before opening the timer, and the
-timer's result step says it replaces today's result.
-
-## 2026-10 — Conditioning timer on the phone (v0.424.0 / web 0.616.0)
-
-`ConditioningTimer` is a full-screen dialog run by `Timer.kt` (the web's
-timer.ts rules, mirrored; keep them in step). Time comes from
-`SystemClock.elapsedRealtime`, checked four times a second, so it can't drift.
-Tones play through `ToneGenerator` on the alarm stream so they're heard over
-music; vibration needs the VIBRATE permission (added). The view's keepScreenOn
-is set while the get-ready or the clock is running. Sound and get-ready length
-are kept in SharedPreferences ("kairos_timer"). `ConditioningCard` replaces the
-plain block for a planned named workout: last result, household best, Start,
-Log a result, Skip, and "How did it feel?" once logged. The result goes through
-the plan's log with replace (one per workout a day).
-
-## 2026-10 — Cardio as one card (v0.423.1 / web 0.615.1)
-
-With nothing logged yet, the day's Cardio is one card like the Warm-up: its
-name, "Check Concept2 now" when connected, Skip and Add cardio. Once something
-is logged, the entries show and Add cardio sits under them. Whether Warm-up and
-Cardio make a day late is the server's call (they don't, from web 0.615.1).
-
-## 2026-10 — Cardio, Warm-up, day order and set structure on the phone (v0.423.0 / web 0.615.0)
-
-The day screen orders its sections by the server's `order` (mirrored
-`sectionOrder` = the web's cleanOrder) and adds a Warm-up and a Cardio section
-from `simple` plans and the day's `cardio`, since those plans hold no
-movements. `CardioBlock` replaces Concept2Rows: the day's cardio with "How did
-it feel?" (`EffortChooser`, shared with the set logger and the home sport
-prompt), Add cardio, Skip for a Cardio plan with nothing logged, and "Check
-Concept2 now". Cardio, warm-up and skips are online only (like Undo); the
-reload after each keeps the progress bar right. The plan screen gets "Order of
-the day", "Order" per day, and a Sets choice on each weights movement (when
-adding it and later). After "Did you do it? Yes" on Home, "How hard was it?"
-stays until answered or skipped.
-
-## 2026-10 — Concept2 on the phone (v0.422.0 / web 0.614.0)
-
-Settings → Concept2 connects with the Logbook token (sent once, never shown
-again) or disconnects. The day screen asks the server to check Concept2 when a
-day loads and every 15 minutes while the view model lives; the server decides
-whether to actually go to Concept2 (at most every 5 minutes), so the phone
-needs no timer of its own beyond that. "Check Concept2 now" forces it. Rows
-show under Cardio when rowing is planned, else under Extra; new rows reload
-the day so the Cardio block counts done. Undo is online only: it changes
-sessions on the server, and an offline Undo would race the next sync.
-
-## 2026-10 — How-to behind ⓘ (v0.421.0 / web 0.613.0)
-
-The server sends each movement's how-to (`about`) with the pool, the plan
-options and the set logger. ⓘ sits in the set logger's top bar (a dialog with
-the how-to and "Watch how") and on every row of the Swap lists and the plan
-builder's movement list (the how-to opens under the row, since a dialog over a
-dialog reads badly). "Watch how" is a video search for the name, built on the
-phone, so nothing stored can go stale. Older servers send no `about`: ⓘ still
-shows, with just "Watch how".
-
-## 2026-10 — Suggestions on the phone (v0.420.0 / web 0.612.0)
-
-`SuggestionCard` (in MovementSetsScreen.kt, shared with the log page) shows the
-server's card with its choices, the first filled. The set logger's "Use 190"
-moves the top set's hint, "Swap" opens the picker, "See programs" opens
-Programs; the log page's "Lighter today" / "Ease in" shows the lighter line at
-once (the loggers' hints come back lighter from the server). Answers go through
-`workouts/suggestion` (queued offline) and a queued answer keeps its card
-hidden on reload. A set more than 10% over `recentTop` gets an amber note
-(`jumpFor`). Home shows the program invite (its own `workouts/programs` read).
-Needs web 0.612.0.
-
-## 2026-10 — Programs on the phone (v0.419.0 / web 0.611.0)
-
-`ProgramsScreen` (Route.Programs, from a card on the Workouts page) shows the
-running program (week, training maxes with Save, Raise my maxes / Repeat once a
-block is done, Change program, End program with "Go back to my old plan" or
-"Keep this plan"), or the program list and its setup: weekday circles, a
-dropdown per slot (`Dropdown`, now shared from AddWorkoutSheet), and recent top
-weights for main lifts. Coming back bumps `programsChanged` on the Workouts
-entry so it reloads the plan. The Workouts page card is the running program,
-the invite (Not now / Don't ask again), or a plain "Programs" row.
-
-The set logger uses `workouts/sets` `target` for its hints and row count, marks
-the top set, and shows "Today <scheme> · <program · week>". The log page header
-shows the program line; charts draw `intent` points hollow. Needs web 0.611.0.
-
-## 2026-10 — Records, how it felt, rep ranges, weekly training (v0.418.0 / web 0.610.0)
-
-The set logger shows the record chips from `workouts/sets` `records` under the
-top bar (the mockup's header chips) and "New best for N reps" on a saved set,
-with the web's rules mirrored in `MovementSetsViewModel` (`recordChips`,
-`isNewBest`: records.ts). Once a set is saved, a card asks how it felt and
-whether something hurt; answers go to `workouts/feedback` (queued offline like
-other writes, the whole answer each time) and a queued answer is re-applied on
-reload. "Additional charts" gains the rep-range pills (`bands`), and a tapped
-point shows its reps. The Workouts page gains the Weekly training card
-(`workouts/weekly`, cached like Progress). Needs web 0.610.0.
-
-## 2026-10 — Set logger: the mockup's top, and a fix for Remaining sets (v0.417.0)
-
-0.416.0 put "Log workout" in the top bar and the movement's name in the page.
-The name is the top bar's title again (the mockup), with "Last: Oct 23" (or
-the save status, or "instead of …" after a swap) under it and Swap / Undo as
-the top bar's action, since a swap changes what the title says. The "[165] lb ×
-[3]" rows stay, with the boxes filling the row as in the mockup.
-
-Remaining sets −/+ never visibly did anything: `SetCard` read the shift
-through the view model (`vm.hintW(row)` with a default argument), and Compose
-skipped the cards because none of their parameters changed. The shift is now
-a parameter, so the grey weights move with it; the middle reads "+5 lb".
-
-## 2026-10 — Web fonts in the app; set logger back to the card's style (v0.416.0)
-
-The app used Material's default type (Roboto, regular weight), which read thin
-next to the web and the mockups. `KairosTypography` now uses the web's fonts
-(the same files, converted with fontTools; the variable Bricolage is
-instantiated at 600 and 700 because Compose static fonts are simpler and
-minSdk 26 gains nothing from the variable file). Glyphs they lack fall back to
-the system font.
-
-0.415.0's set logger drifted from the Log workout card: a column-heading row,
-stretched boxes, and a bottom bar under the gesture bar. It now keeps the
-mockup's layout in the card's own idiom: the movement names itself with the
-Swap pill beside it (Undo when swapped) and "Last: Oct 23" on the right; each
-set is a small card reading "[165] lb × [3]" with the card's 72dp boxes; Add set
-and Same as last time are pills; −/+ are white circles; Skip / Calculator / Log
-sit above the navigation bar (`navigationBarsPadding`), Log filled. The day page
-is unchanged.
-
-## 2026-10 — Day page and set logger follow the mockup (v0.415.0 / web 0.609.0)
-
-0.414.0 bolted the new rows onto the old card layout. The log page now follows
-the mockup and the web day page, built from the app's own parts (OutlinedCard,
-WorkoutActionTile, the swap pill): a header card (the day, tap to pick another;
-the title; "N of M done"; the week strip), then sections in the web's order
-(`daySections` mirrored in `WorkoutLogScreen.kt`: warm-up, cardio, strength by
-muscle group, conditioning, sport). A set-by-set movement is its own card with
-today's sets or last time's and a Logged / Skipped chip; other plans keep their
-existing card. Overdue days use the same sections, tinted and labelled with the
-day. The set logger: a column header, a card per set (✓ fills when saved, "Last
-time …" or "Added today" under it), Add set and Same as last time as pills,
-Remaining sets with −/+, and Skip / Calculator / Log pinned to the bottom.
-
-Adding a movement to a plan preselects the movement's own "Logs as" (server
-0.609 `metric` on plan options), so a plank starts as time.
-
-## 2026-10 — Every-set logging on the phone (v0.414.0 / web 0.608.0)
-
-The log page uses the web's day-page rule (blocks.ts `daySections`): a strength
-plan (WEIGHTS, ISOMETRIC or no category) whose tracked movements are all
-WEIGHT, REPS or DURATION shows one row per movement that opens
-`MovementSetsScreen`; everything else keeps its card. The set logger mirrors the
-web: hints never become values until ✓; each save sends the movement's whole
-saved list to `POST workouts/sets` (a replace, so a queued offline copy is safe to
-replay); saves are sent one at a time with the newest rows; Back and Log keep
-typed-but-unticked sets; a late day sends `completedOn`. A queued save is
-re-applied on reload (the set screen's rows, the log page's set count). The week
-strip mirrors `stripState`. Needs web 0.608.0 (older servers have no
-`workouts/sets`).
-
-## 2026-10 — Paper plates picture redrawn (v0.413.1 / web 0.605.1)
-
-`grocery_paper_plates.png` replaced with the web's redrawn picture (same
-160x134 size); the old one was cut off at the bottom. See the web's DECISIONS.
-
-## 2026-10 — Change your password (v0.413.0 / web 0.605.0)
-
-Settings → Password posts `{ current, next }` to `/api/v1/auth/password`; the
-server checks everything and returns a message to show. Under `auth/` so the
-offline queue never stores it (ApiClient skips `/auth/`); offline, the change
-simply fails with "Couldn't reach the server". This phone stays signed in.
-
-## 2026-10 — Drawer hides sections the server says to (v0.412.0 / web 0.604.0)
-
-`GET /api/v1/nav` returns section keys to hide (the web sidebar's rule,
-`hiddenNavFor`). Stored in DataStore (`nav_hidden`) so the drawer is right
-offline and on a cold start; re-fetched on start, after a sync and whenever the
-drawer is opened from the menu button. Empty until the first answer, so nothing
-is hidden by guesswork; an older server (404) leaves everything shown.
-Supersedes "the section is always in the drawer" from 0.409.
-
-## 2026-10 — Scoring rework on the phone (v0.411.0 / web 0.603.0)
-
-The rules live on the server (web docs/SCORING.md); the phone draws what it is
-sent. Character card: squares from `pendingFrom` on are today's growth (alpha
-0.45), `growthLabel` ("7.4 / 12") under the row while growing and beside the
-deepening rail; "This month" shows `month.credit / month.target` days (falls back
-to the season tier when an older server omits `month`). Family goal rows show
-`credit` (one decimal, rounded down, `fmtDays`). Settings → How scoring works
-draws `GET /api/v1/scoring/guide` (the same text as the web's /scoring page) and
-caches it in the Room page cache so it opens offline.
-
-## 2026-10 — Hockey layout per person (v0.410.0 / web 0.601.0)
-
-Sections arrive from `/api/v1/hockey` already in the person's order with
-`open` set (the server's `arrangeSections`); the app draws them and changes
-them in place. A toggle or an Arrange move updates the screen at once, rewrites
-the Room page cache (so the layout holds offline and on the next cold open),
-and posts the whole layout to `/api/v1/hockey/prefs`. Offline, that post is
-queued by the normal write queue and replayed — safe because it is the whole
-layout, not a delta. Collapsed sections show their session count; the
-explanatory footer was removed.
-
-## 2026-10 — Hockey section (v0.409.0 / web 0.600.0)
-
-`GET /api/v1/hockey` returns the week already shaped by the server's
-`buildHockeyView` (event name, button label, saved location, the "Hockey
-practice" type id), so `ui/hockey/HockeyScreen.kt` only draws it — no rule is
-copied onto the phone. Empty days are left out (the web lists all seven). Add
-hands an `IcsDraft` plus the type id to the Calendar through
-`CalendarOpen.NewFromDraft`, the same pending-open path the widget uses, so the
-normal New event form opens filled in, owned by the person on this phone, with
-participants addable. `AddEventOverlay` takes `presetEventTypeId`, applied only
-on a new event and only if the type still exists. The section is always in the
-drawer; on a server without ice-time it says Hockey isn't set up (the web hides
-it — the app has no feature flag from the server yet). The last good week is
-cached and stays on screen if ice-time can't be reached.
-
-## 2026-10 — Grocery icon batch 2 (v0.408.0 / web 0.598.0)
-
-16 more `grocery_*` PNGs (same files as the web), mapped in `KAIROS_DRAWABLES`
-and added to `GROCERY_SUGGESTIONS`. `kairos:deodorant` (blue) is now listed as
-"Women's deodorant"; the new `kairos:mens-deodorant` is "Men's deodorant".
-Details in the web repo's DECISIONS for 0.598.0.
-
-## 2026-10 — Emoji grocery icons get the dark-mode tile too (v0.407.1 / web 0.596.1)
+## 2026-11 — Home's right column ends with the cards (v0.814.1)
+
+- The family goal and schedule column was the window's height (sticky), so it
+  ran past the person cards. It's now as tall as the cards' rows: the column's
+  content sits absolutely inside the grid cell, so it never makes the row
+  taller, and the schedule scrolls inside. At least 24rem when there's only
+  one row of cards. Phones are unchanged.
+
+## 2026-11 — The Cardio page's activity picker (v0.814.0, app 0.586.0)
+
+- Activities show as icon-over-name segments, ordered by the last time each
+  was done. Up to five done in the chart's twelve weeks are all buttons; past
+  that, or with any not done in those weeks, four buttons and More. More
+  opens a menu over the page (it never pushes the page down) with "Last 12
+  weeks" and "Older". With More picked, its button shows the activity.
+- An activity stays on the page forever (its history keeps it); only where
+  it sits changes. Ordering is client-side from each activity's `last.date`
+  and the first week's start: no API change.
+- Menus that pick from a list open over the page rather than expanding in
+  place, from here on.
+
+## 2026-11 — A stop at a zone without the zone (v0.813.2)
+
+- Five stops at home on Nov 23 were unnamed spots 2–14 m from the house:
+  their points carried no zone (Home Assistant hadn't reported Home yet, or
+  only for part of the stop). A stop with no zone whose middle is within
+  50 m (`ZONE_NEAR_M`) of a zone's learned centre now counts as that zone
+  (`zoneNear` in `zones.ts`, used by `loadDay`), for History and visits
+  alike. A stop added by hand keeps what it was given.
+
+## 2026-11 — Family WOD always a button; no Something else (v0.813.1, app 0.585.2)
+
+- The day's Family WOD tile shows every day (Today under it when the day has
+  one) and opens the Family WOD page, where a parent sets one and anyone can
+  suggest one: what Log another's Family WOD used to do.
+- Something else is gone from Log another: it opened the log form with every
+  category, all of which Strength, Cardio, Sport, Conditioning and Routines
+  already reach.
+
+## 2026-11 — One timer, the workout day's buttons, tracked workouts by name (v0.813.0, app 0.585.0)
+
+- Every timer (Conditioning, warm-ups and routines, the each-side timer, the
+  free Timer, the Family WOD) uses one face (`TimerFace` in
+  `src/app/exercise/timer-kit.tsx`, the app's `TimerKit.kt`), one set of
+  sounds and one ⚙ settings sheet. Looks: Ring and Full color, chosen
+  separately for your workouts and the Family WOD (Full color by default).
+  Under either: a bar of rounds or steps and the now/next list.
+- The fixes that came with it: one Sound switch and one Get ready (was 10 s
+  on Conditioning, 5 s on warm-ups, none on each-side); a get-ready and
+  3-2-1 before each side; vibration only at changes; the same end tone; the
+  screen kept awake on all of them (each-side wasn't on the web); one Start
+  side and one Pause between sides (warm-ups now use it when a step switches
+  sides). Into work is a high tone and into rest a low one everywhere.
+- Settings live on the device: `kairos.timer2.*` (web, read from the old keys
+  once) and `kairos_timer` `t_*` keys (app).
+- The workout day: Train (Start a… on the phone, the day's Family WOD, Log
+  another) and Tools (Timer, Routines, Calculator), the Workouts page's
+  buttons. Log another is a page of five choices (Strength, Cardio, Sport,
+  Conditioning, Something else); Start a… and Family WOD left it, and
+  Mobility, Stretching and Isometrics moved to Routines (a warm-up starts now,
+  the others are added to today). Setting a Family WOD from the day is gone:
+  the Family WOD page does that. `additional-picker.tsx` is deleted.
+- A tracked walk, run, ruck or hike is named by what it was and how far
+  (`trackedItems` in `tracked-count.ts`): "Walk · 2.1 mi" on the home tile,
+  a done card in the cardio color with distance and minutes in the day's
+  workouts (`tracked` on the day API), and its own entry in Recent
+  (`own` in `groupHistory`). It's left out of Additional.
+- History map: tracked and slow walks draw their dashes 2.5 px to the right
+  of the way they went (`KEEP_RIGHT`), so going out and back shows two lines.
+  The legs list uses the activity's icon.
+- All places: for those who confirm everyone's places, each unconfirmed spot
+  lists who stopped there (`who`).
+
+## 2026-11 — Menu swipe off the map (v0.812.2, app 0.584.0)
+
+- `useMapEdge` reports the topmost map's band (`mapBand(top, bottom)`; a
+  picker over the day's map wins) and clears it when the map goes; `useNoMap`
+  says a page has none. The app opens the menu on a rightward swipe off the
+  band, so History and All places swipe anywhere. Old apps get `mapBottom`.
+
+## 2026-11 — Place centre and type list (v0.812.1)
+
+- The pin stays in the middle of the place map and moving the map moves the
+  place; confirm and update take `lat`/`lng` (up to 400 m from where it was).
+  The zoom holds at 18 and only backs out when the circle wouldn't fit, so a
+  bigger type looks bigger.
+- Place type is a row that opens its own list page (feet right-aligned).
+  Feet are a radius: "Feet from the pin to the edge of the circle."
+- An unconfirmed spot starts as Shop or restaurant (200 ft). Before, the
+  preview showed the 50 m spot match but confirming saved the old 120 m.
+- Home is "Home or small shop" (130 ft): a shop in a strip center needs the
+  same small circle.
+- The overnight snapshot never asks Google, so a spot made before anyone
+  opened that day in History stayed unnamed. An unnamed spot now takes the
+  newest cached Google answer within 50 m when it's listed or visited again.
+
+## 2026-11 — History filter, place types, who confirms (v0.812.0)
+
+- One Filter button on History (who; Today, 7 days, 30 days, 1 year, All or
+  two days picked on a calendar). Active filters show as chips with ✕. The
+  dates apply to All places too: places with no visits in them drop out.
+- A place's size comes from its type (`PLACE_TYPES`, feet shown, metres
+  stored): Home 130 ft up to Stadium, mall or campus 1300 ft. Stored in
+  `PlaceName.kind`; the old "business" still reads as Business and keeps its
+  size. No migration.
+- The place sheet draws the place's circle on a close-up map and redraws it as
+  the type changes. An unnamed spot's street comes from the browser's Google
+  geocoder; nothing is stored.
+- Confirming a spot: parents, anyone listed in the `places.confirmAll` setting
+  (Admin → Family map → People), or someone who stopped there. A setting, not a
+  `PlacesPerson` column, because saving People recreates those rows. Others see
+  only their own spots in All places.
+
+## 2026-11 — Watch how on warm-ups; History (v0.811.0, app 0.583.0)
+
+- Warm-up steps always show the ⓘ, and its dialog has Watch how (the same
+  video search as movements), with or without a written cue. The app reuses
+  `MovementInfoDialog`.
+- The Family map's search page is titled History (its map button too).
+
+## 2026-11 — Skipped sport stays on the list (v0.810.0, app 0.582.0)
+
+- `workoutBlocksFor` returns skipped sports in `items` (`skipped: true`), not
+  in done/total, and stays non-null while two or more are listed, so the tile
+  keeps its list (it fell back to the old extras line with "7:15 PM"). The web
+  tile shows the list ahead of "Complete for today!"; "N of M" needs two
+  counted.
+- Moving sets to another movement by hand: set `swappedFromId` to the planned
+  movement, or that day's plan reads unlogged and turns overdue.
+
+## 2026-11 — Farmer hold timed; In progress (v0.809.0, app 0.581.0)
+
+- `isCarry` matched "farmer" in any name, so Farmer hold got a yards unit on
+  its target. A name with "hold" isn't a carry.
+- `WorkoutTile`: a started workout shows its name and italic "In progress"
+  (with several, in place of its details) instead of the remaining parts; a
+  finished one is green.
+
+## 2026-11 — Didn't go; chip matches the tile (v0.808.0, app 0.580.0)
+
+- `workoutBlocksFor` leaves out sports answered "didn't go" (they used to
+  count as done), so the tile, `workoutBlocks` and `workoutCard` drop them.
+- `workoutBar` (day-card.ts) swaps today's part of the Workout bar for the
+  blocks' done / total, keeping overdue workout days; used by the dashboard
+  API (app chips and ring) and the web greeting card. The chip said 0/1 (the
+  plan's task) while the tile said 0 of 2 (plan + practice).
+- The day page's "N workouts" leaves out a didn't-go event; it stays listed
+  so the answer can be changed.
+
+## 2026-11 — Clearer goal votes (v0.807.0)
+
+- On /coop each idea's people: a vote is the avatar in full colour, the chip
+  outlined and tinted in the person's colour with a check; no vote is a grey,
+  faded avatar and muted name.
+
+## 2026-11 — Smaller workout details (v0.806.0, app 0.579.0)
+
+- The detail under a workout on the tile is 11px (12px at `lg`) on the web
+  and 10sp in the app.
+
+## 2026-11 — Workout details under their workout (v0.805.0, app 0.578.0)
+
+- `workoutBlocksFor` marks plan items (`plan: true`); `workoutCard` puts the
+  kinds line on the first of them as `detail`, so "Core · Cardio · Isometric"
+  sits under Hanging core, not after the sport. `kinds` stays for old apps.
+- Bullets are 4px (web, faint) / 3dp (app); the detail lines up with the name.
+
+## 2026-11 — Vote badge, + placement, Back (v0.804.0)
+
+- `FamilyGoalTile`'s badge is always "Vote" until a goal wins.
+- `AddTaskFab` moved to `bottom-2 right-[4.5rem]`, left of the admin lock
+  (`bottom-4 right-4`), centres level.
+- `AreaHeader`'s button reads Back: Home means the shared screen.
+
+## 2026-11 — Home right column, + button, Get ahead pop-up (v0.803.0, app 0.577.0)
+
+- `/person/[id]`: the right column is the character (`Companion size="lg"`),
+  `FamilyGoalTile`, and on a personal device `ScheduleCard` (its ‹ › move the
+  schedule with `?day=`). Tiles grow at `lg` (min height, padding, text).
+- `AddTaskFab` + `Popup` (fixed size, body scrolls, footer stays): who, due
+  date, repeat (every N days/weeks/months/years, weekdays, ends never/on/
+  after) and a reminder time, through the new `addTaskFull` action that uses
+  `addTaskCore` / `createRecurringTask` like the device endpoint. On the home,
+  the shared home and the Tasks page; the inline Add task form left those.
+- School's Get ahead is `SchoolGetAheadButton` in the header: every subject's
+  next lesson with its own Add to today, in the fixed-size pop-up.
+- `/reading?person=` shows one person; the Reading tile links there.
+- Workout tile lines: small bullets, green once done.
+
+## 2026-11 — Goal tile and schedule card (v0.802.0)
+
+- `FamilyGoalTile` is a single link to /coop. Its ring and line use this
+  month's `childrenMeeting / childrenTotal` even before a goal is chosen
+  (it showed nothing then), or the carried goal's own month. A Vote badge
+  (Pick for a parent) shows until a goal wins; no buttons inside the tile.
+- `ScheduleCard` replaces the dashboard's `DaySchedule`: name and date in the
+  card's header with small ‹ › arrows (the name goes back to today on another
+  day), no Today or Full calendar buttons; the header stays, the list scrolls.
+  The fixed top-right date is hidden on `/`, where it sat over the goal tile.
+- The "N overdue" line above the cards is gone so the cards align with the
+  goal tile.
+
+## 2026-11 — Shared home: uniform cards, goal over the schedule (v0.801.0)
+
+- `PersonCard` is a fixed `h-[21rem]`; the categories and prompts scroll
+  inside it. The middle is its own link (the stretched link can't receive a
+  scroll), the prompts stay clickable above it.
+- `/` is two columns at `lg`: cards (three across at `xl`) and a sticky
+  right column, `FamilyGoalTile` (gold outline, glow, a ring around the trophy
+  that fills with the children finished) over `DaySchedule fill`, whose list
+  scrolls on its own. The full-width banner stays on the person page.
+
+## 2026-11 — Area pages instead of pop-ups (v0.800.0, app 0.575.0)
+
+- `/person/[id]/{school,chores,bible,tasks,workouts}`: real pages, so the side
+  menu stays. `AreaPage` lays them out: Late on the left (oldest first, red
+  edge, scrolling inside its card), Today, Progress and Extra on the right;
+  one column on a phone with Today first; no late column when nothing is late.
+  Workouts is the same `DayLog` day page as before, as a page.
+- Rows come from `lib/queries/person-rows.ts` (`personRows`, `splitRows`), now
+  shared with the home page. Home tiles link to these pages; `SchoolCard`,
+  `ChoresCard` and `WorkoutLauncher` pop-ups are gone (`SchoolTile`,
+  `ChoresTile`, `WorkoutTile`; `SchoolProgressList` for the page). Deleted:
+  `src/app/person/[id]/workout-launcher.tsx`.
+- The home page no longer loads the whole workouts board: it syncs core days
+  and reads the person's swaps itself.
+- Bible and Tasks tiles: lines check off; the tile's name opens the page
+  (a whole-tile tap can't sit around a link).
+
+## 2026-11 — Web home as tiles (v0.799.0)
+
+- `/person/[id]` (the home on a personal device, and a person's page on the
+  shared screen) now matches the app's home: `GreetingCard` (date, greeting
+  by household time, a chip per area, the ring; the web keeps the avatar to
+  the profile and level/streak as chips), a tile grid (`HomeTile`), the family
+  goal, then the companion on shared screens. Schedule and Add a task sit in
+  a right column at `lg`. The category bars, header row and long lists are
+  gone; the admin button there too (the layout's lock covers it).
+- Tiles: Bible and Tasks are `ListTile` (one item and the tile checks it off;
+  several and each line does), Chores and School are their existing cards
+  with a tile in place of the summary row (the pop-up is unchanged), Workouts
+  is `WorkoutLauncher asTile` using the same `workoutCard` as the app
+  (`src/lib/workouts/day-card.ts`, now shared with the dashboard API), and
+  Reading links to /reading.
+- `FamilyGoalBanner` restyled to the app's card (trophy, gold outline with a
+  soft inner glow, a gold Pick/Vote pill); the shared dashboard gets it too.
+- The pop-ups' own layout (late on the left, today on the right) is mocked
+  up separately and waits for a yes.
+
+## 2026-11 — Dashboard workoutCard (v0.798.0, app 0.574.0)
+
+- `workoutBlocksFor` also returns `items` (each workout: a program block,
+  the planned workout with `name: null`, each sport event by its kind name,
+  each tracked walk/run), with done states. The dashboard API turns that into
+  `workoutCard { items[{name, done}], kinds[] }`: the planned workout is named
+  from the day's title after the first " · " ("Core · Hanging core" →
+  "Hanging core"), and kinds are the part before " · " of the title and each
+  extra ("Isometric · Rack pulls and holds" → "Isometric"). Event times are
+  left out; they're in Today's schedule. `workoutBlocks` is unchanged.
+
+## 2026-11 — All places first (v0.797.1)
+
+- On the Places page the All places tile (where spots get confirmed) moved
+  above the search box; the "finished days are added overnight" line is gone.
+
+## 2026-11 — Admin tabs; one map-settings button (v0.797.0)
+
+- `components/admin-tabs.tsx`: `AdminTabs` + `pickTab`. The tab is `?tab=`
+  (the first tab has no param), read on the server, so only that tab's
+  sections render and Back, the lock and a refresh return to it. Used on
+  Workouts (Exercises / Workouts / Equipment / People), Chores (Assign /
+  Assigned / Master list / Effort), Family map (Status / People / Places /
+  Setup) and Bible reading (Plans / Progress / New plan). Shorter admin
+  pages stay one page. Sub-pages go back to their tab.
+- Exercise pool: one type at a time (chips with counts), muscle groups
+  folded with the lb/kg toggle on the row, a search box that searches every
+  type, and the add form behind "+ Add".
+- Family map: full screen, everyone, traffic and map style moved into one
+  layers button that rolls a pill down (like Tracks rolls out); a tap on the
+  map folds it. Search stays its own button. Web only; the app shows it.
+- Visits: `snapshotTick` catches per day. A failed day is skipped until the
+  server restarts (it used to fail the whole run, so the same day was
+  retried every 5 minutes and nothing after it was written); the newest
+  error shows in Admin → Family map → Status. Note the timer's first run is
+  5 minutes after start, so Places is empty right after a fresh deploy.
+- `ISO_LIBRARY` gains "Knees, hamstrings and shoulders" from the v0.796
+  holds; doses taken from published guidance (see the code comment).
+  `switchesSides` now includes knee to wall and arm lift-off holds.
+- Removed the duplicate lock button in the Family map admin header and the
+  duplicate "Workouts" back link on a person's workouts page.
+
+## 2026-11 — Fingers-only maps; admin navigation tidy (v0.796.0)
+
+- All three Google maps set `zoomControl: false` and `cameraControl: false`
+  (the arrow pad). Pinch and drag only; a mouse wheel still zooms on the web.
+- `src/lib/admin-sections.ts` is the one table, both ways: `ADMIN_FOR_PAGE`
+  (the lock on each main page) and `pageForAdmin` ("Close admin" and "Lock
+  admin" used two copies of the same list, missing tasks, school, hockey and
+  places). Added: /games, /hockey, /places, /coop → chores; /characters,
+  /summary, /scoring → Scoring & rewards (/admin/season).
+- Admin hub: Game time added (/admin/games had no tile and was unreachable
+  from the menu); Characters removed (it linked out to the main page);
+  About gets an info icon instead of the lock; stale blurbs fixed.
+- `AdminBack` takes a `parent`: pages inside a section go back to it (Settings
+  → Device/Appearance/Email/Scoring; Calendar → Addresses/Event names; School,
+  Bible, Workouts, Money sub-pages), with "Admin Menu" beside it.
+- Library: four isometric holds added (hamstring press, arm lift-off, knee to
+  wall, reverse Nordic); Copenhagen is already there as "Copenhagen plank".
+  They reach the pool from Admin → Workouts → Movement library. The Isometric
+  day's own rotation (`ISO_LIBRARY`) is unchanged.
+
+## 2026-11 — Places page: visits kept for good (v0.795.0, app 0.573.0)
+
+- Plan: project doc `claude/places-visits-plan.md`. Confirmed places stay in
+  `PlaceName` (it already held the family's names, with `kind` added) rather
+  than a new Place table, so naming, notify rules and history labels keep
+  working unchanged. New: `PlaceSpot` (a spot nobody has confirmed),
+  `PlaceVisit` (a person's stop on a day → PlaceName, a zone, or a spot),
+  `PlaceSnapshot` (days written). Migration `183_place_visits`.
+- Matching (`pickPlace`): the nearest PlaceName (everyone's or this person's)
+  whose radius covers the stop; a second one within 25 m of the same distance
+  makes it "Which one?" (`altPlaceNameId`). Zones win, as in history labels.
+  Otherwise the nearest spot within 50 m, or a new spot.
+- Google content: a spot's `label`/`address` come from `PlaceLookup` (≤30 days)
+  with `labelAt` = the lookup time; `tidy()` clears them after 30 days and the
+  place id stays. A name the family typed on an added stop has `labelAt` null
+  and is kept. Confirming makes a PlaceName (the family's choice, kept).
+  No OpenStreetMap for now.
+- Snapshots: the 5-minute timer writes up to 6 unwritten finished days per run,
+  oldest first per person, from that person's first point; so all history
+  fills in. `loadDay(…, { names: false, snap: false })` — no Google calls at
+  all. A day correction (`removeStop`/`undoStopEdit`/`addStop`) rewrites that
+  day; naming a place (`saveFamilyName`, `confirmSpot`, `updatePlace` size)
+  re-matches visits around it (`rematchAround`). Visits moved by hand
+  (`pinned`) are left alone. Today isn't written until it's over.
+- The Places page (`/places/search`, `/places/embed/search`) reads and writes
+  through the API on the web too (`requirePlacesViewer` takes the parent's
+  web session), one code path for both. Confirming follows naming (anyone);
+  "Which one?", moving a visit and editing a place are parents only.
+  Confirm and "Not right?" reuse `PlaceFix` (new props: title, kind/size,
+  everyone-only, no "Just add the stop").
+- Search button: first in the map's right-hand column (hidden in full screen).
+  One map-style button cycles map → satellite → terrain on both maps.
+  History opens with `?stop=<arrival ISO>` selected (within 15 min).
+- Admin → Family map → Status adds "N visits at M places · size".
+
+## 2026-11 — History focus, fixed strip, stop actions (v0.794.0)
+
+- Maps in the app (`/places/embed`) use `gestureHandling: "greedy"`: the page
+  there doesn't scroll (0.793), so one finger can only mean the map. On the web
+  a phone still needs two fingers, since the page scrolls.
+- Tapping a stop selects it and frames the trip that leaves it — every leg up
+  to the next stop, plus both stops (an out-and-back with no stop is one leg,
+  shown whole). The day's other trips fade to 22% (`fadeLine`, which keeps
+  each line's drawn opacity in a WeakMap); lines map to items in draw order
+  (every non-stop item with ≥2 path points). Tapping the same stop, or its pin,
+  again clears it and refits the day. The last stop has nothing leaving it, so
+  it pans to the stop. `fitPoints` holds the 400 m / zoom-17 rule for both.
+- The facts strip uses tabular numbers and the day picker a fixed 8.75rem with
+  the label truncated, so the row doesn't move between days.
+- Edit and remove are icon buttons on the right of a selected stop. Remove
+  opens a confirm ("This deletes the stop but keeps the route"). It was
+  already route-safe: a removal is a `PlacesStopEdit` overlay; `applyEdits`
+  joins the legs on either side into one route through the spot and no
+  location points are deleted.
+
+## 2026-11 — History top, locked maps, rtask guard (v0.793.0, app 0.572.0)
+
+- History (chosen from "Kairos: History page top", round 2, #2): back, avatar
+  and name in a chip on the map's top-left; under the map one row with a strip
+  of miles · top mph · stops (rectangular, rounded 10px) and the day picker.
+  Driving minutes left the top. In the app (`/places/embed`) `main` is
+  `h-[100dvh]` and only the timeline scrolls; on the web the map and row stick.
+- The Family map in the app does the same: map `h-[52dvh]`, the people list
+  scrolls under it.
+- `useMapEdge` (embed-context) reports the map's bottom (CSS px) to the app's
+  `KairosPlaces.mapBottom` bridge on mount/resize, so the app opens its menu
+  on a rightward swipe below the map. On the web there is no bridge.
+- History zoom: bounds under 400 m centre at zoom 15 (fitBounds on a
+  near-point went to max zoom, and a following setZoom was overridden);
+  otherwise fitBounds, capped at 17 on the first idle.
+- Migration `182_generated_once_rtask` dedupes `rtask:` rows and widens
+  `Task_generated_once` to them. `editTask` turns the unique violation
+  (moving a generated task onto a day that has it) into "That day already has
+  this task."
+
+## 2026-11 — Generated tasks once per day; area colors (v0.792.0, app 0.571.0)
+
+- Bible and workout tasks are generated on page loads and API calls, each
+  run reading what exists and creating what's missing. Two runs at the same
+  moment both created the day's rows (pairs 10 ms apart at 00:02 on 11-12 and
+  11-23, for every person). Migration `181_generated_once` deletes the extra
+  copies (keeps a done one, then the oldest) and adds a partial unique index
+  `Task_generated_once` on (userId, generatedFrom, dueDate) for `plan:%` and
+  `workout:%` rows. The generators already use
+  `createMany({ skipDuplicates: true })`, which becomes `ON CONFLICT DO
+  NOTHING`, so a racing run now skips instead of duplicating. Chores already
+  had their own unique key.
+- Area colors: no two alike and none the late red. Workouts `#9f1239`,
+  Game time `#a21caf` (was nearly School's indigo), Ice time `#1e3a8a` (was
+  nearly Reading's cyan), Chores `#ea580c` (was close to Summary's gold).
+  Category `WORK` was Bible's violet; now stone `#57534e`.
+
+## 2026-11 — Plates on every bar lift; Log with missed sets (v0.791.0, app 0.569.0)
+
+- `GET /workouts/sets` adds `bar` ("barbell" / "ez" / null) from the pool
+  movement's equipment keys (`barOf` in `queries/workout-log.ts`: `ez_bar`
+  wins over `barbell`). A WEIGHT movement on a bar shows the plate calculator
+  on each set in place of remove, like a program's fixed sets (5/3/1); the
+  program's `strict` (no moving weights) is unchanged.
+- Removing a set is replaced by leaving it undone: Log with sets not done asks
+  "Log with missed sets?" and Log saves only the done sets and finishes the
+  movement (the app's Core/multi-movement screen asks the same for the
+  workout). A movement with nothing done at all still isn't marked finished.
+- Correction to 0.790's note: the 15-minute gaps weren't Home Assistant going
+  quiet while driving. Android throttles a background app's location to every
+  30 minutes; HA's 15-minute sensor check was the only thing getting a fix.
+  Setting HA as each phone's digital assistant app keeps it foreground and
+  gives a point a minute (household fix, not code).
+
+## 2026-11 — Quiet drives on Family map (v0.790.0)
+
+- Some phones sent a location only every ~15 minutes, so a 3.9-mile drive
+  arrived as two points 32 minutes apart (corrected after 0.790: it wasn't
+  driving — Android throttled HA's background location on those phones; see
+  0.791): under the 8 mph average a
+  drive needs, and "top 0 mph" (the phone's 0 counted as a speed). Now a trip
+  with a gap of 5 minutes or more between reports, 1.5 km or longer, averaging
+  1.9 m/s (≈ 4.3 mph, past a fast walk) is a drive; the gap includes the wait
+  before leaving, so the real pace was higher. Its top speed is unknown unless
+  the phone reported one. Two stops 1.5 km or more apart with no reports
+  between get a trip from leaving one to reaching the other.
+- Still unknown: when they really left. The trip starts at the last report at
+  home; a phone set to report more often while moving (the HA Companion's
+  high-accuracy or location-update settings) is the real fix.
+- The tracks row is one icon that opens the people (an animated width);
+  closing it clears every track. Everyone within 400 m opens at zoom 15.
+  History's map type is the live map's icons; an empty day centres on the last
+  point before it at zoom 13.
+
+## 2026-11 — Summary gold (v0.789.0)
+
+- Summary's side-menu color is gold (#ca8a04, was #b45309, which Bible's
+  tracker, holidays and the deadlift color also use). The family goal card
+  is outlined in it at about half strength. Book reading's icon uses
+  Reading's color. Calendar sub-lines (time, names) are 0.6 rem.
+
+## 2026-11 — Work and backpacking behind the day (v0.788.0)
+
+- Mockup "Kairos: Work in the background". `background` on a grid event: the
+  WORK kind, a feed marked work, or the Backpacking type. Those are laid out
+  on their own (`assignLanes` on just them, so overlapping shifts get one lane
+  each) under the day; everything else is laid out as if they weren't there,
+  set in 10 px where it covers one so the edge shows.
+- Web: a 16% tint of the event's color, a 3 px edge, title then time · who.
+  App: diagonal stripes in the event's color — grey when others are grey, so
+  it never reads as a grey event; your own stay in color.
+- A work feed's shifts take the subscription's display name as the title;
+  the feed's title is `feedTitle`, shown in the details. Hand-made work events
+  keep their own names.
+- Web events show whose they are after the time; the app shows names on
+  others' events only.
+
+## 2026-11 — Trips start on the calendar; the trip tile (v0.787.0)
+
+- Mockup "Kairos: Trips and home tiles". The colored band stays for things
+  that should stand out; of "Tile everywhere" only the trip tile is built.
+- A trip is deliberate, so it's planned, not started: Start a… (was Go for
+  a…) → Backpacking trip opens the calendar's New event on the Backpacking
+  type (`backpacking` on the calendar's event types). The app's "Back on"
+  screen is gone; `start` stays in the API for older apps.
+- The trip tile has no End: the trip ends with its event. Finished on the last
+  day turns the phone's GPS off; `{ finish: true }` cuts a longer single trip
+  event to end today (a repeating one is left alone). Trip opens the event
+  (`eventId`, `title` on today's trip). No Rest day button: "Hiking today?" No
+  is the zero day.
+- Family WOD's button shows only on a day with one; parents set one from the
+  day's + Additional, as before.
+
+## 2026-11 — Workouts in two tabs; the tile's buttons in one row (v0.786.0)
+
+- Mockup "Kairos: Workouts page": Progress | Train tabs (Progress first). Train
+  holds the plan card, then the buttons in three groups built like it, under a
+  tinted band (`ActionGroup`): Train (Log workout, Go for a… on the phone,
+  Family WOD), Find & build (Browse, Routines, HIIT / CrossFit), Tools
+  (Calculator, Recent, Pause).
+- The plan card's five actions are one row, the icon over the label (option
+  B). Its week strip starts on Sunday like the charts (`buildStrip`), and its
+  labels are sized like Workout days' so long names wrap instead of truncating.
+- Every workout button has the accent outline; Saved plans' rows are on white.
+- The app keeps the page's loaded data in a ViewModel, so coming back from a
+  button's page lands where you were instead of at the top.
+
+## 2026-11 — Replaced occurrences outside the calendar (v0.785.0)
+
+- Editing or cancelling one occurrence of a repeating event makes a child
+  event (`recurrenceId`, `recurrenceDate`). Only the calendar view skipped the
+  replaced day; sport attendance prompts, sport days, class check-ins, trip
+  days and phone reminders still expanded the series onto it. Now they all
+  use `replacedOccurrences` (`calendar/overrides.ts`) and ignore cancelled
+  rows; a moved class meeting asks on its new day. Reminders also key the
+  skipped day by the event's local day, not the UTC date.
+
+## 2026-11 — Program tile (v0.784.0)
+
+- Mockup "Kairos: program tile", option B: the plan card opens with a header
+  band in the accent colour (PROGRAM or PLAN, the name, the week or end date
+  on the right), and its actions are white outlined buttons, two to a row
+  (`TileHeader`, `TileButtons` in program-card.tsx; the same in the app's
+  WorkoutsScreen). Programs beside the first keep their own rows inside.
+
+## 2026-11 — 5/3/1's 7th-week protocol; the lift page line (v0.783.0)
+
+- 5/3/1 (only; Boring But Big keeps its 4-week cycle, 5/3/1 for Beginners
+  its 3-week cycles with no deload) runs 3-week cycles. Every other cycle
+  ends with a 7th week, as in 5/3/1 Forever: a deload (40/50/60% × 5, as the
+  old week 4) or a training-max test (70/80/90% × 5, then 100% × 3+).
+- `PersonProgram.seventhWeek` (migration 180): null for a cycle without one,
+  "ask" until picked, then "deload" or "test". Continue alternates it (a
+  fresh 5/3/1 starts without, so two cycles come before the first 7th week).
+  `withSeventh` turns the program into that cycle as it runs (a week longer,
+  the 7th week its last), so weeks, labels, targets, the wait for What's next
+  and the cycle check all work unchanged on `ActiveProgram.program`.
+- The day page asks Deload / TM test when the 7th week is under way and not
+  picked (until then it's the deload's sets). It can change until the cycle
+  ends. After a test, What's next checks the test's top set: under 3 reps is
+  a miss (the max drops 10%), otherwise the usual raise.
+- Moving over: a running 5/3/1 keeps its 4-week cycle, its 4th week now the
+  7th week ("deload" when it's already under way, "ask" before).
+- The lift page shows the program line ("5/3/1 · 7th week · deload · Cycle
+  2") and the green raise, without "Today <sets>"; a lift with no program
+  line (an extra lift) still shows its sets.
+
+## 2026-11 — US spelling in the UI (v0.782.0)
+
+- Owner: "color", not "colour", in anything people see (labels, What's new).
+  Code comments may vary; migration names stay as they are.
+
+
+## 2026-11 — Web Saved plans on the plan card (v0.781.0)
+
+- As in app 0.557: Saved plans is a "Saved" link on the plan card (and
+  "Saved plans" on the invite and No plan cards). The web has no Go for a…
+  (it needs the phone's GPS), so its eight buttons are four to a row (two on
+  a phone).
+
+
+## 2026-11 — Elevation for tracked outings (v0.780.0)
+
+- `saveTrackedWorkout` makes one Elevation call per saved walk, run, ruck or
+  hike (the route, ≤ 512 points) and keeps gain/loss on `WorkoutTrack` and as
+  the session's notes ("↑ … ft ↓ … ft", `elevationNote`). `cardioDay`
+  appends that line to the entry's summary, so the web and the app show it
+  with no app change. Calls: one per outing, one per backpacking day; Kairos
+  stops at 40 a day.
+
+
+## 2026-11 — Trip GPS, trip summary, zone colours (v0.779.0)
+
+- Backpacking uses the phone's GPS after all (owner): the app's trip points
+  go to `POST /api/v1/places/phone-points` and into `LocationPoint` with
+  `source: "phone"`, so Family map, History and the trip's miles all use
+  them. `preferPhone` drops Home Assistant points within 5 min of a phone
+  point. Without the app, the trip still goes by Home Assistant.
+- Each logged trip day keeps distance, time and elevation on `BackpackDay`.
+  Elevation: one Google Elevation call per day (≤ 512 points of the day's
+  hiking, `elevationOf`; usage kind "elevation", 40/day; the Elevation API
+  must be on for the lookup key), gain/loss ignoring changes under 3 m; also
+  written to the session's notes. When a trip's last day is logged (or
+  answered no) a "Backpacking trip done" summary goes out once
+  (`summarySent`); `GET workouts/backpacking` adds `lastTrip` (finished in
+  the last 14 days).
+- Zones: `PlacesZone` (name → HA icon, colour). The HA automation sends
+  `zone_icon`; Admin → Family map → Zone colours picks a colour per zone
+  (default: Home green, others from a palette by name). Live people carry
+  `look` (`color`, `icon` as an MDI SVG path from `@mdi/js`, `zone`); cards
+  are tinted with it, coral when in no zone; stale stays amber.
+
+
+## 2026-11 — Backpacking trips; terrain; a daily map cap (v0.778.0)
+
+- Owner's call: no phone GPS for multi-day trips (he has a backpacking app
+  for terrain). A trip is a calendar event of the new Backpacking type
+  (`EventType.backpacking`; migration 177 adds the type, or flags an existing
+  one named Backpacking). Trip days: every day a single event covers (all-day
+  end exclusive), or each occurrence of a repeating one; the owner and the
+  event's people (`tripDays`, pure).
+- A trip day's hiking = the `move` legs (≥ 100 m) of `planDay` over that
+  day's Family map points; drives (to the trailhead) don't count. On History
+  those legs are workout lines ("Backpacking") and stops of 2 h+ outside any
+  zone are "Camp" (no Google lookup).
+- `backpackingTick` (5-min timer): the first time someone on a trip day has
+  walked 400 m+, a "Hiking today?" notification (`/exercise` → Workouts,
+  where the trip card answers it); `BackpackDay` keeps the answer. Days that
+  are over (21 days back) are logged as a "Backpacking" cardio session
+  unless the answer was no — answered or not, per the owner. Each logged day
+  is a workout of its own (`trackedCount`).
+- From the app, "Backpacking trip" only makes the event (today → the chosen
+  day) and marks today hiking; `GET/POST /api/v1/workouts/backpacking`.
+- Live map: `backpacking` on people on a trip today (a backpack on the card).
+- Terrain map type button beside Satellite (same map load).
+- Map loads: counted before the map opens (`takeMapLoad`); past 300 a day
+  the map isn't opened ("Map paused for today"), the cards still work. Google
+  doesn't allow caching its map; panning and zooming aren't extra loads.
+
+
+## 2026-11 — Tracked walks, runs, rucks and hikes; quiet drives end (v0.777.0)
+
+- `POST /api/v1/workouts/track` saves one outing tracked with the phone's GPS
+  (app 0.557): `logCardio` makes the session (walk/run/ruck/hike, distance in
+  the household's unit, moving seconds, pack weight for a ruck) and a
+  `WorkoutTrack` row keeps the route, times and the phone's `clientId` (a
+  resend returns the first save). Removing the cardio entry removes the route
+  (cascade).
+- It is a workout of its own: `workoutBlocksFor` counts each tracked outing as
+  a done block, so a morning run plus the planned workout reads "1 of 2". As
+  with any extra, it finishes the day's workout task only when nothing is
+  planned (`settleWorkoutTask` fallback).
+- Family map History: the tracked route replaces the trips Home Assistant
+  recorded in that time (`withWorkouts`), labelled with the activity and drawn
+  in thin short dashes (walks HA recorded stay dotted).
+- A trailing trip with nothing heard for 10 min (`QUIET_END_MS`) ends in a
+  "last seen" stop at its last report (`planDay(..., now)`), so it settles,
+  is drawn on roads and its place is named. A phone that stops reporting
+  once parked left the drive "under way" (raw straight lines) for good.
+- Drives settle 1 min after the stop that ends them (was 3); the day's last
+  drive, still under way, is drawn at 40% opacity (`live`).
+
+
+## 2026-11 — History layout; smarter places (v0.776.0)
+
+- History: totals are one line under the name (no tiles). Wide screens: map
+  and timeline fill the window side by side, only the timeline scrolls.
+  Phones: the map sticks to the top (42vh) while the page scrolls the
+  timeline.
+- Quick stops: a cluster of ≥ 2 reports spanning ≥ 1 min, none faster than
+  3.5 m/s, counts as a stop when most reports are in one HA zone or its centre
+  is inside a saved address (150 m) or a named spot (its radius) —
+  `planDay(..., known)`. A drop-off at the rink was being skipped (stops need
+  5 min otherwise).
+- Naming: Nearby Search asks for 10 results with types; places people park
+  beside (EV chargers, ATMs, parking, bus/transit stops, post boxes, …,
+  `MINOR_TYPES`) are named only when nothing else is near.
+- Live: a person last reported moving more than 10 min ago is shown as last
+  seen there (not moving, no mph), "since" that report — a slow or silent
+  phone no longer reads "51 mph" forever.
+
+## 2026-11 — Add-stop icon, design B4 (v0.775.0)
+
+- Owner picked B4 from mockups: a small + (10 px) and pin (14 px) on the
+  dashed line between stops, the person's colour at half strength (full on
+  hover, focus or tap), no border; the page colour sits behind just the icon
+  so the dots carry on above and below.
+
+## 2026-11 — One reminder model (v0.774.0, app 0.556.0)
+
+- **An event's reminders are a suggestion to everyone on it** — owner, people
+  it's shared with, everyone for a family event — passed through each
+  person's switches (my events / family / others'). **Each person can set
+  their own on any event** (`SubscribedReminder`, now for every event: their
+  minutes; empty = muted); their own always count. `lib/calendar/my-reminders.ts`.
+- The bell list (`reminderUserIds`) is no longer read; the bell toggles are
+  gone from the web form and "Remind me" from the app form. Migration 175
+  writes the old outcome down for existing events with reminders: people on
+  an event who weren't belled get a muted row; belled people who aren't on
+  it keep the event's minutes as their own. So nothing changes for existing
+  events; new events follow the new rule.
+- Found and fixed: reminders set on calendar-subscription events were stored
+  but never sent to phones (the upcoming feed didn't read them). The feed now
+  includes any event the person set their own reminders on.
+- The calendar payload's `reminders` is the viewer's; `eventReminders` is the
+  event's own (for editing); `myReminders` says they set their own.
+- Default reminders per kind live in each person's choices
+  (`reminderDefaults`), kept by the app; the web form has no defaults yet.
+
+## 2026-11 — More optional news; add-stop button on the line (v0.773.0, app 0.555.0)
+
+- `notify-news.ts`: money entries logged (PENDING) → parents with
+  `approvals` (not the parent who logged it); family workout suggestions →
+  parents with `approvals`; a family workout set → its members with
+  `familyWorkout` (not the parent who set it); each morning from 8 AM
+  household time (the timer, once a day via `notify.choreTurnDay`) → people
+  with `choreTurn` get the shared chores where they're furthest behind (the
+  home card's "your turn"). All held by quiet hours; all best-effort.
+- History: "+ pin" is a pill on the dashed line between stops, in the
+  person's colour.
+
+## 2026-11 — Sync pings, three calendar switches, per-stretch roads (v0.772.0, app 0.554.0)
+
+- **Sync ping**: the Prisma extension (alongside the Activity log hook) calls
+  `syncSoon()` after any write to Event, EventParticipant, Task,
+  SubscribedReminder or RecurringTask; one `{k: "sync"}` FCM message to every
+  registered phone 20 s after the burst, normal priority (nothing shown).
+- **Calendar choices**: mine / family / others. A reminder still only comes
+  when the event's reminders name the person; these decide which of those
+  pass. Saved choices from 0.771 take family = others.
+- **Assigned**: "<name> gave you a task" (one-off and recurring, from the app
+  or the web), for people who turn it on; held by quiet hours.
+- **Roads**: Routes answers are checked per stretch (one Routes call's worth
+  of reports): a bad stretch is drawn as recorded without losing the rest.
+  The check allows for fuzzy fixes (tolerance up to 1.5× the report's
+  accuracy, 400 m cap) and up to 15% of reports missing, but none over 600 m.
+  Migration 174 clears raw-drawn cached tracks to redo them.
+
+## 2026-11 — Notifications per person; add stop by search or pin (v0.771.0, app 0.553.0)
+
+- **Each person's own choices** (`NotifyPrefs`, JSON, `notify-prefs-shape.ts`
+  checks it): set on the phone, kept on the server for the next phone. Admin
+  → Family map → Notifications now only points there (plus Send test).
+  Until a person's phone saves, admin rules that told them are their
+  starting Family map choices; calendar and tasks start from the phone's own
+  switches (sent by app 0.553), so nobody gains or loses alerts.
+- **Calendar**: "mine" (events the person owns) and "others" (family events
+  and events someone else made that name them). The upcoming feed drops what
+  they turned off; with no saved choices it behaves as before. This is the
+  owner's worry addressed: suggested reminders from others are their own
+  switch.
+- **Safety alerts** (`places/safety.ts`), parents (ADMIN or PARENT) about
+  children (CHILD): speed per child (once per drive; a drive ends after 10
+  min not moving), battery below N (again only after +5%), no update for N h
+  (background timer; again after a new report). `SafetyAlertState` remembers.
+  Not held for quiet hours.
+- **Quiet hours**: `PushMessage.deliverAfter`; Family map news is held until
+  the quiet window ends (household time), no ping meanwhile; the inbox skips
+  held rows; the timer pings when they come due.
+- **Background timer** (`src/instrumentation.ts` → `lib/timers.ts`, every 5
+  min): the first one in Kairos; no-update checks and held-notification pings.
+- **Add a stop**: "+ pin" (accent) between stops opens a page: Search (Text
+  Search biased to the trip's middle, radius half the trip + 300 m, 500 m–5 km)
+  or Drop a pin (a map with a fixed centre pin, starting at the trip's middle;
+  move the map, "Use this spot", then name it). Replaces tap-on-the-History-map.
+
+## 2026-11 — One visit, one stop; smoother raw paths (v0.770.0)
+
+- A stop is reports within 120 m of its first one, so GPS drift inside a big
+  store split one visit in two. `mergeNearbyStops` (in `planDay`) joins
+  back-to-back stops within 160 m and 12 min of each other, and stop–trip–stop
+  when the trip is a slow wander (not a drive, ≤ 12 min, never > 300 m from the
+  first stop). History also joins neighbouring stops that end up with the same
+  name (≤ 20 min, ≤ 0.5 mi between). Removals still match the visit's start.
+- Paths drawn from raw reports (parking lots, off-road, walks) get two passes
+  of a light 1-2-1 smoothing for drawing; replay and distances use the raw
+  reports.
+
+## 2026-11 — Directions; fixing a day in History (v0.769.0)
+
+- Person card: History (clock) and Directions (arrow) only; no renaming from
+  the live map. Directions = `geo:lat,lng?q=lat,lng(Name)` inside the app (the
+  WebView hands a tapped non-web link to Android, so whichever maps app the
+  person uses opens; no app update needed) and Google Maps directions in a
+  new tab on the web. The full-screen bubble's place line is the same link.
+- **History is where a day is fixed, by parents** (role ADMIN or kind
+  PARENT; children can't hide their own stops). "Not right?" is now **Edit**
+  on a stop (the search-and-save page). **Remove** writes a `PlacesStopEdit`
+  "remove" matched to the stop's start (±90 s); the trips either side join
+  (drive if either was). **Add a stop**: the pin on a trip, tap the map, then
+  pick or type what it was (or "Just add the stop"); stored as "add" at the
+  time the trip passed nearest the tapped spot, splitting that trip. Removed
+  stops list under the timeline with **Put back**. `applyEdits`
+  (`day-edits.ts`) is pure and runs over `planDay`; recorded points never
+  change.
+- App: `/api/v1/places/view/stops` (Places cookie + `x-kairos-embed`, parents
+  only). Web: server actions, which check the signed-in parent.
+
+## 2026-11 — "Not right?" is search-and-save (v0.768.0)
+
+- Owner: replacing a wrong business with a bare address wasn't a fix. Now a
+  full page: nearby businesses Google already returned, a search box (Places
+  API (New) Text Search, location-biased 5 km around the spot, 6 results by
+  distance, its own usage kind "search", 40 a day), and "Call it “…”" to save
+  what's typed. Saved as `PlaceName` with the picked place's address and
+  Google place id; the spot's radius is set from how far the place's pin is
+  (100–250 m) instead of a size control nobody could read.
+- "Just the address" is gone; migration 171 deletes the nameless spots it
+  made (they only hid business names) and adds `PlaceName.address` /
+  `googlePlaceId`.
+- Works in the app too: `/api/v1/places/view/{choices,search,name}` behind the
+  Places cookie plus an `x-kairos-embed: 1` header (another site can't add it
+  without a CORS preflight, so the cookie can't be used cross-site).
+- Person cards: the card selects; History (clock) and Not right? (pencil)
+  are icon buttons on the card, always there.
+- Admin → Named places: name, address, who, a Google Maps link, Remove; the
+  size selector (in metres) is gone.
+
+## 2026-11 — Family map naming fixes from real data (v0.767.0)
+
+- **A zone beats "just the address".** v0.760 let a nameless family spot win
+  over the HA zone; one tap of "Just the address" on a home stop then hid
+  "Home" for everyone there (and a stale cached neighbour's address showed instead). A
+  nameless spot now only stops business names.
+- **Learned zones.** A report with no zone within 60 m of a zone's learned
+  centre (`zones.ts`) is named as that zone — older points from before the
+  automation sent zones, and phones whose update missed it.
+- **Saved addresses by address.** A saved venue's geocoded pin can sit far
+  from where people are (a rink's address matched Google's reverse geocode
+  exactly, but its pin was beyond 120 m). When Google's street
+  address (number + street, suite and spelling normalised —
+  `address-match.ts`) equals a saved address's, the saved name is used.
+  Saved radius 120 → 150 m.
+- **Nearby Search radius** was 30–80 m from the accuracy; with a good fix
+  (10 m) that was 30 m, too small to reach any business centre from inside
+  a big store, so it fell to a street address. Now 60–150 m (2× accuracy),
+  still nearest first. Migration 170 forgets cached address-only answers so
+  those spots are asked again.
+
+## 2026-11 — Places → Family map (v0.766.0)
+
+- Owner's choice. Only what people see changes (sidebar, page and Admin
+  titles, messages, the app's menu, screen title and notification channel).
+  URLs (`/places`, `/places/embed`, `/admin/places`), API paths, models,
+  settings keys and code names stay "places", so nothing breaks or migrates.
+
+## 2026-11 — Places map controls (v0.765.0)
+
+- Map controls are one column of round icon buttons inside the map, top
+  right (full screen / close, everyone, traffic, satellite), the same in and
+  out of full screen and on phone and web; the tracks bar (route glyph, not
+  the word) takes the rest of the top edge and scrolls sideways. Google's
+  Map/Satellite control is off (it sat under the tracks bar); Satellite is
+  our toggle (`hybrid` ↔ `roadmap`).
+- The person bubble on the map shows only in full screen, where the cards
+  are hidden; otherwise it repeated the card.
+- "Not right?" hides "Just the address" when the spot is already shown as an
+  address (it changed nothing and looked broken).
+
+## 2026-11 — Fan-out lines straight (v0.764.0)
+
+- The curved fan-out connectors (quadratic, 16 segments, 2.5 px at 70%
+  opacity) read as wavy over the base map. Now straight, full colour 3 px on a
+  6 px white casing, like Google's own route lines.
+- Docs: a sign-in portal in front of Kairos must bypass `/places/embed`,
+  `/_next/static` and `/api/avatars` as well as `/api/v1` for the app's
+  Places screen (Authelia example in the Places doc, Part 6).
+
+## 2026-11 — Relative redirect for the Places hand-off (v0.763.0)
+
+- Behind a reverse proxy, `req.nextUrl` in a route handler carries the
+  container's bind address (`0.0.0.0:3000`), so the hand-off's redirect sent
+  the app's WebView off its own origin and the app opened it in the browser.
+  `/places/embed/start` now answers 303 with a relative `Location`. Don't
+  build absolute redirect URLs from `req.nextUrl` in route handlers.
+- Queued for the next app release: an off-origin redirect inside the Places
+  WebView is dropped, not handed to the browser.
+
+## 2026-11 — Places in the phone app (v0.762.0, app 0.550.0)
+
+- **The app shows the web pages** (`/places/embed`, `/places/embed/<person>`)
+  in a WebView: one map implementation, no Maps SDK in the app.
+- **Hand-off, not the device token in the page.** `POST /places/web` (device
+  auth) → a random single-use ticket, 60 s, in memory (single server
+  process; a restart only means the app asks again). `/places/embed/start`
+  swaps it for `fd_places` = `p1.userId.deviceId.expires.hmac` (appSecret),
+  12 h, httpOnly, lax. Checked on every request: signature, expiry, device not
+  revoked/expired, person active.
+- **The cookie is read-only by construction.** Server action ids aren't tied
+  to the page that posts them, so proxy.ts lets the Places cookie through
+  only for GET/HEAD on embed paths with no `Next-Action` header. The embed
+  pages read via `/api/v1/places/view/*` (`requirePlacesViewer`: device
+  token, Places cookie or parent session; added to the API auth check's
+  guards). "Not right?" is hidden in the app. Without a session an embed page
+  answers 401 (not the login page) so the app can renew.
+- The root layout renders embed paths with no chrome and no web sign-in
+  check; proxy.ts has already decided.
+- Pages share `src/app/places/render.tsx`; `EmbedProvider` / `useEmbed`
+  switch links and data sources in the client views.
+
+## 2026-11 — Places: Routes for sparse drives, zone centres (v0.761.0)
+
+- **Two ways to put a drive on the roads.** Any gap over 400 m between reports
+  → Routes API (`computeRoutes`) through the reports as pass-through
+  waypoints, thinned to ≥1 km apart (wider on long drives, ≤4 calls),
+  ≤10 intermediates per call and traffic-unaware so each call stays in the
+  Essentials tier (10,000 free). Otherwise Roads snapping as before. Snapping
+  sparse points was what drew corner-cutting tracks.
+- **Every Google answer is checked against the recorded points.** Routes:
+  each report within 150 m of the route (or its own accuracy, up to 250 m),
+  average under 40 m/s for the time taken, and no more than 2.5× the
+  straight-line path + 2 km. Fails → raw points, cached, so off-road drives
+  (a Jeep trail) are drawn as recorded. A sparse drive never falls back to
+  Roads. Walks never go to Google.
+- Kairos stops at 280 route calls a day (owner caps Google at 300). Road
+  track cache cleared once (migration 169) so old straight drives redraw.
+- **Zone centres.** The median position of reports in each HA zone over 60
+  days (≥5 reports with accuracy ≤100 m), recomputed hourly. Someone settled
+  in a zone is drawn there, and History stops in a zone are pinned there, so
+  people at home stack into one group. Notifications and stored points are
+  untouched.
+
+## 2026-11 — Places: Home Assistant zones, tighter address reuse (v0.760.0)
+
+- **HA zones feed Kairos when present** (owner: don't reinvent Home/Work). The
+  automation sends the person's state as `zone` ("home" → Home; not_home /
+  unknown → none); stored on `LocationPoint.zone`. Order for a place name:
+  the family's own `PlaceName` → HA zone → saved address → cached Google →
+  Google. A nameless family spot ("just the address") still beats the zone.
+- In a zone and slower than 3 m/s, a person counts as there whatever the GPS
+  wobble says; "since" runs back through the same zone. History stops take
+  the zone most of their reports were in.
+- Notification rules can name a zone (`PlacesNotifyRule.zone`): arrive/leave
+  follow HA's own zone changes (its boundaries and home-network detection),
+  no distance check. Zones offered are those seen in the last 60 days.
+  Kairos's own places keep working with no HA.
+- **Reuse radius ≠ search area.** A cached Google answer is reused within 30 m
+  for a business (was 60 — neighbouring shops) and 25 m for a street address
+  (the house across the street was being reused for the whole home). Reverse
+  geocoding asks for `street_address|premise` first, then anything.
+- **Fan-out** is an arc above the spot (up to 150°, spacing chosen so avatars
+  never overlap, radius ≥ 68 px) with curved lines (quadratic, bowed outward)
+  meeting at a dot on the real spot, instead of evenly spaced straight spokes.
+
+## 2026-11 — Places: icons, grouped markers, notifications (v0.759.0)
+
+- **Notifications are Kairos's own**, not Home Assistant's (owner's choice:
+  Kairos should not depend on HA). Geofences are Kairos places — named places
+  (now with a size: 50–500 m) and saved addresses (120 m) — not HA zones.
+  `checkPlaces` runs after each ingest on each person's newest point (skipped
+  if older than 30 min), only for places some rule mentions. `fenceStep`:
+  first fix records silently; arrive inside the radius; leave 50 m beyond it;
+  fixes worse than 150 m ignored; 10-minute cooldown per person and place;
+  nobody is told about themselves. A person's own named place only applies to
+  them.
+- **Delivery: content-free Firebase ping → Kairos inbox.** A server can't reach
+  a phone directly; every Android push rides a connection the phone keeps open.
+  Firebase Cloud Messaging uses the one Play services already holds, so no
+  battery cost or always-on notification. Kairos sends only `{k: "inbox"}`;
+  the app fetches the text from `/api/v1/push/inbox`. Rejected: ntfy (another
+  app on every phone, owner refused), an HA relay (owner refused), Kairos's own
+  persistent connection as the main path (battery + always-on notification —
+  kept as the fallback idea for phones without Play services).
+- **No Firebase config in the APK.** The app starts Firebase at runtime
+  (`FirebaseApp.initializeApp(context, FirebaseOptions)`) with values from
+  `/api/v1/push/config`, so one APK and one image work for any household; a
+  server without Firebase returns null and the app falls back. The service
+  account key (FCM HTTP v1, JWT signed with node:crypto, no SDK) stays on the
+  server; its project must match the app values. Tokens Google rejects are
+  cleared.
+- `PushMessage` is a general inbox (kind places / test now) for later app
+  notifications; delivered rows go after a week. Until the app release,
+  messages queue (Admin shows how many are waiting).
+- **Movement as icons**: car with mph, walking person, motion lines with mph
+  for the in-between band. Live: `motionOf` — median reported speed over the
+  last 3 minutes, else distance over ~2 minutes; drive ≥10 mph, walk <5.
+  History legs: drive, or walk/move by average speed.
+- **Grouped markers**: people whose markers would overlap at the current zoom
+  (46 px, Web-Mercator metres per pixel) merge into one stacked marker with a
+  count; tapping fans them out in a circle with lines in each person's colour
+  to the real spot; tapping the map or zooming folds them. Fanned-out markers
+  are pinned so the 30 s glide doesn't pull them back.
+- Selected History stop and selected live card are tinted with the person's
+  colour instead of the page background.
+
+## 2026-11 — Places: speed, Follow, tracks, History, place names (v0.758.0)
+
+- **Speed** from Home Assistant is metres per second (confirmed against a
+  highway drive: stored 30–33 while position-derived speed was 70–73 mph);
+  `mph = speed × 2.23694`, whole-number m/s means ~2 mph steps. Cards and the
+  marker chip show it while moving ("Driving" from 10 mph); `mph` is in the
+  live payload.
+- **Follow** keeps the map on a selected person through refreshes; dragging
+  the map stops it.
+- **One day plan** (`planDay`, pure, src/lib/places/day.ts) feeds both today's
+  tracks and History: a stop is ≥5 min within 120 m (the newest place counts
+  even if short); a trip is a drive when it averages ≥3.5 m/s or reports ≥6 m/s,
+  otherwise "moving" (walks, runs, trails). Points worse than 250 m are left
+  out. The last point before midnight starts the day at that place.
+- **Road-following tracks:** finished drives (followed by a stop and settled
+  3 min) are snapped once with Roads API snapToRoads (interpolate, ≤100
+  points per call, chunked) and cached in `SnappedPath` 30 days. If the
+  snapped spots of the original points sit too far away (median > 35 m or
+  >30% beyond 60 m — off-road, car parks), the raw points are drawn. A drive
+  still under way is raw. Kairos limit 140 calls/day (Pro, 5,000 free a
+  month). Note: reports ~27 s apart at highway speed are ~800 m apart, more
+  than Roads prefers; the believability check falls back to raw if Google
+  can't follow it.
+- **Tracks on the map** are per person (avatar chips; the choice is kept per
+  browser in localStorage) and refresh with the 30 s poll. Drives solid
+  (thicker when snapped), other trips dotted.
+- **History** (`/places/<person>?date=`, under `/places` so the map policy
+  applies and Link navigation keeps the one map): totals, numbered stops,
+  timeline, replay (a dot along the day's trips at 30×/120×/480×, each stop a
+  short pause). Stepping days only redraws.
+- **Family names win:** `PlaceName` (where the person stood — Kairos's own
+  data, no expiry) is checked before saved addresses and Google: the person's
+  own names first, then everyone's. A nameless one means "just the street
+  address here". "Not right?" offers Google's other nearby results — stored as
+  `PlaceLookup.candidates` when Nearby Search first runs, so choosing costs no
+  extra call — plus "Just the address" and "Name this place…" (a full page:
+  name, everyone / just this person). Admin → Places → Named places removes
+  them. Names are memoised per person and the memo is cleared on any change.
+
+## 2026-11 — Places page (v0.757.0)
+
+- **One map per visit.** Google bills per map load, so the Places page creates
+  its map once and never rebuilds it: the 30-second refresh (a server action,
+  paused while the tab is hidden) only glides markers to new spots
+  (requestAnimationFrame, 0.9 s ease-out). The view is fitted to everyone once;
+  after that it stays where you panned ("Everyone" re-fits). Full screen is the
+  same map grown to the window (Esc closes), not a second map. Each load is
+  counted (`notePlacesMapLoad`) for Admin.
+- **Markers are the real avatars**: `AdvancedMarkerElement` (needs the Map ID)
+  with the shared `Avatar` rendered into it, faded after 12 h without a report,
+  "Moving" under it while travelling. Tapping a marker or a card opens a bubble
+  (name, place, since, updated) and a ring for GPS accuracy. Bubble text is set
+  with `textContent`, never HTML.
+- **Gestures:** a mouse, or full screen, moves the map directly; on a touch
+  screen inline, one finger scrolls the page and two move the map.
+- **Moving vs here** (`presenceOf`, src/lib/places/geo.ts): moving when the two
+  newest reports are over 120 m apart within 15 minutes, or raw speed ≥ 3 (true
+  for m/s, km/h or mph while speed's unit is unconfirmed). Otherwise "since" is
+  the oldest consecutive report within 120 m of the newest. A still phone
+  reports rarely, so "stale" waits 12 hours.
+- **Place names, cheapest first** (`resolvePlace`): a saved address within
+  120 m → a Google answer already cached within 60 m → Nearby Search (Places
+  API New, Pro; field mask id/displayName/formattedAddress/location/types,
+  nearest non-area result within the GPS accuracy, 30–80 m) → reverse
+  geocoding (the street address). Nobody moving is looked up; a fix worse than
+  150 m skips Nearby Search. Answers are memoised 10 minutes in-process, and
+  concurrent requests for one spot share a single Google call.
+- **Google's caching rules:** lat/lng may be kept 30 days and place ids
+  indefinitely, so `PlaceLookup` rows (and saved-address coordinates,
+  `geocodedAt`) are deleted/refreshed after 30 days; names are treated the same
+  way. Saved addresses are geocoded lazily (three per request at most); one
+  Google can't find is retried after 7 days; editing an address clears them.
+- **Kairos's own daily limits:** 140 Nearby Search and 280 geocoding calls per
+  household day (`PlacesApiUsage`), under the daily caps set in Google's console
+  (150 / 300) and inside the free monthly allowance (Pro 5,000; Essentials
+  10,000). Past a limit, the place shows as unknown until tomorrow.
+- **Admin → Places → Google usage** shows Kairos's own counts (today, month,
+  free allowance, Kairos limit). Google's real usage needs a Google sign-in, so
+  Admin links to Google's usage, quotas and billing pages rather than storing
+  Google credentials.
+- **Content policy:** only `/places` pages get the wider CSP from Google's guide
+  (Google image/font/data hosts, `worker-src blob:`, `'unsafe-eval'` and
+  `blob:` scripts) via `isMapPath`. A policy belongs to the document, so the
+  sidebar opens Places with a plain `<a>` (full load) instead of `Link`.
+- Places shows in the nav (web and the phone's `/api/v1/nav` hidden list) once
+  a map key, Map ID and a tracked person exist. `GET /api/v1/places/live` is in
+  place for the app's Places screen (release 3).
+- `@googlemaps/js-api-loader` 2.x (`setOptions` + `importLibrary`) loads the
+  API; `@types/google.maps` types it.
+- The Home Assistant guide now links **person** entities, reads speed/course/
+  altitude from the person's `source` tracker and battery from its Companion
+  battery sensor, and gives every optional payload value `| default(none)`.
+
+## 2026-11 — Places setup and Map ID (v0.756.0)
+
+- Admin → Places stores a Google **Map ID** (`places.mapId`, not a secret): the
+  coming map draws people as HTML avatar markers, which Google only allows on a
+  map with a Map ID.
+- The Home Assistant REST command takes its values as `tracker`, `lat`, `lon`,
+  `accuracy`, `speed`, `course`, `altitude`, `battery`, `updated` instead of
+  passing `entity_id` in the action's data, which Home Assistant can treat as a
+  target. The posted JSON keeps the documented field names.
+- The setup doc recommends the LAN URL when Home Assistant and Kairos share a
+  network, so pushes never meet a CDN bot filter or SSO gateway.
+- Deleting history stays admin-only: `/admin` is gated in its layout and
+  `deletePlacesHistoryAction` calls `requireAdmin`; there is no API route for it.
+
+## 2026-11 — Places, release 1: collection (v0.755.0)
+
+- Family locations come from the Home Assistant Companion app already on the
+  phones. HA posts each position to `POST /api/v1/places/ingest`; Kairos
+  stores and shows. Rejected: Kairos reading HA's websocket (would need an HA
+  token in Kairos), Traccar, and our own Android tracker (background location
+  is the expensive part).
+- The ingest token is made in Admin, shown once and stored only as its SHA-256
+  (`places.ingestTokenHash`), compared in constant time. Not an env var like
+  `GAMETIME_INGEST_TOKEN`: a database dump never reveals it, it isn't in the
+  container template in plain text, and replacing it is one button.
+- `PlacesPerson` links a person to one HA entity (unique). Blank = not
+  tracked; their history stays until deleted. Saving clears and rewrites the
+  rows so two people can swap entities.
+- `LocationPoint` keeps raw values, unique per person + reported time (HA's
+  `last_updated`), so retries upsert. `speed` is stored as sent; its unit is
+  confirmed from a live payload before any page converts it. 0,0 (no fix) is
+  refused; a missing or future time becomes now.
+- A point from an entity linked to nobody is skipped and the last one is
+  remembered (`places.unlinked`) so Admin can show its exact id.
+- Day boundaries for deleting by date (and the coming day view) use the
+  household timezone: `src/lib/places/day-bounds.ts` finds local midnight,
+  23 or 25 hours apart across DST.
+- History is kept until deleted (owner's choice: a long time, with delete
+  tools). Admin shows points and table size; delete by person and/or dates.
+- Two Google keys: the browser map key (public by design, restricted by
+  referrer in Google's console) and a server-only lookup key for place names.
+  Saved now, used from release 2 and 3.
+- Admin → Places uses the new `MapIcon` so it doesn't share Addresses' pin.
+
+## 2026-11 — Endurance days, finishers, 5/3/1 misses (v0.754.0)
+
+- Endurance (Open #11) is an Other days add. Its window: Long steady (a
+  cardio and minutes), Intervals (rounds, work, rest) or Circuit. Long steady
+  and Intervals are a cardio plan entry whose name says it all ("Long steady
+  · Row 40 min"); Row, Run and Ruck plan as their category, Bike, Walk, Hike
+  and Jump rope as any cardio. `enduranceCardioRow` tells them from the
+  Cardio step's rows by name. Picks ride on the kind: `endurance@steady.ROW.40`,
+  `endurance@int.BIKE.8.60.60`, or circuit ids.
+- Circuits and carries are rotation kinds (`endurance`, `carry`) beside
+  Core, Arms and Isometric: a library each (`ENDURANCE_LIBRARY`,
+  `CARRY_LIBRARY`) plus your own, a weights entry with no muscle group,
+  titled by its name, no monthly test (`hasRotationTest`).
+- What counts toward the endurance heart: cardio as before, and a circuit or
+  carry finisher's minutes once anything in it is logged that day (marker
+  `endurance` in `workoutSuggestionAnswer`, "<minutes>|<name>", set by
+  `logMovementSets`). High reps count only inside such a workout, never a set
+  or two on a lift day. The heart's week adds a Circuits row.
+- Finishers after the lifts (the last of release 2): the Finishers step has
+  a row per lift day, None / Core / Holds / Carries, each with its window.
+  `finishers` on start; an unchanged one keeps its rotation, any other is
+  made fresh and is the program's own. `currentSetup.finishers` fills the
+  step; a rotation on a program day no longer reads as added lifts. Odd
+  squad keeps its own C finishers.
+- 5/3/1's What's next: the + set short of its asked-for reps drops the
+  training max 10% (to the lift's step); that day's "Too hard" on the lift
+  holds it. The v0.748 note that feedback "isn't tied to a lift" was wrong:
+  it's filed per movement.
+
+## 2026-11 — Rest days on the charts; Other days windows (v0.753.0)
+
+- Rest look: a pale slate square with a small moon (`RestSquare`), no legend.
+  Workout days: `heat.restDays` (Rest / skip with nothing else logged, or
+  paused, over a year) on the rows the grid already draws, so a planned rest
+  weekday still has no row. This week: a finished day with nothing done and
+  nothing due, in a week the plan or a log covers, is `rest` (as Rest / skip
+  and paused already were). Missed stays a dashed amber outline; the bars
+  don't change.
+- Open #15: an Other days add opens its window: Core / Arms / Isometric
+  workouts to rotate (and the monthly test), a Mobility or Stretching
+  routine, or a muscle group and its movements. The choice rides on the
+  kind: `arms@id,id|notest`, `mobility@routineId`, `strength:LEGS@id,id`
+  (`splitOther` / `joinOther`, other-days.ts). A kind with picks always
+  makes the day fresh; picks that don't check out fall back to the library's
+  first.
+
+## 2026-11 — Plateau card (v0.752.0)
+
+- Release 4 of the plan-builder proposal. `plateau.ts` (pure): main groups
+  are Chest, Back, Legs, Shoulders, Deadlift. A group has stalled when it
+  was trained on 3+ days in the last 4 weeks, has sets from before to beat,
+  and no set in the window is a new best (`isNewBest` against that
+  movement's earlier sets). Two or more → the card.
+- Only for your own plan (weekly or rolling) and programs without training
+  maxes; a program with maxes has What's next at each cycle's end. Not
+  while a program is 4 weeks old or less.
+- `plateauFor` rides on the programs payload (`plateau`). Own plan: Try
+  5/3/1 (preview, starts its setup), Light week, Swap the movements (opens
+  Your plan). A program that runs on: New plan, Light week. Keep going.
+- Light week writes the day answer `deload` for 7 days (60%, `lightFactor`),
+  leaving days already adjusted alone. Light, swap and keep hide the card
+  for 4 weeks (setting `workouts.plateau.<id>`, after the light week for
+  light); starting a program hides it by itself. `POST /workouts/plateau`.
+
+## 2026-11 — Day page: always the list, plainer states (v0.751.0)
+
+- The day opens on its workouts whenever it has any, one included (was: the
+  only open workout opened straight away, so a future core day with a sport
+  went to the sport). No workouts (rest, nothing planned) → the day page.
+- "Logging late" only for a day in the strip's `overdue` (a past workout task
+  still pending). It used "planned and nothing logged", and the list header
+  never passed "logged", so finished days read late.
+- Card words: Complete (a workout of many parts), Logged · N min (a sport,
+  like one movement), Didn't go and Skipped (neutral). A day to come shows no
+  progress; "Did you go?" shows only once the event has `ended`.
+- The time chip left the day page and its cards (it wrapped the date and
+  meant nothing on old days). Usual workout time lives on the profile page
+  (web) and in Settings (app). `POST /workouts/time` stays for older apps; no
+  client calls it.
+
+## 2026-11 — Two programs at once, part 2 (v0.750.0)
+
+- Release 3b of the plan-builder proposal. `dayProgramBlocks` (workout-log)
+  splits a day two programs share into one block per program: its planned
+  entries (by `programId`; untagged entries and the plan-wide steps go to the
+  first), parts, done and skipped. Fewer than two programs on the day → `[]`,
+  and every screen works as before.
+- Day page: one card per program in Today's workouts (`prog:<id>`); opening
+  one narrows the day to that program's entries. Skip (and Unskip) marks
+  every movement of that program's entries skipped for the day
+  (`setProgramDaySkipped`), so it counts as done like any skip.
+- Home card x of y counts each program as its own workout.
+- `GET /workouts` adds `programBlocks`; `POST /workouts/program-skip`.
+
+## 2026-11 — Two programs at once, part 1 (v0.749.0)
+
+- Release 3a of the plan-builder proposal. `PlannedWorkout.programId`
+  (migration 163) marks a program's own entries; the migration gives today's
+  running program the entries holding its program lifts.
+- Several `PersonProgram` rows can be ACTIVE. The first started
+  (`loadActivePrograms` / `loadActiveProgram`, oldest first) owns the
+  plan-wide steps (other days, warm-up, cardio, conditioning).
+- `startProgram`: `add` runs a program beside the first; `programId` names
+  the one changed or replaced. Beside the first (`alongside`), only that
+  program's own entries are replaced and the plan-wide steps are skipped (the
+  setups hide those steps). Changing the first never deletes another
+  program's entries. New program rows are tagged with their program.
+- `endProgram(…, programId)`: with two running, ending one marks it ended
+  and deletes only its entries; with one, as before (kept entries lose
+  their tag). `nextBlock(…, programId)`, `alsoPrograms` (each with its
+  setup), `ProgramInfo.id`.
+- A lift's targets come from the program that owns its entry; a program's
+  setup reads only its own entries (and the plan's own).
+- Plan card: each extra program's name, week, What's next and End; Add
+  program (a third asks first). Your plan: a Program section per program.
+- Next (3b): each program as its own workout on the day page and in the
+  home card's x of y, skipped on its own.
+
+## 2026-11 — Other days, What's next, success marks (v0.748.0)
+
+- Release 2 of the plan-builder proposal (project doc
+  `claude/plan-builder-proposal.md`).
+- Setup steps, every program: Days, Other days, Lifts (Odd squad: Blocks,
+  Movements), Warm-up, Cardio, Finishers, Maxes, Review. Odd squad's Days
+  step only places its days now; Core and Rest moved to Other days.
+- Other days (`src/lib/workouts/other-days.ts`): each weekday the program
+  doesn't use is rest, skip, core, arms, iso, mobility, stretching, cardio,
+  conditioning, strength:<GROUP>, or custom ("As it is", a hand-built day).
+  `startProgram({ other })` keeps a day's rows when its choice matches what
+  it holds now (`otherKindOf`), rotation state and all, and makes a changed
+  day fresh (`makeOtherDay`: library rotation, routine, or an empty muscle
+  group day). Warm-up goes on every workout day, other days with work too.
+- The setup starts the other days from `otherDays` (what each weekday holds
+  now): the same program (editing, Change movements) keeps them; a new
+  program keeps only the rest days. So Rest carries over, and Arms or Core
+  end with the program they came with unless picked again. Without `other`
+  (older apps) starting a program behaves as before.
+- What's next (`WhatsNext`, replacing Cycle done): per main lift a
+  suggestion (`cycleCheck`): wave lifts by the heaviest set of the last
+  heavy week (2+ reps raises, 1 or none holds), ladders by every ladder
+  done (`ladderStepAfter` reaching 3), others by their step; tap to switch
+  between +step and Same. Continue (`nextBlock` with those raises) or New
+  plan. Repeat and "with changes" are gone (Change movements covers it).
+  A harder program (`HARDER`) shows with a preview when 70% of the cycle's
+  answers were Easy (5 or more).
+- Until a choice, the program's days show the plan card instead of the
+  workout (web: `programWait` on the day; app: `program.blockDone`); other
+  workouts and sports carry on.
+- Success marks: `PersonProgram.cycle` and `lastRaises` (migration 162),
+  set by `nextBlock` and the next cycle with changes. The plan card says
+  "Cycle 2" and "↑ Cycle 1 done · 3 of 4 lifts went up"; a main lift's title
+  adds "Cycle 2" and `target.up` ("↑ 5 from cycle 1").
+- Not done here: the setup's Add opens no per-kind window (a rotation starts
+  from the library's first; change it on Your plan); core or holds on lift
+  days; a "too hard" week holding a lift (feedback isn't tied to a lift).
+
+## 2026-11 — Plan card, one Edit, one setup style (v0.747.0)
+
+- Release 1 of the plan-builder proposal (project doc
+  `claude/plan-builder-proposal.md`, mockup "Kairos: building and editing a
+  plan").
+- The program card is the plan card for every plan: the program (name, week,
+  "With Arms and Core") or "My plan" (its end date), a week strip
+  (`planSummary` / `buildStrip`, Monday first, each day's main work and
+  kind), and Edit / Change / End. Own plans end with "End today" (the plan's
+  end date, nothing deleted). No plan: New plan.
+- Edit opens Your plan (the plan editor) with a Program section on top:
+  training maxes and Change movements, which opens the program's setup on
+  the plan as it is and saves in place (same week) for every program, not
+  only Odd squad. Odd squad's own Edit link and the card's maxes moved there.
+- The Edit plan button is gone; Saved plans (My plans, Household, save /
+  share / export / import) takes its place. The plan editor no longer has
+  the save / share button at its foot.
+- One setup style (`setup-parts.tsx`): bars with "2 of 5 · Lifts", the same
+  Back / Next bar, and the Warm-up / Cardio / Conditioning step for Odd squad
+  too (it used to keep the current ones silently). Warm-up None and no
+  cardio or conditioning days leave them out.
+- The chooser is "New plan" with Build my own (the plan page, no program).
+  The every-few-days plan is called Rolling plan ("cycle" is 5/3/1's word).
+- No data changes: plans and programs carry on as they are.
+
+## 2026-11 — Sport names on Cardio (v0.746.0)
+
+- A subscribed feed drops events once they age out, so an old sport
+  session's event is gone and its own name is the matchup ("Team A @ Team
+  B"), which read as "Sport". `sportNamer`: the event's sport, else the
+  session's name if it names one, else the person's sport when every sport
+  type and sport calendar of theirs picks the same one, else "Sport".
+- The Cardio sport line lists the sports done, with commas ("Hockey,
+  Soccer"); this week's line names only this week's. One colour.
+
+## 2026-11 — Cardio colours, picking the sport, x of y (v0.745.0)
+
+- Cardio kinds: row, run and ruck by category; hike, walk, bike (Cycling)
+  and jump rope by the name a CARDIO session is logged under
+  (`cardioKeyOf`). Hike and Walk are new in Add cardio (distance and time);
+  Ruck keeps load. No enum change.
+- The Cardio card stacks each week by kind (`weeks[].parts`) with white
+  lines between; this week's lines and the Cardio page bars use the kind's
+  colour (`CARDIO_KIND_COLOR`). Weekly training keeps one Cardio colour, and
+  sport is always green.
+- Sport is picked on an event type or a subscribed calendar (`sport`,
+  migration 161). `eventSport`: the type's pick, the calendar's, else the
+  names, else "Sport" — no more Hockey by default. Existing sport types and
+  calendars whose names name no other sport were set to Hockey by the
+  migration, so nothing changed for them. A logged session goes by its
+  event's sport (`sportsOfEvents`), else its own name. A sport other than
+  Hockey warms up with Quick 5 minutes instead of Hockey legs.
+- Home card: with two or more workouts on the day (the planned one and each
+  sport event), "1 of 2 workouts" (`workoutBlocks`); done or skipped counts,
+  and all of them done or skipped is Complete for today!. A planned rest day
+  keeps Rest day.
+- Weekly training's Planned line (`plannedParts`) is planned parts, counted
+  like the bars, plus the week's sport events from the calendar. Each day's
+  parts are saved (`WorkoutSuggestionAnswer` key `plannedParts`) by the task
+  generator and by Weekly training, written only when they change, so a
+  later plan change doesn't rewrite past weeks. This week fills the days to
+  come from the plan; weeks before any were saved have no line. `planned`
+  (days) stays for the week's "x of y planned days".
+- Mockup: artifact "Kairos: cardio colours, sports, x of y".
+
+## 2026-11 — Workouts as blocks (v0.744.0)
+
+- A day holds workouts, each its own block: the planned workout (its own
+  warm-up, cardio, lifts, core, mobility) and each sport event marked "counts
+  as a sport". Blocks never share parts: the planned Warm-up is no longer
+  handed to the sport (`sportDay.forSport` is always false), and a sport's
+  session leaves the planned page's logged list.
+- Order by time: sports from the calendar, the planned workout from a usual
+  time per weekday (`AppSetting workoutTimes:<userId>`), changed for one day
+  in `WorkoutSuggestionAnswer` key `workoutTime`. Untimed blocks go last.
+- With two or more blocks the day opens on Today's workouts while two or
+  more are still open; with one open it opens that one; back returns to the
+  list. One block: straight in, as before.
+- A sport completes the day only when nothing else was planned (unchanged
+  since v0.649; SCORING.md corrected). Its minutes count toward Cardio (a
+  SPORT activity, named by its sport) as well as Endurance.
+- Weekly training counts workouts and parts by type per week instead of
+  days: lifting, core, holds, conditioning, cardio and mobility once a day
+  each, every sport event; warm-ups never. A set's movement decides lifting,
+  core or holds. Day labels list every kind in the bars' order (the old label
+  kept the first two words, which were usually the warm-up and the row).
+- Kept: the dashed line stays planned days, and the home card's Workouts
+  row is unchanged (both changed in v0.745).
+- Mockup: artifact "Kairos: workouts as blocks" (overview and step by step).
+
+## 2026-11 — ⓘ on every movement list (v0.743.0)
+
+- Conditioning workouts (today's card and the picker), Family WOD lines and
+  the core / arms / holds workout lists showed movements as plain text, with
+  no how-to. Each line now has the ⓘ. Those lists only carry names, so
+  `MovementInfo` without `about` looks the how-to up by name the first time
+  it opens (`movementAboutAction`); Family WOD sends `moveNames` beside its
+  lines.
+
+## 2026-11 — White controls, no white footer box (v0.742.0)
+
+- Outlined buttons, choice chips (unselected) and fields drew no background,
+  so on the grey page (the Workouts full pages above all) they took the page
+  colour instead of white. Every bordered `border-hairline` button, link,
+  label or field without a background now has `bg-surface` (87 files, the
+  shared `CHIP` included). On a white card nothing changes.
+- The sticky Next / Start bar on the program setup and block builder pages
+  had a white fill and a top rule from when they were pop-ups; it now uses
+  the page background with no rule.
+- Rule (ARCHITECTURE.md): a bordered control always sets `bg-surface`.
+
+## 2026-11 — Reuse date formatters (v0.741.0)
+
+- The real cause of the slow Summary: `todayISO` and `fromDateColumn` built a
+  new `Intl.DateTimeFormat` on every call, and the grid called them for every
+  task on every day of the range (a month: hundreds of thousands of
+  formatters). A synthetic month of 6,750 tasks took 29 s in the sandbox.
+- `dates.ts` now builds each formatter once (`fmt`), and `fromDateColumn` is
+  `toISOString().slice(0, 10)` (same result: stored dates are UTC midnight).
+  The grid works out each task's days once and tallies by day in one pass
+  (`tallyByDay`). The same synthetic month: 16 ms. Every caller of these
+  helpers (scoring, streaks, the calendar) gets the same saving.
+
+## 2026-11 — Faster Summary weeks (v0.740.0)
+
+- Every week change rebuilt the family goal, which runs `loadProgression`
+  (everyone's scoring from every task) before the grid could load. The API
+  now skips it with `goal=0`; the web page loads the grid and the goal side by
+  side instead of one after the other.
+
+## 2026-11 — A side menu that never scrolls (v0.739.0)
+
+- 14 sections (15 with weather) at 48px each plus the logo and the old
+  three-row bottom came to ~860–910px, so a 650px laptop window and most
+  phones scrolled. The page list is now fixed, so the rows share the height
+  left: each `li` is `flex-1 basis-0` between `min-h-8` and `max-h-12` (a
+  28–44px row inside 2px padding). Tall screens look as before; it scrolls
+  only below about 600px.
+- Logo bar 80 → 56px. The bottom is one row when open: avatar, name with the
+  version under it, switch, collapse (`UserBadge` gains `version` and
+  `trailing`). Collapsed: the avatar, then a 32px expand arrow.
+- Mockup: artifact "Kairos side menu: fit the screen".
+
+## 2026-11 — Repeat wording, again (v0.738.0)
+
+- "Already completed today" wasn't always true: the later card drops the
+  movement even when the first card isn't done yet. Now: "Hollow hold was
+  removed because it is in another workout today."
+
+## 2026-11 — Repeat wording (v0.737.0)
+
+- The later card's line "Hollow hold in Core · Bodyweight core" read as
+  nonsense. It now says "Hollow hold was removed because it was already
+  completed today.", on its own line under the card's count (web and app).
+- Checked the likely overlap before building a per-session swap: only Core +
+  Isometric collides in practice (Hollow hold, Side plank; 7 of 48 pairings).
+  Swapping isn't planned.
+
+## 2026-11 — One movement, one card a day (v0.736.0)
+
+- A day's sets, skips and "how did it feel" are kept per movement, not per
+  card. So Hollow hold in Core and again in an Isometric workout showed the
+  Core sets and feeling on the Isometric card, and that card finished itself.
+- Now the first card in the day's order keeps the movement; every later card
+  drops it for the day (`repeatsByPlan`, `src/lib/workouts/day-repeats.ts`,
+  shared by the server and the web day page). The server sends it as
+  `repeatOf` with `skipped: true`, so completion is right even on an older
+  app. Nothing is stored and no logged data changes.
+- Swapping the dropped movement for a different one for that session isn't
+  built: sets would have to belong to a card rather than a movement first.
+
+## 2026-11 — One open list; docs match the code (v0.735.0)
+
+- ROADMAP.md was rewritten: **Open** (the only list of agreed, unbuilt work),
+  **Not doing** (decided against, so it doesn't resurface), **Versions**, then
+  **Built** by area. The old per-run "Shipped" sections, status narratives and
+  scattered unchecked lines are gone; release history stays in `CHANGES`
+  (version.ts), the app's CHANGELOG.md and this file. Rule recorded in
+  ARCHITECTURE.md: a release that ships an Open item removes it there.
+- Dropped: workout progress into Strength (Strength counts workouts done),
+  memory verses, and an upload picker for event backgrounds (standard
+  images, now including game vs practice, stay open).
+- Found while checking: importing a personal Bible plan by pasting already
+  works (v0.723, `scope: "mine"`); listed in Open only until confirmed.
+- README: status and features current (Summary, work feeds, appearance,
+  Admin activity and export); the weather variables were removed (nothing reads
+  them until weather is built) and the variables the code does read
+  (`GAMETIME_INGEST_TOKEN`, `PUBLIC_URL`, `SMTP_*`, `COOKIE_SECURE`) added.
+  docs/API.md: status, the v0.699 sign-in note, push and sync marked not
+  built, what stays web-only, and the inventory at 200 routes.
+
+## 2026-11 — Ladders repeat, bodyweight charts, work calendars (v0.734.0)
+
+- **Ladders** (`ladderStepAfter`): each earlier program week of the block
+  moves the lift's ladders on only when its logged reps reached that step's
+  total (`ladderTotal`, deadlift capped); a short week, or a week with no
+  session, repeats. Week 5's test is unchanged. The label follows the step.
+- **Bodyweight charts** (`queries/bodyweight.ts`): movements whose pool
+  metric is REPS (not Core), logged with no weight, join the lift charts as
+  `fixed` series in reps (best set a day; total and density from
+  `dayNumbers`), on the web and the phone. A movement also logged with weight
+  stays in the weight series only.
+- **Garage length** from a parent's phone: the builder's finisher card on the
+  app has a picker (`POST /workouts/garage`).
+- **Work calendars**: `ExternalCalendar.isWork` (migration 160). Its events
+  sync as `WORK` instead of `EXTERNAL` (still external and read-only), so
+  they get the Work label, the person's Work colour and Work reminders, and
+  the app draws them solid like a work shift. Turning it on or off re-kinds
+  the feed's events at once.
+- Roadmap tidy: the Family events toggle is done; smooth chore-card
+  animation dropped; Wisdom from personal Bible reading was already done
+  (Strength from workout progress is the open half).
+
+## 2026-11 — Summary page, completion grid, Activity log, export (v0.733.0)
+
+- **Summary** (`/summary`, last in the sidebar) is new: the family goal and
+  the completion grid. **Characters** moved to `/characters`, unchanged but
+  without the family goal. A parent (or the shared screen) sees everyone; a
+  child on a personal device sees only themselves (`completionPeople`).
+- **A day's share** (`queries/completion.ts`): due that day and done by its
+  deadline (the due date, or an anytime chore's last day), plus anything
+  finished that day that was late from an earlier day. Late work counts on the
+  day it was finished; its due day shows it missed. Skipped and open
+  (unclaimed) work isn't counted. No history of household pauses is applied.
+  The week or month figure is done ÷ due over the days so far, not an average
+  of percents.
+- **Day log**: `dayLogFor` (shared by Characters' popup, the grid, and the
+  app) adds `doneOn` (due here, finished later) and `from` (late from an
+  earlier day, finished here). `DayLogDialog` is now reusable and opens on any
+  day.
+- **Activity** (`AdminActivity`, migration 159): the Prisma client is
+  extended (`prisma.ts`) so a write to a followed model
+  (`activity-model.ts`: what parents set up or decide, never generated tasks,
+  reading days, synced plans, sessions or groceries) made by a parent is
+  logged after it succeeds, with only the fields that changed and secrets
+  masked. Who: a device request is marked in `requireDevice` (keyed on Next's
+  per-request headers object) and only non-GET requests from a parent count;
+  on the web only server actions (`next-action` header) by the signed-in
+  parent count, so page loads that tidy data don't. Tasks: only hand-made
+  ones for someone else; bulk changes record a count. Rows past 12 months are
+  cleared when a new one is written, once a day (there's no scheduler). About
+  half a kilobyte a row.
+- **Export** (`/admin/export`, admin only, a card on About): every table as
+  JSON, minus password/PIN/token hashes, secret settings, private calendar
+  links and the weather cache. Photos aren't included.
+
+## 2026-11 — Odd squad, progress charts, the Core test across programs (v0.732.0)
+
+- **Odd squad** is a code template (`ODD_SQUAD` in programs.ts) with
+  `builder: true`: five days named by muscle group, each with A (main lift,
+  `ladder`; deadlift `ladder:3`), B1/B2 (density pair, `density:15`) and C
+  (finisher). Slots carry `offer`, a short list by name, each with its own
+  sets when they differ (shuttle carry `carry`, holds `hold:`, clubs `clubs`).
+  Library movements were added for the lists (sandbag floor press, sandbag
+  row, sandbag to shoulder, shuttle carry, bear-hug hold, double kettlebell
+  floor press, kettlebell reverse lunge, club front swing).
+- The **block builder** replaces the usual setup for a builder program: Days
+  (a group, Core or Rest per weekday; every group once), Blocks (B and C can
+  come off), Movements (pair chips pick two; pull-ups Bodyweight / Weighted
+  pick the Pull-up or Weighted pull-up movement), Review (the weight for 5
+  reps, stored as the training max). Edit on the running program reopens it
+  and keeps the week; a builder program saves no "your version", so picking it
+  again after it ends starts over. No naming or week-count choices.
+- Targets: ladders 1-2-3 × 3, × 4, then 1-2-3-4 × 3, × 4 at the 5-rep weight;
+  week 5 two easy triples at 80% and a test set one step up (5 reps, deadlift
+  3; bodyweight: one more rep than the best). Density: sets of 5, one more
+  than last time; 20% more reps than the block's first session at that weight
+  (or Easy) steps the weight up; week 5 ⅔ the sets. Shuttle carry in lengths
+  of the garage (Admin → Workouts → Equipment, default 20 ft): 3 × 6, 4 × 6,
+  3 × 9, 4 × 9; week 5 2 × 6 with the next bag. Clubs two hands 3 × 10, 3 × 12,
+  one hand 3 × 8, 3 × 10 a side. `testMainOnly`: only main lifts test in week
+  5. Not done: "miss a rep and repeat the week" for ladders.
+- Sandbag and club weights step to the sizes on hand (`bellSizesFor`).
+- **Core test:** `startProgram` and `endProgram` (restore) no longer delete
+  Core / Arms / Isometric rows; snapshot rows standing for one are skipped.
+  `syncCoreDays` also reads this month's test from what was logged before
+  today (`testedThisMonth`, by the test's shape), so a Core day made again or
+  moved to another weekday doesn't test twice.
+- **Charts:** each day's point carries `est` (Epley over every set ≤ 12 reps),
+  `volume`, `total`, `seconds` and `density` (reps a minute from the first to
+  last set's times, only when that's 3+ minutes) via `dayNumbers`. Lift page:
+  Est. max (with top weight and the training max dashed) / Top weight /
+  Volume; sandbags and clubs (`fixed`) Reps / Density / Time. The trend
+  follows est. max for a lift in a program, reps for a fixed weight, else top
+  weight; "Flat" became "Holding · N weeks in a row" while it's still done
+  (logged in the last two weeks), else "Last done N weeks ago". A 12-week
+  consistency row (done / light / missed). Bodyweight movements still aren't
+  charted.
+
+## 2026-11 — Preview a future day's movements (v0.731.0)
+
+- A day still to come stays faded and can't be logged, but its movement cards
+  now open the movement page read-only: the planned sets and target weights
+  (the same `loadMovementLog` the day uses), labelled "Preview", with no Swap,
+  Skip, calculator or Log, and leaving saves nothing. Web: the day's container
+  blocks pointer events for everything (`[&_*]:pointer-events-none`) except the
+  movement buttons (`!pointer-events-auto`); `MovementLogger` takes `preview`.
+  Core days and other cards stay closed.
+
+## 2026-11 — Start over is a last resort (v0.730.0)
+
+- It came off the Bible reading pages. Family: a "Start over" section at the
+  bottom of Admin → Bible (keep the plan only; family plans are built on the
+  web, and the app has no family Start over). Personal: the last link in the
+  plan's options on the web, and the bottom of Edit plan in the app, with
+  both choices. The confirmation's box is "Note", bulleted.
+
+## 2026-11 — Bible round 3: one plan, two ways to add, start over choices (v0.729.0)
+
+- Carry on made a second plan, so the first one finished as far as the tracker
+  could tell. Admin → Bible now offers "Combine with <plan>" on a plan that
+  starts after another ends: its days move into the earlier plan, it's
+  deleted, the earlier one's "finished" record goes, and the family's reads
+  are re-keyed to the combined plan (raw SQL; `substring(... from n::int)` —
+  without the cast Postgres treats the parameter as a regex). The generator's
+  Carry on defaults to "Add to <plan>", which extends that plan instead.
+- Add readings has two ways, replacing push back / add to days / some of
+  each: Additional readings (extras on the same days, never counted toward
+  the plan, end date unchanged) and Insert into the plan (plan readings that
+  count; later readings move back; the new end date is shown). Both are
+  offered whatever the plan's `endKind`; the API maps the old "mix" to insert.
+  Three steps: what (pick a testament, section, book, then chapters — or
+  type), how, review.
+- An All books page (/bible/books, ?mine=1) replaces the pop-ups: a card per
+  section, small tiles. The cards and sections link to it. "Progress since
+  <date>" sits under the cards.
+- Start over asks: keep the plan (bars to 0%) or — personal only — end it and
+  start a new one (the plan is deleted, not counted as finished, and the plan
+  builder shows). Family import / export stay on the web.
+
+## 2026-11 — Extras don't start a finished book again (v0.728.0)
+
+- The app can't read intent from chapters, so it goes by where a read came
+  from: plan days and manual marks are deliberate and start a finished book
+  (and its section and testament) again; extras — added readings, a plan's
+  Christmas / Easter days, "+" lines in a typed or imported plan — are
+  one-offs and leave its bar full. Extras still count toward ×counts and
+  milestones. Typed extras can be verse-specific ("+ Luke 2:1-20"); the web
+  import example now shows a "+" line.
+
+## 2026-11 — Tracker: books on tap, milestones roll up (v0.727.0)
+
+- The 66-book grid is no longer always open. Tapping the Whole Bible card
+  opens all books in a window, a testament card its books, a section row its
+  books (web: a modal; app: a dialog).
+- Milestones are folded on the server (`rollUp` in tracker.ts) so web and app
+  match: a finished book shows only until its section finishes, a section
+  until its testament, a testament until the whole Bible. Finished plans stay;
+  only the latest manual reading and start over; at most five, newest first.
+  Bests and plans completed sit on one line in the header. The filters are
+  gone.
+
+## 2026-11 — Tracker: a book started again, and Start over (v0.726.0)
+
+- A level finished in this time through the Bible stays full, unless one of
+  its chapters is read again: then its bar shows its new time through (its
+  section and testament follow, since they've been started again too).
+- "Start over" (`TrackerReset`, migration 158; family: a parent, personal:
+  anyone for themselves) sets every bar back to 0%: bars, "since" dates and the
+  checklist's covered shading count only reads after the latest one. ×counts,
+  completions and their timing still count every read; it's logged as a
+  milestone ("Started over"). Web: a button above the sections; app: the plan
+  ⋮ menu.
+
+## 2026-11 — Tracker bars measure this time through the Bible (v0.725.0)
+
+- 0.724 drew each level's bar toward its own next time, so finishing the NT
+  dropped it to 0% (×1) while the rest of the Bible was still going. Now every
+  book, section and testament counts chapters read beyond the whole Bible's
+  count: the NT stays at 100% until the Bible is finished, then everything
+  starts over together. The ×count is unchanged. The Whole Bible card still
+  says "toward ×N"; the others say "this time through". The app reads the
+  same `progress`, so it needs no change.
+
+## 2026-11 — Bible tracker replaces reading eras (v0.724.0)
+
+- Every chapter read is a row in `BibleRead` (migration 157; scope "family" or
+  a user id). A level (book, section, testament, whole Bible) has been read as
+  many times as its least-read chapter; its n-th time through finishes with the
+  last of its chapters' n-th reads and started with the first read after the
+  time before. Pure in `src/lib/bible/tracker.ts`; ledger, manual runs and the
+  payload in `tracker-core.ts`. So "NT twice, OT once" shows NT ×2, OT ×1,
+  Whole Bible ×1 with no special case.
+- Sources: the family's published plan days become rows as they pass (synced
+  on load; later-starting plan wins a shared day; only the last month is
+  re-checked once rows exist); a person's ticked plan days ("planId|date");
+  extras (source "extra", count on the tracker only); manual checklist marks
+  (source "manual", in a `ManualReadingRun`). Re-reads are new rows, so
+  Wisdom XP now counts each read.
+- Manual: the checklist shows the open run's marks. Reset ends the run (kept
+  as a milestone with its chapters and span); marks stay counted; the next
+  mark opens a new, timed run.
+- Already logged: each person's `UserChapterRead` rows were copied by the
+  migration into an open, untimed manual run (×1, no time). The family's hand
+  marks are copied on first load into an untimed run, skipping chapters the
+  published plan already covered. `UserChapterRead` and `ChapterCompletion`
+  are no longer written; they stay as the record they were.
+- Milestones are worked out from the ledger each time, plus finished plans
+  (`ReadingPlanDone`, kept so a replaced personal plan's finish isn't lost; a
+  family plan finishes when its last plan day passes, a person's when every
+  plan day is ticked) and ended manual runs. Bests: fastest timed whole Bible,
+  NT, OT. Plan type is from what it covers: all 66 books, a full testament or
+  section, or less.
+- Plans record how they end (`endKind`): "N chapters a day" plans end when
+  their readings are done, so added readings always push them back; finish-date
+  plans and imports end on a date and offer all three choices.
+- Added readings are extras: a reading on its own day is an extra day
+  (`isExtra`), one on top of a day goes in the day's new `extra` field. Extras
+  never count toward a plan's coverage, days left or completion. Export/import
+  write them after a "+" ("2026-12-23, Revelation 16-17 + Luke 2"; "+ Isaiah 9"
+  for an extra day). Readings added with 0.723 were saved as plan reading and
+  can't be told apart.
+- Eras (0.723) are gone: `ReadingEra` dropped, the eras route removed. The app
+  0.521's eras calls fail quietly and it falls back to the old cards.
+- Marking a personal day takes its date (`iso`); an older app's passage-only
+  mark finds the plan day with that passage nearest today.
+
+## 2026-11 — Bible: reading eras, adding readings, import / export (v0.723.0)
+
+- `ReadingEra` (migration 156): one pass at the Bible, family (no owner) or
+  one person's. The open era's start is the floor every coverage figure
+  counts from: plan days on or after its date and hand marks / personal reads
+  stamped after it. Starting a new era closes the open one with a snapshot
+  (one character per chapter in canon order) and opens a new one at 0%. With
+  no era yet, everything so far is kept as "Before eras". Full passes count
+  the closed eras whose snapshot covers all 1,189 chapters, plus the open one.
+- No rows are deleted to start an era (personal reads feed Wisdom). Marking a
+  chapter again restamps it into the current era; unmarking, and the
+  checklist editor, only touch this era's rows.
+- The section chart compares this era (thick bar) with any earlier era (thin,
+  faded), OT and NT in their own colours. Personal plans get eras too, with
+  the same view. A parent starts the family's; anyone starts their own.
+- `src/lib/bible/plan-edit.ts` (pure, previewed in the browser and saved on
+  the server): `addReadings` — push back, add to days, or some of each (the
+  first N readings get their own days). Reading days follow the plan's own
+  weekdays when the plan spans two weeks or more. Picked chapters join up
+  ("Luke 2-3"); a long press or shift-click puts a chapter on the last
+  reading's day.
+- Import reads dated lines (YYYY-MM-DD or M/D/YYYY, comma or tab) or passages
+  alone laid out from a start date on chosen weekdays; a "#" line names the
+  plan; same-date lines join. Export writes the same dated format, so a plan
+  round-trips. Family: a new draft, or into an existing plan (replacing from
+  the first date). Personal: replaces the person's plan from the first date.
+  The old CSV importer and its action are gone.
+- Not done from the mockup: "a plan with no end date always pushes back" — a
+  plan doesn't record its pace, so all three choices are always offered.
+
+## 2026-11 — Bible plans: even out by verses, never a chapter twice (v0.722.0)
+
+- `src/lib/bible/verses.ts`: verses per chapter for all 66 books (ESV
+  versification, 31,103 verses; from the MIT-licensed
+  bible-passage-reference-parser data, extracted once and checked against
+  books.ts chapter counts).
+- `buildPlan({ balance: "verses" })`: a day aims at a share of verses instead
+  of a chapter count. Weekly pace: N chapters a day becomes N average chapters'
+  worth of verses for the selection; finish-by-date: the verses left over the
+  days left. Chapters are added while that brings the day closer to its share,
+  never split, so Psalm 119 reads alone and short psalms group. Keep books
+  whole still holds (a book's last stretch is swept up within 1.35× a day).
+- Admin → Bible → Generate: "Even out by verses", on by default. Personal
+  plans: a finish-date plan evens out by verses; "N chapters a day" keeps its
+  count, since that's what was asked for.
+- `expandSegments` drops a chapter already chosen (overlapping ranges, a book
+  listed twice); `repeats` counts them and the preview says so.
+- Import / export, reading eras and adding readings followed in v0.723.
+
+## 2026-11 — Rotator cuff before any upper-body work in a warm-up (v0.721.0)
+
+- `withShoulderPrep` used to add Shoulder prep at the end. Now the prep goes
+  in as one block ahead of the routine's first arm or upper-body step
+  (push-ups, pull-ups, curls, rows, dips, arm or wrist circles, presses and
+  the like; `UPPER` in warmup-library.ts), or at the end when nothing works
+  the arms. A routine with its own cuff steps (rotator / external or internal
+  rotation) gets them moved ahead of its first upper-body step (`cuffFirst`),
+  on every day, not only weight days. Everything else keeps its order.
+- Applies to the day's warm-up wherever it's resolved (plan choice, match,
+  rotation, a one-day switch), so the phone gets it from the server with no
+  app change. The routine library itself is unchanged.
+
+## 2026-11 — A sport's warm-up goes with the game; who voted (v0.720.0 / app 0.520.0)
+
+- Reverses part of 0.716: the warm-up for a game on the calendar (the card
+  beside the planned Warm-up) no longer holds the day's workout open or lists
+  under Remaining, so a finished workout gets its credit in the day's percent
+  before the game. Choosing it as the day's Warm-up (the Hockey tab) still
+  makes it that plan entry, which counts like any warm-up.
+- Today is re-judged once more (`workout.settledV4`), both ways this time, so
+  a workout held open only by the game's warm-up completes.
+- `GET /api/v1/coop` proposals add `voterNames` (parents only, else empty);
+  the app's family goal shows "Voted: …" under each idea for parents. The web
+  already shows every face on each idea, highlighted when they voted.
+
+## 2026-11 — Invitation QR with the server address; "Remaining" (v0.719.0 / app 0.519.0)
+
+- The invite box (Admin → household account row) shows a QR again, drawn as
+  SVG squares from `qrcode-generator` (`components/qr-code.tsx`, no images or
+  innerHTML; dark on white with a quiet zone for either theme).
+- It holds `kairos://join?token=…&server=<address>` (`appJoinQr`): the
+  address is the configured public URL, else the address the admin page was
+  opened on. Built at runtime and shown only to an admin; nothing in the repo.
+  The emailed and pasted links stay token-only. Owner's call to include the
+  server, reversing v0.179's "token only" so a new phone sets up in one scan.
+- The phone's in-app Scan code (app 0.519) reads it with CameraX + ZXing core;
+  a code typed or pasted still works the same way.
+- The workout card's started-not-finished list is labelled "Remaining".
+
+## 2026-11 — Re-judge today once under the new completion rule (v0.718.0)
+
+- 0.716 only re-judged a day when something on it was saved, so a day closed
+  earlier under the old rule (warm-ups and a sport's warm-up didn't count)
+  kept reading "Complete for today!". `resettleTodayOnce` runs once from the
+  task generator (every dashboard load) and lowers today's COMPLETE workout
+  tasks the new rule says aren't done. Today only: past days keep their
+  verdict, so the stricter rule never makes them overdue after the fact.
+- Verified against a local database: a movement saved with `open` holds the
+  day open and lists in `remaining`; saving it finished completes the day.
+- Sets saved before 0.716 carry no marker and still read as finished; ticking
+  or unticking any set on that movement (or pressing Log) sets it right.
+
+## 2026-11 — Day page "Logged" follows the open marker (v0.717.0 / app 0.517.0)
+
+- `DayMovementState` gains `open` (and the phone's exercises already carry
+  it from `PlannedMovement.open`). The web day page's Logged chip, the Core
+  card's count and "Logged", and the movement's done state treat a movement
+  with sets left and Log not pressed as not done.
+- Sets saved before 0.716 have no marker, so they read as finished; the next
+  tick or Log on that movement sets it right.
+
+## 2026-11 — "Complete for today!" means everything; the card shows what's left (v0.716.0 / app 0.516.0)
+
+- A movement used to count as done as soon as one set was saved, and
+  warm-ups and cardio never held the day open, so the home card said
+  "Complete for today!" with sets, a warm-up or a sport's warm-up still to do.
+- Now a movement is done when all its sets are ticked or Log is pressed (or
+  it's skipped). Both set loggers send `open: true` with a save while sets are
+  left and Log hasn't been pressed; the server keeps a day marker
+  (`WorkoutSuggestionAnswer` key `moveOpen`, slot `<plan>|<slot>`) and
+  `planDone` treats that movement as not done. No `open` = finished, so older
+  clients and past days behave as before. No migration.
+- `loadDayPlanProgress` counts Warm-up / Cardio plans (done or skipped) and a
+  sport's warm-up beside the plan (its card's done / skip), and returns
+  `remaining`: open movements by name, or the plan's name when none of it is
+  done, then the rest ("EZ bar skull crusher · Warm-up · Hockey warm-up").
+  Changing the sport warm-up's state or which warm-up the day uses re-settles
+  the day.
+- Home card (web and app): before anything is logged, today's workout names
+  as before; once started and not finished, "Left" and that list; then
+  "Complete for today!". `GET /dashboard` adds `workoutRemaining`.
+
+## 2026-11 — Workout chart pages on cards (v0.715.0)
+
+- The full-screen chart pages (a lift, a core move, Core, Cardio,
+  Conditioning and one conditioning workout) put each block on a card
+  (`bg-surface`, hairline border): the chart with its rep filters, the stat
+  tiles (were `bg-ground/40`, which vanished on the page background), best
+  weight per rep count and recent sessions. Small pop-ups are unchanged.
+
+## 2026-11 — No more class approvals (v0.714.0 / app 0.514.0)
+
+- Class approvals are removed: a child adding a class in the app could
+  propose a new subject or semester, which waited in a "Needs approval" queue
+  (web admin panel, app Settings › Parents › Class approvals, a badge on the
+  menu). Now only an admin adds subjects and semesters, in Admin → School; a
+  non-admin picks from the lists (typing a new subject is refused with "Pick a
+  subject from the list.", a new semester is ignored). Nothing was pending, so
+  migration 155 just drops `Subject.pending/proposedById` and
+  `Term.pending/proposedById`. `GET/POST /api/v1/school/approvals` and the
+  approve/merge actions are gone.
+- A class never needed a semester on the server; the forms did. The calendar
+  class form (web) and Add class (app) get "No semester" and lose "Add a new
+  semester", so summer or winter-break work can be set up with its own dates.
+
+## 2026-11 — One day of grace for superseded chores (v0.713.0 / app 0.512.0)
+
+- Chores still expire by succession, but a day later: an unfinished instance
+  stays actionable through the day the same chore next comes due (for anyone)
+  and expires the day after. Example: dog clean-up missed by one child
+  yesterday stays on his list today, overdue, while the other child has
+  today's; both can check theirs off. The successor is untouched.
+- `loadStaleContext` now finds each chore's newest instance due *before*
+  today (`latestBefore`) instead of on or before today; `isStale` is otherwise
+  the same. Still read-time only: no migration, no backfill. The rule applies
+  everywhere `isStale` is used (lists, scores, missed counts), so a miss is
+  recorded one day later than before. Workout prompts keep their own window.
+- In grace a chore is simply overdue, so it gets the overdue tint already on
+  the web's task row; the app's chore list rows get the same light red tint
+  as behind school work.
+
+## 2026-11 — A day's switched warm-up keeps Shoulder prep and yields to Hockey (v0.712.0)
+
+- 0.711's one-day switch replaced the entry's routine outright, so it lost
+  the rotator-cuff Shoulder prep added on weights days, and it beat the
+  sport-day choice: the window's Hockey tab still showed the switched routine.
+- `daySwaps` now takes the entries with their categories. A switched Warm-up
+  goes through `withShoulderPrep` like the plan's own choice, and is ignored
+  while the day's Warm-up is for its sport (Hockey shows Hockey legs; back on
+  Workout, the switched one returns). Mobility and Stretching are unchanged.
+- The Hockey tab chooses what the day's Warm-up is. On Workout, the sport's
+  warm-up stays a separate optional card on the log.
+
+## 2026-11 — Switching a day's warm-up is for that day only (v0.711.0 / app 0.510.0)
+
+- **Switch in the day's warm-up window no longer edits the plan.** It used to
+  write the weekday's plan entry, which changed every following week and
+  replaced a rotation. Now the choice is stored for that date and plan entry
+  only (`WorkoutSuggestionAnswer`, key `warmupSwap`, slot = plan entry id;
+  "-" is a plain check), so no migration. Changing a warm-up for good stays in
+  the plan builder.
+- **The swap wins over match / rotation / shoulder prep for that entry,**
+  since it is an explicit choice for the day. The sport-day choice is
+  separate and unchanged. Routines added to one day were already day-only.
+- `POST /api/v1/workouts/day-warmup { date, plannedWorkoutId, warmup }` for
+  the app; `plan/warmup` keeps its meaning (the plan).
+
+## 2026-11 — Backgrounds, Graphite and a tidier Appearance picker (v0.710.0 / app 0.509.0)
+
+- **Backgrounds are a second choice beside the color theme,** independent of
+  it: Classic (the original cool grey / navy, and the default, so nothing
+  changes until someone picks), Stone, Mist, Linen, Sage, Lavender, Blush and
+  Two-tone (linen page, sage cards). Each sets the neutrals only (page, card,
+  border, shaded band, muted text, ink) and has a matching dark set that
+  Mode switches to. Mocked up and agreed on the design canvas first.
+- **Graphite,** a warm dark grey, is a ninth color; its dark-mode accent is a
+  light warm grey (#c9c4bc) with dark text on it.
+- **Web: `appearance.mode`** (system / light / dark) and
+  `appearance.background` settings. The old on/off `appearance.dark` is read
+  when no mode is saved, so a dark household stays dark, and is kept in step.
+  "System" sets the `dark` class in the browser before paint with a tiny
+  script that carries the request's CSP nonce, and follows the device live.
+  Background CSS is `html[data-bg]`; light rules carry `:not(.dark)` so they
+  never outrank the dark ones.
+- **The picker** (web Admin → Appearance; app Settings → Appearance): a live
+  preview, Mode as one segmented control, Color as one row of dots with the
+  name on the right (the app's one-row-per-color list is gone), Background as
+  eight tiles that show the current mode's colors. Everything else on those
+  pages is unchanged. The web stays one choice for the household; the app is
+  per phone, as before.
+- **Not changed:** the home-screen widget keeps the Classic neutrals (it
+  follows the color and mode as before).
+- **ROADMAP corrections:** the household order is set by dragging the person
+  cards in Admin → Chores (not the setup page), and first-run setup is one
+  /setup page with sections, not a step-by-step wizard.
+
+## 2026-11 — Roadmap tidied against the code (v0.709.0)
+
+- **One backlog list** at the top of ROADMAP.md now holds every open item;
+  each was checked against the code on 13 Nov.
+- **Dropped:** "act as me" on the shared tablet; Kairos-side TOTP (the API
+  that skips Authelia has device tokens and password + code enrollment);
+  shift entry and hours totals under Work; recurring grocery staples;
+  bonus-size tuning; a lighter collect mechanic; the interface items (nav-bar
+  motion, icon badges, touch tiles, phone layouts: the web is a shared screen
+  and phones use the app).
+- **Closed as done:** the School card (overdue, today, progress, extra work;
+  "Edit completion" covers bulk-marking); per-person dashboard ordering (the
+  household order drives it); the first-run setup (the /setup first-run
+  flow).
+- **Added:** mark a subscribed calendar as Work, the one Work item wanted.
+- **Checked, still open:** the Family filter. The Family badge selects
+  everyone; family events and holidays always show; it isn't its own toggle.
+
+## 2026-11 — Bodyweight work-up hints start from last time (v0.708.0 / app 0.508.0)
+
+- **The problem:** a program's target filled every set's hint, so 5 × 10
+  pull-ups showed "10" in each box even for someone at 3 a set, and ticking an
+  empty box logged 10.
+- **The rule:** for a movement logged as reps or time with no weight (a
+  bodyweight move working up to its target), a target set's hint is last
+  time's value for that set. Ticking an empty box logs that. The target stays
+  in the scheme line ("Today 5 × 10").
+- **Unchanged:** the first time (no last time for that set), warm-up sets,
+  and any weighted movement or set with a weight (5/3/1, programs with a
+  training max) keep the target as the hint. A set beyond last time's count
+  takes the target.
+- **Where:** `workUpHint` in `src/app/exercise/day-log.tsx` (web) and in the
+  app's `MovementSetsViewModel`; no server change.
+- **Also:** ROADMAP wording for PC play time (maybe a small program on the PC;
+  the ROG Ally is covered) and for ice-time (it reads the rink's schedules
+  today; the open item is picking up each season's new links on its own).
+
+## 2026-11 — Monthly tests compare with the last test (v0.707.0 / app 0.507.0)
+
+- **The problem:** a test's "Last time" (and the greyed hints inside it) was
+  the last day the move was done. The plank isn't in any Core rotation, so
+  that was usually last month's test; but Isometric's wall sit, dead hang and
+  push-up hold are also in its regular workouts, so their "last time" was a
+  3 × 30s day, not last month's max.
+- **What counts as a test day** (`src/lib/workouts/test-history.ts`): tests
+  aren't tagged when logged, so it's recognised by shape: the most recent
+  earlier day on which every hold in the test was logged with exactly one
+  set. The test is one max hold each; the regular workouts do 2–3 sets. It
+  works on existing history with no migration. A day where the holds were
+  done one set each outside a test would count too; that's rare.
+- **Where it shows:** the test card (the plank's "Last time …"; Isometric's
+  "Last time 1:35 · 1:02 · 0:48" until one is logged) and the hints in the
+  test's logger (`loadMovementLog(..., test)`, `workouts/sets?test=1`). The
+  same holds opened from a regular workout still show the last workout. A
+  swap shows the swapped movement's history, as before.
+- **App 0.507** shows the same; the plank card needed nothing (the day
+  payload's `last` is the last test for test movements).
+
+## 2026-11 — Full Content-Security-Policy; Vitest 5 (v0.706.0 / app 0.506.0)
+
+Both were optional follow-ups from the threat review; done now so the header
+and the audit are both complete.
+
+- **The policy** (`src/lib/csp.ts`, set by `proxy.ts` on every request it
+  sees, redirects included):
+  `default-src 'self'; script-src 'self' 'nonce-…' 'strict-dynamic';
+  style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
+  font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';
+  form-action 'self'; frame-ancestors <FRAME_ANCESTORS or 'self'>`.
+- **Scripts:** a fresh random nonce per request goes on the request's policy
+  (and `x-nonce`); Next reads it and stamps every script it renders.
+  'strict-dynamic' lets the chunks those scripts load run. Every HTML page
+  was already rendered per request, so nothing loses static rendering.
+  Kairos has no inline or third-party scripts of its own.
+- **Styles stay 'unsafe-inline':** the UI sets colours through `style`
+  attributes everywhere, which a nonce can't cover. Inline styles can't run
+  code, so the script rule is where the protection is.
+- **No `upgrade-insecure-requests`:** Kairos is also reached over plain HTTP
+  on the LAN, where that directive would break every asset.
+- **Dev only:** `'unsafe-eval'` (React's dev error stacks) and `ws:`/`wss:`
+  for hot reload.
+- **`FRAME_ANCESTORS`** still widens framing exactly as before;
+  `X-Frame-Options: SAMEORIGIN` is still sent when it isn't set.
+- **Vitest 5.1 with Vite 8** (exact). Test-only, never in the image; the
+  config needed no change. `npm audit` (dev included) is now clean.
+- **App 0.506:** the Game time screen shows the ROG logo for `"ally"`, from
+  one ordered list like the web, so an unknown source draws nothing.
+
+## 2026-11 — ROG Ally as a third game-time source (v0.705.0)
+
+Collector 5.0.0 adds a third source, `"ally"`: per-app usage on a handheld
+Windows PC from Microsoft Family Safety. Its minutes are already merged into
+the credited total on the collector's side. The payload shape is unchanged:
+`"ally"` can now appear in a friend's `platforms` list and in a game row's
+`platform`.
+
+- **No ingest, schema or minutes change.** The ingest route stores
+  `platforms` as given (comma-joined) and each title's `platform` as given; it
+  never branched on the value.
+- **The icon:** `PlatformIcons` (`src/components/game-cards.tsx`, the /games
+  household cards and the per-kid detail) now draws from one ordered list
+  (Xbox, Steam, ROG Ally), each its brand mark in its brand colour. The
+  Ally has no logo of its own (it's sold under ASUS's Republic of Gamers
+  brand), so it shows the ROG mark from Simple Icons (`republicofgamers`,
+  #FF0029), the same source as the Steam glyph, labelled "ROG Ally". 0.704
+  first shipped a generic handheld outline; it was replaced before deploy.
+- **Unknown values draw nothing.** A source not in the list is skipped (no
+  icon, no crash), and the hover title names only the known ones, so a future
+  source needs only a new list entry.
+- **Branching checked:** nothing else in the web reads `platforms` or a
+  title's `platform` by value. Top games merge by title only, so a game played
+  on two sources still shows once.
+- **App:** the Game time screen gets the same icon in a follow-up release; it
+  reads the same `platforms` list from `/api/v1/game-time`.
+
+## 2026-11 — Late classes in Catch up; paused classes in the app (v0.703.0 / app 0.505.0)
+
+- **Catch up lists every late class.** A class with nothing overdue that's
+  still set to finish after its deadline (a whole-year Geography ending in
+  June, say) wasn't listed, because there was nothing to restart. It's now
+  shown locked beside the behind ones, without an overdue count, so every
+  class that runs past the year is in one place. It still isn't moved.
+- **"Falling behind" after a re-baseline:** the tag means an undone lesson
+  dated before today. A re-baseline leaves none, so the tag clears until a
+  lesson is missed again; a locked class keeps it. Now covered by a test.
+- **API:** school progress rows (`/api/v1/school` and the dashboard) carry
+  `paused`, `done` and `total`; the app shows "paused" and done/total for a
+  paused class instead of a finish date.
+
+## 2026-11 — Pausing a class for one student (v0.702.0, migration 154)
+
+For a class a student should work through at their own pace, with no
+schedule to fall behind on.
+
+- **One switch per plan** (a plan is one student's class): Pause / Resume on
+  each published plan in Curriculum plans, with a "paused" badge.
+- **Paused means one open item.** Only the next undone unit (plan order) has
+  work; later units lose their pending work and dates, so nothing is
+  scheduled ahead. On pause, that item is due on the class's next meeting day
+  (today if it meets today), even if it was dated later or is overdue.
+- **Never late.** Once a day, before the school views read anything,
+  `rollPausedPlans` moves a paused class's open item that's now in the past to
+  the next class day. Rolling (rather than `lateAfter`) keeps every overdue
+  count, the app and past days' stats right without teaching each of them a
+  new rule: past days never hold a paused item.
+- **One a day, more if they want.** Finishing the open item (any path:
+  `syncPlanUnitDone` is the one hook) creates the next, due on the class day
+  after today. It shows under "Do some extra work", so the student can pull it
+  into today and keep going. Reopening an earlier item makes it the open one
+  again.
+- **Progress shows what's done:** a paused row reads "paused" and done/total,
+  with no pace tag or finish date. Catch up, compress, the term compile and
+  the year calendar's overflow all leave paused plans out.
+- **Resume** lays out every remaining unit from the next school day at the
+  plan's own pace (re-fit if it's fit to term), even past the deadline.
+  Unpublishing a plan clears the pause; republishing schedules it normally.
+- **App:** shown as "paused" with done/total from app 0.505 (server 0.703).
+
+## 2026-11 — Re-baselining school work that's behind (v0.701.0)
+
+Some students had fallen well behind on curriculum plans that would still
+finish before the end of the year. Being behind never reshuffles a schedule
+(`reschedulePlanForward` only moves future work), so the overdue lessons piled up as late work.
+Now an admin can restart it.
+
+- **Where:** a Catch up section at the top of Curriculum & schedule, shown
+  only when someone has overdue plan work. One button per student and a
+  Re-baseline all; each asks for a confirm that names the restart day.
+- **What moves:** every undone unit of a behind class (overdue, today's and
+  future), oldest first by plan order, from the **next school day after
+  today**. Today's work moves too, or yesterday's lessons would land after
+  today's. It's meant to run after school is done for the day, so work not
+  yet logged isn't moved by accident. Excused (skipped) items stay put;
+  completed ones are never touched.
+- **When a class is skipped:** the deadline is the end of the class's own
+  window (the last term's end for a whole-year plan, its term's end for a
+  one-term plan, so a term class re-baselines against its term). A plan at
+  its own lessons per day that would finish after that is left alone, and
+  shown locked: some students' work deliberately runs past the semester for
+  them to self-manage. A **fit-to-term** plan re-fits to its deadline instead
+  (extra items on the first days, as when it was published) and is never
+  skipped.
+- **What updates:** the task's due date, the school work's start date (null
+  for tests, as everywhere) and the plan unit's scheduled date. Every admin
+  screen reads those (Student work, plan view, the year calendar, the School
+  card), so they're all current at once. The first planned date is kept in
+  `originalDueDate`, so a lesson still reads "moved from …". A unit whose task
+  was completed but whose `done` flag never caught up is fixed on the way.
+- **Worked out twice:** the preview and the apply each work it out from the
+  database, so a stale page can't move the wrong things; a second run on the
+  same day moves nothing (nothing is overdue).
+- **Known effect:** past days stop counting the moved lessons as missed,
+  because they're no longer due on those days. That's the point of a
+  re-baseline, but it does make earlier days' completion look better.
+- Curriculum plans now show "fit to term" on plans that use it.
+
+## 2026-11 — Next.js 16 (v0.700.0)
+
+Its own release because it's a major version. Reason: the last production
+audit warning was Next 15's bundled PostCSS (build-time only, not exploitable
+here), and only Next 16 drops it. `npm audit --omit=dev` is now clean. React
+stays at 19.2.8 (Next 16 needs 19.2 or later); `@types/react` 19.2.18 and
+`@types/react-dom` 19.2.7.
+
+- **`src/middleware.ts` is now `src/proxy.ts`**, exporting `proxy`. Same gate,
+  same matcher, same headers. Proxy is always the Node runtime and refuses a
+  `runtime` option, so that line went (0.699 had set it to Node anyway).
+- **Builds use Turbopack** (Next 16's default). There's no custom webpack
+  config, so nothing to port. The companion-sprite route builds file paths at
+  runtime, which made Turbopack trace the whole project (source, docs, tests)
+  into the server output; `turbopackIgnore` comments on those two calls keep
+  it out. `public/` is copied into the image separately, as before.
+- **`next lint` was removed by Next 16.** No ESLint config or package was ever
+  installed, so the `lint` script was dropped rather than replaced. The type
+  check (`scripts/preflight.sh`, and `next build` itself) is the check.
+- **`tsconfig.json`**: Next 16 rewrote `jsx` to `react-jsx` and added
+  `.next/dev/types` (dev and build now write to separate folders). Committed
+  so builds don't modify a tracked file.
+- **Checked and not affected:** no sync `cookies()` / `headers()` / `params` /
+  `searchParams` access (the type check passes), no `revalidateTag`, no
+  parallel-route slots, no `scroll-behavior` override, no AMP or runtime
+  config, `next/image` unused and image optimization already off. Node 22 in
+  the Docker image meets the 20.9 minimum.
+- **Not changed:** the dev-only test tools (Vitest 3 and its Vite) still show
+  audit advisories. They never reach the image; moving to Vitest 5 is a
+  separate job.
+
+## 2026-11 — Sign-in required everywhere on the web, parents only; threat-review fixes (v0.699.0 / app 0.504.0)
+
+From the code-level threat review (13 Nov):
+
+- **The web always requires a parent's sign-in.**
+  - Before, web actions checked nobody unless `REQUIRE_LOGIN` and
+    `SESSION_SECRET` were set as container variables, because the edge
+    middleware couldn't read the database.
+  - Now middleware runs on the **Node runtime** and checks every request
+    through `web-gate.ts` against the database (the DB-stored secret, the
+    user, credentialVersion and role). That one implementation is shared with
+    `currentUser` / `isAdmin`.
+  - `REQUIRE_LOGIN` and the Device page's "Require sign-in" switch
+    (`setRequireLoginAction`) are gone.
+- **Web sign-in is for admins only.** A shared screen is signed in by a parent
+  and keeps acting for the household, which the guards already allow for an
+  admin. A child's account is refused at sign-in ("use the app"), and a
+  child's existing web cookie stops verifying. Children use the phone app
+  (device tokens, untouched).
+- **First run** (no active admin with a password) stays open so setup can
+  happen. Once closed, it stays closed for the life of the process.
+- **The PIN is a nuisance guard, not security:**
+  - 3 tries per 15 minutes, keyed per device, so one person can't lock a
+    parent out elsewhere;
+  - 4–8 digits still;
+  - the unlock cookie is signed with a key that includes the PIN hash, so
+    changing or clearing the PIN ends every other device's unlock;
+  - with no PIN, a signed-in parent is admin.
+- **Headers.**
+  - `X-Content-Type-Options: nosniff` and `Referrer-Policy: same-origin` on
+    every response (`next.config.ts`).
+  - Middleware sends CSP `frame-ancestors` (default `'self'`, plus
+    `X-Frame-Options: SAMEORIGIN`). The `FRAME_ANCESTORS` variable can widen
+    it for a dashboard that embeds Kairos.
+- **Sign-in `next` redirect:** `/\evil.com` was accepted and the browser
+  read it as `//evil.com`. `safeNext` (`src/lib/safe-next.ts`) now refuses
+  backslashes, control characters and `//`.
+- **Calendar-feed address filter:** `dns.lookup` returns IPv4-mapped IPv6 as
+  `::ffff:7f00:1`, which the old string check let through. `isBlockedIp` now
+  parses IPv6 to bytes and catches mapped, compatible, NAT64 (64:ff9b::/96)
+  and 6to4 (2002::/16) forms, plus bracketed literals and zone ids. It also
+  blocks 192.0.0.0/24 and 198.18.0.0/15.
+- **One minimum password (8)** everywhere (`MIN_PASSWORD` in auth.ts). The
+  phone join/reset flow had allowed 6; app 0.504 matches.
+- **Co-op propose and vote** web actions now `requireCanActFor` the person.
+- **Unguarded helpers moved out of `"use server"` files**, since every export
+  there is a callable action. The build manifest registered all 376; IDs are
+  random per build and these weren't shipped to browsers, so this was defence
+  in depth. The moves:
+  - the school approve/merge cores, `persistClass`, `meetingEventData` and
+    `WEEKDAY_TOKENS` → `school/structure-core.ts`;
+  - `addSchoolWorkToTodayCore` and `reschedulePlanForward` →
+    `school/plan-core.ts`;
+  - `setSubscribedRemindersCore` → `calendar/subscribed-reminders-core.ts`;
+  - `loadPauses` → `queries/pause-list.ts`.
+- **Smaller fixes:** the game-time ingest token is compared in constant time;
+  the stale `auth/enroll` entry is off the public-route list; `loginUser`
+  rate-limits by the same client address as the API (`clientIpFromHeaders`,
+  honouring `REAL_IP_HEADER`).
+- **Checked:**
+  - unit tests (safeNext, isBlockedIp); DB tests (`web-gate.test.ts`: first
+    run, admin-only, expiry, tamper, credential version, PIN-bound unlock);
+  - a production build and the standalone server driven by Playwright:
+    signed out → /login; `/api/v1` → 401 JSON; headers present; a child
+    refused; a parent signs in and `/\evil.com` stays on site; PIN screen,
+    a 4th wrong PIN refused, another device unlocking; first run open.
+- **Reviewed and sound:**
+  - password hashing, signed cookies, device tokens, invite codes, and
+    forgot-password not revealing who has an account;
+  - all 186 guarded API routes, ownership on every by-ID change, and
+    parent-only role checks;
+  - uploads, the sprite route, and the absence of risky HTML or links;
+  - no committed secrets.
+
+## 2026-11 — Security updates: Next.js, Prisma, Nodemailer; image endpoint off (v0.698.0)
+
+- **Next.js 15.5.21 → 15.5.29.** This fixes two critical unauthenticated
+  remote-code-execution advisories in the image optimizer (crafted AVIF / SVG),
+  a server-action denial of service, and SSG/ISR cache poisoning. It's a patch
+  within 15.5; no code changes were needed.
+- **`images: { unoptimized: true }`.** Nothing uses `next/image`, so
+  `/_next/image` is switched off and now 404s. middleware.ts skips that path,
+  so before this it was reachable without sign-in. Turning it off removes the
+  surface whatever the advisories say next. Re-enable it only together with a
+  current Next.
+- **Prisma 7.9.0 → 7.10.1** (client, adapter-pg, CLI; pinned exactly, because
+  `latest` points at an 8.0 release candidate). The flagged parts were the
+  CLI's dev tooling, not the running app.
+- **Nodemailer 9 → 10.5.0** (a process-global DNS cache reused the TLS
+  servername across transports). The only breaking change is "Node 20+", and
+  the image runs node:22. It ships its own types, so `@types/nodemailer` is
+  removed. `send.ts` is unchanged.
+- `npm audit fix` also updated indirect packages (sharp, nanoid,
+  source-map-js) without breaking changes.
+- **Remaining:** Next's own bundled PostCSS 8.4.31. It's build-time only (it
+  processes Kairos's own CSS, never user input), and the fix is Next 16, so it
+  waits for a planned 16 upgrade.
+- **Checked:**
+  - preflight (full type check);
+  - a production `next build`;
+  - the standalone server: pages 200, `/_next/image` 404, `/api/v1/me` 401
+    JSON;
+  - Nodemailer 10 loads via both `require` and `import`, and sends through a
+    JSON transport;
+  - vitest.
+  Real SMTP delivery wasn't tested here; Admin → Settings → Email → Send test
+  is the check after deploying.
+- The code-level threat review is next. Its findings will be reported before
+  any fixes.
+
+## 2026-11 — Three decisions recorded (docs only, 13 Nov)
+
+- **Hockey trusts the rink's own numbers.** "Full" comes from the rink's
+  `RemainingSpots`, passed through unchanged by ice-time, even when it
+  disagrees with enrolled / max. A rink can show "2/3, Remaining spots: 0"
+  while it holds a dropped spot (seen 13 Nov, on the rink's own page too).
+  Kairos follows the rink: it never offers a spot the rink won't sell, and the
+  count flips to open on the next read after the rink frees it. This is not a
+  bug, so there's no "held" state and no max − enrolled override.
+- **Minecraft Java stays partly tracked.** No server will be hosted, so exact
+  play times (server log / RCON) are not pursued. The collector's `ally`
+  source covers app-open time on a managed Family Safety PC; a shared or
+  unmanaged PC stays untracked.
+- **Growth lost to switches before 0.697 is not restored.** Switches aren't
+  logged, so it couldn't be rebuilt exactly, and it won't be patched by hand.
+
+## 2026-11 — Switching characters keeps growth with the one that earned it (v0.697.0, migration 153)
+
+A child reported losing a newly hatched character's progress after switching
+it out and back. Run against a real database, three things turned up:
+
+- **Bug: `growthBanked` was an INTEGER** (migration 121, from when growth was
+  whole squares). Since 0.603 a day can be worth part of a square, so banking
+  2.33 stored 2, and under half a square stored 0. Every switch lost (or
+  gained) up to half a square.
+  - Migration 153 makes it DOUBLE PRECISION.
+  - Fractions already rounded away can't be recovered, because switches
+    aren't logged.
+- **Rule changed: a day was credited to whoever held it at its end.** That
+  was the 0.603 rule. A character hatched and switched out the same evening
+  lost its hatch day to the next one, which is the reported case.
+  - Now the outgoing character banks everything, today so far included.
+  - The incoming one stores `tenureCreditOffset` (the day's credit at the
+    switch) and counts only what's earned after it, capped so it never goes
+    negative. The day is split at the switch.
+  - A first companion gets the whole day. Perfect weeks still go to whoever
+    holds the week when it ends.
+- **Rule changed: switching away mid-deepen reset the deepen.** Now its
+  progress is banked (`deepenBanked`), and on return deepening restarts from
+  the banked amount.
+- `test/companion-switch.test.ts` runs `activateCompanionCore` and
+  `loadProgression` against a database, with the clock set to specific days.
+  It covers:
+  - away and back the same day;
+  - parts of a square;
+  - the hatch-day case;
+  - a day split at the switch;
+  - a list that grows after a switch;
+  - deepening resuming.
+  It skips without `DATABASE_URL`. It loads the database modules lazily, so
+  it needs no generated client to skip.
+- The earlier "random switch histories sum exactly" test was a pure model. It
+  could never have caught a column type, so this one runs the real code.
+
+## 2026-11 — Growth pace and egg rarity checked against real data: no change (docs only, 13 Nov)
+
+- From a scoring snapshot, the target was an egg about every three weeks, with
+  rares feeling about right as they are.
+- The children's usual completion (about 60–75% of each day's list) gives
+  4.3–5.2 growth a week, so an egg every 2.3–2.8 weeks: on target. Full
+  completion with perfect weeks is about 1.3 weeks.
+- Egg luck there is 0.3–0.5, so rare or legendary comes up on about 16–22% of
+  hatches. A family-goal target of 15 days means finishing about half the
+  list.
+- Nothing changes: 12 to adult, 6 to deepen, a +2 perfect week, the rarity
+  weights in `rarityWeights`, and a target of 15.
+- The snapshot is at Admin → Settings → Scoring & rewards (`/admin/season`;
+  older docs called it the Season planner). It holds household names, so it
+  stays out of the repo.
+
+## 2026-11 — Admin auto-lock, full-body moves, one heat range, web Remaining sets gone (v0.696.0 / app 0.503.0)
+
+- **Admin auto-lock after idle time.** `adminIdleMinutes` (5, 15, 30, 60 or
+  240; default 240) in Admin → Settings → Device, shown only when a PIN is set.
+  - The unlock cookie keeps its `expires.signature` format, so the edge check
+    in middleware.ts is unchanged; only its length moved from a fixed 4 hours
+    to the setting.
+  - `AdminIdleLock` (admin layout, client) calls `touchAdminAction` on every
+    admin page and on taps or typing (at most once a minute).
+    `touchAdminSession` re-issues a still-valid cookie with a fresh expiry and
+    never starts an unlock. When the time runs out the page goes to `/unlock`.
+  - The layout guard alone only covers hard loads, which is why activity is
+    tracked on the client.
+- **Full-body moves split** (involvement.ts).
+  - Lifts get the muscle that drives them: cleans, snatches, thrusters and
+    the sandbag over shoulder → Legs; clean and press / jerk → Shoulders;
+    Turkish get-up → Core; mid-thigh pull → Back. They now count for that
+    muscle's progress like any of its own lifts.
+  - Conditioning moves (burpee, bear crawl, jump rope, slams, wall ball,
+    throws) carry `endurance` and no muscle. Logged as sets outside a
+    conditioning workout, they add minutes to the heart: their time, or one
+    minute a set (`heartMinutes`), as a conditioning entry. Inside a
+    conditioning workout the workout's minutes already count, so nothing is
+    added twice.
+  - A move filed under a real muscle (rotational slam under Core) keeps that
+    muscle and adds no heart minutes. Mobility moves stay out.
+- **One heat range.** `buildHeat` builds only "12w", the one both clients
+  read (`HeatGroupSummary`). `ranges` stays an array so the contract and old
+  phones are unaffected. The web's unused saved range preference
+  (`kairos.heat.range`) is gone.
+- **Web Remaining sets removed** (`day-log.tsx`), matching app 0.502. Hints
+  are last time's or the program's weights.
+- **Web all-day form** uses the app's rule (`timeInvalid`): an all-day event
+  can't end before it starts, and a timed one must end after it starts.
+  - The end goes red (`TimeSelect invalid`, the end date's border) and Save
+    stays off until it's fixed.
+  - A repeating series is never invalid, because its end is a time only.
+- **App pop-ups:** all 43 stock `AlertDialog`s (22 files) are now
+  `AnimatedDialog`. `AnimatedDialog`'s content sits in
+  `Column(Modifier.weight(1f, fill = false))`, so long content shrinks before
+  the buttons leave the screen, as Material's dialog does.
+- **Decisions recorded, no code:**
+  - Push stays local; self-hosted UnifiedPush (ntfy) is the noted path if
+    instant server pushes are ever wanted, never FCM.
+  - The web keeps Personal mode as an unadvertised admin option.
+  - Built-in event-kind colours and the web personal-view tweaks (#2, #4)
+    are dropped.
+  - The collector's `_post` default timeout goes from 20 to 5 the next time
+    the collector is changed.
+- **XP calibration is still open.** 0.603 replaced incubation XP with growth
+  (12 to adult, then an egg) and tilted rarity by the last 14 days'
+  completion, but neither has been checked against real data since. It needs
+  a fresh scoring snapshot and a target pace.
+
+## 2026-11 — Loose ends: shared web, PIN stays, one-offs never pause, dead heat code (docs; app 0.502.0)
+
+- **The web is a shared device.** It gets no personal settings: no sidebar
+  settings icon, no personal defaults. Personal settings live in the phone
+  app. Admin keeps its PIN on the web, because it is nearly always the shared
+  screen. The ROADMAP items for a web settings area, personal defaults and
+  "a parent's login grants admin" are dropped.
+- **Hand-added one-off tasks never pause.** A household or personal pause
+  silences only what Kairos schedules (`PAUSABLE_CATEGORIES`: chores and
+  workout prompts). The "auto-suppress one-offs on paused days" item is
+  dropped.
+- **Remaining sets removed from the app** (0.502.0). The −5 / 0 / +5 row on
+  the log-a-movement screen moved the grey hint weights of sets not entered
+  yet. The row, `RoundStep`, `shiftBy`, `step` and the `shift` state are gone,
+  so hints are last time's (or the program's) weights. The web logger's own
+  "Remaining sets" (`day-log.tsx`) is untouched; whether it goes too is open.
+- **Dead heat-map code removed from the app** (0.502.0): `HEAT_RANGES`,
+  `HeatRangeChips`, `heatFills`, `heatAvailable`, `heatShade`, `HeatKey`,
+  `HeatDetailDialog`, `HeatStat`. The server's `ranges` stay: both clients
+  read the "12w" range for `HeatGroupSummary`. API.md had called them "for
+  older phones"; corrected.
+- **ROADMAP cleaned against the code.**
+  - Ticked as done: device modes, per-resource ownership, personal views, the
+    dashboard follow-up prompts, recurring tasks, per-device revocation, the
+    Authelia bypass, the Room page cache, app offline support, the API
+    surface, calendar phases and cycle-based workouts.
+  - Removed as superseded: the FCM notifications epic (local notifications
+    instead), the retired game-time allowance, PWA and a native wrapper (the
+    native app), expanding subscribed repeat rules, the one-time Class pop-up
+    (the app goes straight to the class form), web gestures, the old
+    companion-eras idea line (built; essence lives on in the collect
+    mechanic), and the duplicate personal Bible plan lines.
+
+## 2026-11 — Every migration registered; docs brought current (v0.695.0, web only)
+
+- `MIGRATIONS` in `src/lib/version.ts` had stopped at `127_marine_corps_birthday`
+  while `prisma/migrations` reached `152_person_pause`. Deploys were unaffected,
+  because Prisma applies the folder. But `/about` compares the database against
+  this list, so a partial upload missing any of 128–152 would have read as "all
+  applied". All 25 are now appended in order. The rule stands: a release that
+  adds a migration appends it at the END of `MIGRATIONS` in the same change.
+  Check it with `ls prisma/migrations` against the list's last entry.
+- The docs were audited against the code and the `CHANGES` history.
+  - ROADMAP's "Current status" had sat at 14 Oct (0.581 / app 0.389). It was
+    rewritten from 0.582–0.695 and app 0.390–0.501.
+  - Finished items were ticked: the school catch-up note (fixed in app 0.288),
+    subscribed-event reminders and class-form parity in the app, carries on
+    the map, and midnight rollover.
+  - README now covers the workouts rework and the Hockey page, and says
+    Shopping instead of Groceries.
+  - ARCHITECTURE gained rows for `training-heat.ts`, companion-lift stepping
+    with bell sizes, `chart-tip.tsx`, the full-page rule, `SECTION_CARD` and
+    `DayRollover`, and now describes preflight's real Prisma client.
+  - API.md's inventory lists the newer workout routes and notes 0.694's
+    unchanged shape.
+- Minecraft Java is documented from the collector's code, not the old note. It
+  is partly tracked through the `ally` source on a managed Family Safety PC
+  when `GAME_APPS` lists the launcher, and untracked on a shared or unmanaged
+  PC. Exact play times still need a decision (host the server for RCON).
+
+## 2026-11 — Companion lifts step only after Easy; bells step by sizes owned (v0.694.0, web only)
+
+- v0.665 stepped a companion set up when that set reached the top of its
+  reps OR the movement felt Easy, so on a fixed scheme (5 × 12) finishing
+  every rep bumped every set however it felt — a Solid reverse fly got +10.
+  Now it steps only when last time felt Easy AND that set reached its reps;
+  Solid, Hard, Too hard or no answer holds. A range still climbs a rep per
+  set to the top, then holds there until Easy. A program's own main lift
+  (`progress`) and 5/3/1 waves are unchanged.
+- The step's size came from the plan slot (`role.lower`): a fly placed in
+  the 5/3/1 Hinge slot (good mornings, 5 × 12) stepped 10 lb. It now comes
+  from the movement done (LEGS or DEADLIFT → lower), a swap included.
+- Dumbbells and kettlebells (`bellOf`) step to the next size in the
+  household's equipment list (`bellSizesFor`, Admin's sizes, same unit):
+  10 → 20 with 5, 10, 20; at the heaviest bell it holds (a range stays at the
+  top of its reps). Light-week 80%, estimates and main-lift steps land on a
+  bell owned (`bellAtOrUnder`, `nextBell`). No sizes listed: steps as before.
+- The "Try … for your top set?" suggestion (no program target) needs Easy
+  too (was Easy or Solid) and names the next bell owned, or nothing at the top.
+
+## 2026-11 — Endurance chart pop-ups; roadmap tidy (v0.693.0, web only)
+
+- `useChartTip` now on the Cardio page's pace chart (transparent r=10
+  targets drawn last, over the best ring), its weekly bars, Conditioning's
+  weekly bars and a workout's attempt dots (`Dots tips`). Bars take the
+  whole column as the target so an empty week can be pointed at; the
+  Workouts cards keep plain bars, since each card is one button.
+- The pop-up flips below only near the top of the SCREEN (was: of the
+  chart), so a tall bar's pop-up stays above it.
+- Conditioning's attempt dots were still the old amber; now
+  `CONDITIONING_COLOR`, lighter for other attempts.
+- Roadmap: the Android "rest of the native client" line ticked — Room and
+  WorkManager shipped, the phone camera scans the `kairos://join` QR, FCM
+  was replaced by local notifications.
+
+## 2026-11 — Chart hover pop-up (v0.692.0, web only)
+
+- `components/chart-tip.tsx`: `useChartTip()` + `<ChartTip>` replace SVG
+  `<title>` tooltips (slow, plain, never on touch). A mark spreads
+  `markProps(title, detail)` and carries `data-tip`; a mouse shows it on
+  hover, a tap keeps it until the next tap anywhere (a document
+  listener while it's open). It sits above the
+  point, or below when within ~50 px of the chart's top, clamped to the
+  chart's width. Marks keep an `aria-label` with the full text.
+- Used by LineChart (replacing its tap-for-a-line-under-the-chart), Compare's
+  bars and the plank-test chart.
+- Dropped from the roadmap: the household progress overview in Admin
+  (covered by the Workouts cards, Compare and Admin → Exercise per person)
+  and the shared-element card animation.
+
+## 2026-11 — Edit plan and HIIT builder restyled (v0.691.0, web only)
+
+- `SECTION_CARD`, `SECTION_LABEL` and `CHIP` in `exercise/buttons.ts` are the
+  full pages' shared section card, its uppercase label and the filled choice
+  chip (as on Family WOD and Pause).
+- Edit plan: the intro paragraph and "leave blank" hints are gone (no
+  explanatory text in the UI); Schedule card holds Starts / Ends (blank reads
+  "Now" / "No end"), Pause / Resume and Order of the day; day rows are white
+  cards, today ringed in the accent.
+- HIIT / CrossFit: Workout (pick, or name and type), Movements (chips) and
+  Result (result and notes) cards, then the filled Log workout button. No
+  behaviour changes.
+
+## 2026-11 — Carries on the map; endurance rises and eases (v0.690.0 / app 0.500.0)
+
+- Carries were FULL_BODY, which has no place on the map, and their assisting
+  credit stopped counting once assisting work fell to ¼ (v0.689). Now farmer
+  carries and holds are Arms (grip) with back, core and legs assisting;
+  suitcase / one-arm / offset carries are Core; overhead carries Shoulders.
+  A movement filed under Full body that the table knows takes the table's
+  primary; any other filing still wins.
+- Endurance used the old streak rule (red at 200 weighted min for five
+  weeks, and stayed). Now: 60 weighted minutes is an active week, 4 of 6
+  active is pale yellow, a 4-week average of 120 yellow, and progress on the
+  6-week average against 12 / 26 weeks back gives orange (+10%), dark orange
+  (+20%) and red (200+ a week, +15% and +25%). Same 2-week rise, 3-week ease.
+- Roadmap: ticked cardio graphs, sport/stretching/isometric, HIIT/CrossFit
+  and its pool, multiple sets — all shipped earlier.
+
+## 2026-11 — Heat map earned by progress, not streaks (v0.689.0 / app 0.499.0)
+
+- The old rule warmed a group a step per trained week and capped at red with
+  any new best in six weeks, so steady training filled the map red in about
+  six weeks and kept it there. Arms read red from bench, rows, press and
+  pull-ups counting half a set each.
+- Now: trained regularly (4 of the last 6 weeks) is pale yellow; colour above
+  that comes from progress — each main movement's best of the last 3 weeks
+  against 12 and 26 weeks back, averaged. 3% / 6% over 12 weeks for yellow /
+  orange; dark orange adds 12% over 6 months; red is 8% over 12 weeks and 18%
+  over 6 months (around month 6–7 of steady progress, or a strong block).
+- It rises at most a step every 2 trained weeks and eases a step every 3 when
+  progress stops (a step a week when down 5%), never below pale yellow while
+  trained regularly. Missed weeks and blue work as before.
+- Assisting work counts ¼ and can't make a week alone; ½ and can when the
+  group had no direct work in 12 weeks (bodyweight-only routines).
+- Holds never count for progress or loss. A program start moves the 12-week
+  comparison window to its first weeks; the 26-week one isn't moved.
+- Long-term progress is a pop-up line ("+31% since you started"), not a map
+  toggle or stars — the user found both too busy. Endurance is unchanged.
+
+## 2026-11 — Heat map from real data; one-person pauses in Admin (v0.688.0 / app 0.498.0)
+
+- Checked against a household export: Legs read grey ("back squats max down
+  12% for 2 weeks") and Back "bent over row max down 30%". Two causes, not the
+  holds: (1) a 5/3/1 program started 2026-11-02 and its sets come from a
+  training max below the old heavy singles, so each week looked like a loss;
+  (2) the older logs kept only the day's top set, so those weeks scored under
+  the two-set bar and didn't count as trained.
+- Fixes in `buildTrainingHeat`: `fresh` (each `PersonProgram.startedOn`)
+  limits the decline lookback to weeks since the latest program start, so a
+  program is judged against itself; a day with exactly one logged set of a
+  main movement counts its week as trained. On the export, Legs goes to the
+  top step ("trained 6 of the last 6 weeks · back squats max up 10%") and Back
+  likewise; Arms stays where it was.
+- One-person pauses: `Pause.userId` (migration 152; null = the household).
+  Admin → Calendar → Vacations & pauses gets Who (Everyone or a person). A
+  person's pause skips their chores (chores/generate) and workout prompts
+  (workouts/generate, as `ownPaused`), clears their pending ones on those days
+  (`clearPausedTasks`), marks their own calendar instead of the family's, and
+  shows on their Pause page as "set by a parent" (`WorkoutPauseInfo.kind`
+  "admin", no End). Household banners and the board's pause stay household-
+  only. Each person's own sick / injured / vacation pause stays on their
+  Workouts menu.
+
+## 2026-11 — Holds not judged for decline; reason line; midnight rollover (v0.687.0 / app 0.497.0)
+
+- Training heat: time-only sets (holds) can still set a new best but are left
+  out of the decline ratios. Isometric and core days prescribe a time (20 s,
+  45 s, 1:00), so a shorter hold isn't a loss; with holds in the week's
+  movements the median ratio (lower middle for an even count) read as a
+  decline every week, cooling Legs to grey despite steady squats.
+- The map pop-ups (web and app) show the group's line ("trained 6 of the last
+  6 weeks", "… max down 8% for 2 weeks", "Sore …") under the headline even when
+  the week has rows, so the colour is explained.
+- Midnight: web `DayRollover` (in the root layout) refreshes the page when the
+  local day changes (checked each minute and on becoming visible); the app
+  bumps `dataRevision` and Home's refresh when `LocalDate.now()` changes
+  (checked each minute). Client-held state that started from the old day (an
+  open day log's chosen date) keeps it until reopened.
+
+## 2026-11 — Web Additional flow, training-kind colours, plan end date, sore holds (v0.686.0 / app 0.496.0)
+
+- Web day: one "+ Additional" at the bottom (the app's flow). Its pop-up opens
+  full pages: Conditioning (`ConditioningPage`, a Pick · Generator switch;
+  Create new is the HiitBuilder), Family WOD, Strength / Sport / Something
+  else (`CustomWorkoutForm` with `initialCategory`, via DayLog's `extra(d,
+  kind, done)`), Cardio (`AddCardioPage`, the same page as the Cardio card's
+  Add), Mobility / Stretching / Isometrics. The Conditioning section shows
+  only with a pick to make or a one-off result; "Log an additional workout"
+  under the day is gone.
+- Weekly training and the cardio / conditioning charts: Cardio #0ea5e9,
+  Conditioning #c026d3, Sport #65a30d (were Chest's red, Core's amber and
+  Upper back's green). Muscle-group colours are unchanged.
+- Weekly plan end date: setting `weeklyEnd:<userId>` (web Ends on, app Ends
+  on, API `POST workouts/plan/start {end}`; `GET workouts/plan` returns
+  `weeklyEnd`). Task generation skips days after it, like the start date.
+  Programs still end on their own.
+- Sore spots hold the heat map: each spot holds the groups its area's
+  loading movements belong to (`soreHeatGroups`, from the Hurt-day table,
+  plus Lower back), from the day it was marked until Better. Held weeks that
+  weren't trained don't cool the group; the line reads "Sore · not cooling
+  while it heals".
+
+## 2026-11 — One Family WOD button; training maxes locked (v0.685.0 / app 0.495.0)
+
+- The Family WOD page shows one button: New family WOD for a parent,
+  Suggest one for anyone else (a parent's suggestion was the same thing with
+  an extra step).
+- Training maxes on the running program are shown, not edited (web program
+  card, app Programs). They hold for the program and change at a cycle's end
+  (Next cycle / with changes) or by restarting it. `setProgramMax` and the
+  route stay for the setup and cycle-end flows.
+- ROADMAP tidy: sport events → workouts is done (the "did you do it?"
+  prompt); overdue Phase 2 superseded by the overdue window and Skip overdue;
+  the per-person pause is done for workouts, open for chores.
+
+## 2026-11 — Range calendar, nine buttons, wider Workout days, full-screen overlays (v0.684.0 / app 0.494.0)
+
+- Pause workouts drops the 3 days / 1 week / 2 weeks chips and the date
+  inputs for a month calendar: first tap the first day, second the last
+  (capped at 180 days), a third starts again; the range is tinted, the ends
+  filled, today ringed, past days off. Web `RangeCalendar`, app
+  `PauseRangeCalendar`.
+- The Workouts menu is nine icon buttons, three to a row, on both: Edit
+  plan, Log workout, Routines; Browse workouts, HIIT / CrossFit, Calculator;
+  Family WOD, Pause, Recent. Family WOD and Pause show what's on under the
+  label (the next WOD's day or suggestions waiting; "Until Nov 14" / "From
+  Nov 20"). Web `ActionButton` moved to `action-button.tsx`; web HIIT /
+  CrossFit opens the existing HiitBuilder as a step. New icons: People/Users,
+  Pause, Clock.
+- Web Workout days: 18px squares (were 14) and as many weeks as the card's
+  width fits, 16 up to 52, measured with a ResizeObserver.
+- The other web content overlays (chores and school cards, money and admin
+  money forms, game detail, add school work, a person's workout launcher,
+  admin chore move, movement library, book progress, addresses, tasks, the
+  calendar's add-event windows) open full screen: the page background with
+  the content on one surface in a column (up to 3xl; 4xl for events; 6xl for
+  the workout launcher), edge to edge on a phone. Small pop-ups stay small:
+  PIN and admin unlock, sign out, colour and avatar pickers, effort picker,
+  catch-up, a day's log, shared tally, grocery quick edit, event popovers.
+
+## 2026-11 — Full-screen web overlays; pie slices for any count (v0.683.0 / app 0.493.0)
+
+- Web, Workouts: the person panel (opened from the grid) is full screen,
+  content in a column up to 6xl so Workout days and Weekly training fit side
+  by side without a scrollbar. The shared `Modal` (plan-file-panel; the
+  conditioning picker's private copy removed) is now a full page — top bar
+  with Back, page background, a 3xl column, Escape goes back — like the app's
+  `FullPage`. `small` keeps a centred pop-up for short choices, confirmations
+  and info (16 uses: the Additional menu, ⓘ and help, Finish early?, End
+  program?, map and tap-a-day breakdowns). Add cardio, the plan builder and
+  the weight calculator overlays went full screen too. Other sections keep
+  their own overlays for now.
+- Workout days: three or more groups are pie slices, no gaps, however many
+  (supersedes v0.682's tiles). Past six the colours blur on purpose; tapping
+  the day lists them.
+
+## 2026-11 — Pages, not sheets; one Add flow (v0.682.0 / app 0.492.0)
+
+- App rule: anything you search, fill in or step through is a full page
+  (`ui/common/FullPage`: top bar, back arrow, the page background, white
+  cards); small centred pop-ups only for short choices, confirmations, ⓘ,
+  date pickers and the tap-a-day breakdown. No bottom sheets: Pick one /
+  Build one, Add cardio, the plan file sheets, the routine picker and both
+  swap-a-movement lists became pages; the warm-up, core and endurance
+  helpers now draw through `FullPage`. The web keeps its Modal for now.
+- One Add button on the day ("+ Additional"), replacing it in the
+  Conditioning section and "Log an additional workout": Conditioning,
+  Family WOD, Strength, Cardio, Sport, Mobility, Stretching, Isometrics,
+  Something else. Cardio uses the Cardio card's Add page, so cardio is added
+  one way; Strength, Sport and Something else open the log flow as a page.
+- Conditioning is one page with a Pick · Generator switch ("Build one"
+  renamed so it's clear the app makes it). "Write your own" became "Create
+  new" and goes to the existing HIIT/CrossFit create page: this page picks,
+  it doesn't write.
+- Workout days: three or more groups draw as tiles (two across up to four,
+  three across up to nine, a short last row sharing its width) instead of
+  wedges or stripes.
+
+## 2026-11 — Tap a day; Family WOD tidy (v0.681.0 / app 0.491.0)
+
+- Workout days: a day with work opens a small pop-up listing each colour's
+  group and the movements done in it that day. The cell drawing is unchanged
+  (no cap on pieces); the pop-up is how a busy day is read.
+- Family WOD's `people` comes back with the viewer first, then the
+  household's order, so the person on the device leads the chips.
+- The set/suggest page puts the day and workout on one card and who's in (or
+  the note) on another.
+
+## 2026-11 — Full pages for Family WOD and pauses; planned pauses (v0.680.0 / app 0.490.0)
+
+- Family WOD and Pause workouts are full pages (web: person-panel steps
+  `familywod` and `pause`; app: routes `FamilyWod`, `FamilyWodEdit`,
+  `WorkoutPause`), each with a summary card on the Workouts menu. A day's
+  "+ Additional → Family WOD" opens the set/suggest page in place of the day.
+- A family WOD is for one date. A new one starts with nobody in: people are
+  tapped in, "Everyone" last. Choices carry `movements` and `about` for an ⓘ
+  pop-up, and names wrap instead of truncating.
+- Personal pauses take a first day (today up to a year ahead) and a last day
+  (at most 180 days long), so they can be planned; reason VACATION joins
+  SICK, HURT and OTHER (stored as text, no migration). Several can exist; a
+  new one makes room among the person's own (`fitPause`: inside ones go,
+  overlapping ones are trimmed, one covering both ends is split). One not
+  started yet is removed rather than ended.
+
+## 2026-11 — Family WOD (v0.679.0 / app 0.489.0)
+
+- Now and then, not on set weekdays: one `FamilyWod` per date (migration
+  151) with a shared workout (`hiitWorkoutId`) and `FamilyWodMember` rows,
+  `how` ASSIGNED (a parent put them in) or JOINED (they joined). A parent
+  sets it from the Workouts page's Family WOD section or from a day's
+  "+ Additional → Family WOD"; changing the people keeps anyone who joined.
+- Anyone sees the day's family WOD at the top of the day, rest and paused
+  days included. Members get the normal conditioning card (id
+  `fwod_<id>`, so feedback has its own slot) with no Skip: it's an extra,
+  done any time that day, never a missed day and never a workout task. Not
+  a member: Join. Someone who joined can leave until they log; someone put
+  in stays in. If the person's own plan has the same workout that day, the
+  plan's card is the one.
+- No results table: the board is the HIIT sessions logged under the
+  workout's name that day (as every conditioning result is), ranked Rx
+  before Scaled, best first, one row a person, "Best yet" when it beats
+  every earlier result of theirs on it in that version.
+- Suggestions (`FamilyWodSuggestion`): anyone, for a day from today up to
+  60 days on, with an optional note. A parent approves (the set sheet opens
+  with it, approving on save) or declines; the person can take it back
+  while it waits. Parents are an unlocked admin or a signed-in ADMIN or
+  PARENT; on the app, `role ADMIN` or `kind PARENT`.
+- Choices are the shared, approved workouts only.
+
+## 2026-11 — Workout pauses (v0.678.0 / app 0.488.0)
+
+- Household pauses (Admin → Pauses) already kept workout prompts off their
+  days; now they also stop the heat map cooling, drop out of "Is the plan too
+  big?", silence day suggestions, read as rest on the strip and in Weekly
+  training ("Paused"), and creating or removing one re-runs workout task
+  generation.
+- A person's own pause (`WorkoutPause`, migration 150): reason SICK / HURT /
+  OTHER, today through a chosen day (3 days, 1 week, 2 weeks or a date, up
+  to 90 days). Started and ended from that person's Workouts menu only; the
+  person or a parent (`requireCanActFor`). One at a time: a new one replaces
+  the person's own running or ahead. Ending it makes today a normal day.
+  Its days behave like a household pause's, for that person only.
+- `pause-run.ts` (`workoutPausesFor`, `pauseOn`) is the one place the two
+  kinds meet; the strip sets `restPlanned` on paused days as well as
+  `paused`, so older apps show them as rest. Logging still works on a
+  paused day.
+- "Keep N sets" and a rotating weekly lift order are dropped for now.
+
+## 2026-11 — Weighted holds (v0.677.1 / app 0.487.1)
+
+- Farmer hold, overhead kettlebell hold and plate pinch hold stay timed (so
+  the isometric days and the hold timer work as before) and take a weight
+  beside each time (`MovementLog.holdUnit`, `isWeightedHold` in library.ts);
+  the weight is saved on the set like any other. The mid-thigh pull hold stays
+  time only: the bar is pinned, so there's no weight to log. Their charts
+  still follow the time.
+
+## 2026-11 — Swapped days; sore spots only from the band-aid (v0.677.0 / app 0.487.0)
+
+- A swap trades two weekdays' plans for one Monday-start week
+  (`day-swap.ts`, setting `workouts.swap.<userId>`, kept four weeks back so
+  history days read the plan they followed). One resolver, `planWeekday`
+  (server `planDow`, `dayPlanWhereFor`), now stands behind every weekday
+  plan lookup: the day page and logger, plan progress and task settling,
+  workout task generation (prompts and strays move with the swap), the
+  Workouts board and person cards (`PersonWorkout.swaps`), the dashboard and
+  person page workout titles, programs, conditioning, Concept2 rows, lift
+  next targets and the suggestions. Core rotation advancement and program
+  rotations still count by the real weekday.
+- The game card adds "Swap with <day>" when a later day this week lifts
+  without leg work, has no game that day or the next, and neither day is
+  already swapped. The day shows "Swapped with Friday this week · Undo"
+  (`swappedWith`); Undo is the suggestion answer `swap`/`undo`.
+- Sore spots: the "+ Sore spot" button is gone; spots come from a workout's
+  "Something hurt?" (the band-aid). The strip under the map shows the
+  band-aid icon, the area and Better, only while something is marked.
+
+## 2026-11 — Ball moves log weight (v0.676.1)
+
+- The eight medicine ball and slam ball moves in the movement library log
+  weight and reps ("W"), and the core rotations ask for them that way. A
+  test keeps every ball move weighted. `coreMetric` also asks for weight
+  when an own workout lists a weighted library move as reps only.
+- Migration 149 moves the existing movements and plan entries for those
+  eight from REPS to WEIGHT. Sets already logged as reps stay as they were.
+
+## 2026-11 — Smarter suggestions: hockey, balance, plan too big (v0.676.0 / app 0.486.0)
+
+- Games vs practices (`sportKindOf`): the event type's new Game / Practice /
+  Other setting (Admin → Calendar; migration 148, `EventType.sportKind`), else
+  the title (" @ " / " vs " a game; Practice, Stick & Puck, Skate a practice).
+  A tournament is 3+ games within 4 days (`tournamentDays`).
+- Day cards, in order after back-from-a-break and a sore spot: tournament
+  (Lighter week: the next four days are lighter days, unless already
+  adjusted), game today or tomorrow with leg work (Lighter legs: a new Adjust
+  mode `legs` — leg lifts at 70%, the rest as planned, not a light day for
+  records; Swap legs: Hurt on a LEGS area with `why: "game"`, stand-ins from
+  recent lifts), plan too big, push/pull balance, then hard days.
+- Plan too big: a third or more of planned days (non-optional entries, from
+  when they existed) with nothing logged over 3 weeks, at least 6 planned.
+  Names the two weekdays missed most. Any answer — Pick days to drop (opens
+  the plan editor), Smaller program (opens programs), Not now — asks again
+  in 3 weeks (`workouts.toobig.<userId>`). Nothing is changed for them.
+- Balance: pattern from the movement (or guessed by name). No pulling for 2
+  weeks with 6+ pressing sets, or over 3 weeks 12+ pressing sets and at least
+  twice the pulling. Only on a lifting day with no pull planned. "Add it"
+  puts the pull done most in 8 weeks (else a row from the movement list) on
+  today's first strength entry, for today only, logged into that entry, and
+  never holding the day open (`PlannedMovement.added`).
+- Swapping a leg day with another day of the same week is left for its own
+  release: every place that finds a day's plan by weekday (the day page, the
+  strip, workout tasks, the dashboard) would have to honour the swap.
+
+## 2026-11 — Sore spots, hurt days rebuilt (v0.675.0 / app 0.485.0)
+
+- One set of areas everywhere: "Something hurt?", sore spots and Adjust
+  today's Hurt all use NECK, SHOULDER, ELBOW, WRIST, UPPER_BACK, LOWER_BACK,
+  HIP, KNEE, ANKLE (Other only for "Something hurt?"). Hurt answers stored
+  with the v0.658 keys read as their nearest (back → lower back, knee and
+  legs → knee).
+- Sore spots (`sore.ts`, `sore-run.ts`, setting `workouts.sore.<userId>`):
+  one per area with the day it was marked and what marked it. Never cleared
+  on their own — only Better. A "Something hurt?" answer marks the area
+  (it doesn't clear it when the answer is removed). No migration.
+- The body map hatches the area in red on both views (`SORE_PATHS`, path
+  indices shared with the app); strips under the map show each spot with
+  Better, and "+ Sore spot" marks one.
+- The day card "Your knee is marked sore — Today has squat and lunge" (Work
+  around it / Not today) replaces the old "your X hurt on Tuesday, go
+  lighter?" card; the per-movement "Swap X today?" card goes by sore spots
+  too. Work around it makes today a Hurt day on that area, with stand-ins.
+  Adjust today's Hurt opens on the first sore area.
+- Stand-ins (`pickStandIns`): each movement Hurt takes out gets one of the
+  person's lifts from the last eight weeks that doesn't load the area and
+  isn't already in today's plan — same muscle group first, then the same
+  half of the body, then the one done most. Stored on the day's adjustment
+  (`swaps`) and shown as that slot's swap (`loggedAs`) until something is
+  logged, so the loggers, completion and history need nothing new; Undo
+  swap goes back. "Add a replacement for each move left out" turns them off.
+- A pause for an injury (the heat map not cooling) stays a separate item.
+
+## 2026-11 — Chart pages line up (v0.674.1 / app 0.484.1)
+
+- Every chart page runs: filter chips (where there are any), the main
+  chart, tiles, the detail, then recent sessions last — the lift page's
+  order. Looks differ by workout; order and content line up.
+- Cardio's tiles add Since best, Sessions (since the first) and Last (its
+  pace, or minutes), to match a lift's six. Conditioning's page ends with
+  its last five sessions; the Core page ends with its last five core days
+  and the moves done (`CoreSummary.recentDays`).
+
+## 2026-11 — Cardio and conditioning charts (v0.674.0 / app 0.484.0)
+
+- Both follow Core's pattern: a card on Workouts after the muscle groups,
+  opening a page whose order matches a lift's (chart, tiles, detail). The
+  Endurance pop-up's Cardio and Conditioning rows open them too. Colours are
+  the weekly-training kinds (cardio red, conditioning amber).
+- Cardio (`buildCardioCharts`, pure, `heat.cardioCharts`) is per activity:
+  rowing in meters with the split per 500 m, running and rucking in miles
+  or km (whichever most sessions used; the other is converted) with pace
+  per unit, other cardio in minutes with no pace. Pace dots are shaded by
+  how the session felt; the best counts only 1,000 m+ rows or a mile+ on
+  foot, so a hard 500 m doesn't stand as the best split. The 30-day change
+  is the median pace of the last 30 days against the 30 before.
+- Conditioning (`buildConditioningCharts`, `heat.conditioningCharts`): the
+  same name and version (Rx or Scaled) is the same workout. Timed types are
+  better lower, the rest higher. "New best" is the last attempt beating
+  every earlier one. Workouts with one scored attempt are "Done once".
+- Both come from the session query the endurance gauge already ran
+  (`cardioEntries` now returns the sessions too); no new route.
+
+## 2026-11 — Core page order (v0.673.1 / app 0.483.1)
+
+- The Core page follows a lift's page: chart first, then tiles, then the
+  detail (the grouped moves). The move pop-up already did.
+
+## 2026-11 — Core in one card, Core page, this week in the map pop-ups (v0.673.0 / app 0.483.0)
+
+- Core no longer lists a row per movement (it grows with every new move).
+  One card: core progress, its weekly line, plank test, core days this week,
+  moves improving. It opens the Core page; a move opens its pop-up on top.
+- Core progress (`core-progress.ts`, pure, served as `heat.coreSummary`):
+  core moves are measured differently (seconds, reps, weighted reps), so
+  each is compared with its first session as a percent — its best in the
+  four weeks up to its last session against that first one (weighted reps
+  by Epley estimated max). The core's number is the median of the moves,
+  so no one move counts more. Up is +3% or more, down −5% or worse. A move
+  with one session is "New". The weekly line is that median as of each
+  week's end; plank tests are drawn the same way against the first test.
+- Moves are grouped by what they work, by name: Front (planks, fallouts,
+  rollouts, dead bugs), Sides and twist (side planks, carries, Pallof),
+  Leg raises and crunches; else Other. Moves not done in eight weeks go
+  under "Not done lately".
+- The move pop-up's tiles are Best, First and Change (against the first).
+- Map pop-ups (muscles and the Endurance heart) lead with this week, exact:
+  "N sets this week" (sets where the group is primary) with a row per
+  movement and its top set; "N min this week" (raw minutes, not the
+  effort-weighted minutes the warmth uses) with a row for sport, cardio and
+  conditioning. With nothing this week, the warmth line explains the colour.
+  The 12-week bests list left the pop-up.
+- Sport sessions are named by `sportDayLabel`, never the calendar event's
+  title (it can hold team names).
+
+## 2026-11 — Warm-up cues, steady body map, Core card, Lower back, past rotation days (v0.672.0 / app 0.482.0)
+
+- Every warm-up library move (and the shoulder-prep sets) has a cue behind
+  its ⓘ (`WARMUP_CUES`, taken by name by the step helpers); a test keeps it so.
+- Heat map: the body map keeps its size in both views; the Endurance heart is
+  laid over the top centre, between the heads, instead of beside the map.
+- Core is one card: a Plank test row (best with PFT points, last; opens the
+  plank benchmark) and the six core movements done most recently, each with
+  best, last and the trend in words — no sparkline, since a rotation has
+  many movements. "All core movements (N)" opens the rest in a pop-up. Each
+  row opens its page (chart, then tiles), the same order as a lift's.
+- Lower back: good mornings and back extensions (and kin) light the same
+  place as a deadlift (map primary stays DEADLIFT) but are listed as
+  "LOWER_BACK" (`Involvement.shownAs`, `shownGroup`) — their own heading
+  beside the deadlifts, their own lighter brown on the map when shown alone,
+  and "Lower back" on Workout days and in a week's day words. Swings stay
+  with the deadlifts. "Good morning" is the exercise's name; singular is right.
+- A past day's rotation entry (core, arms, isometric) shows the workout that
+  day logged when the rotation has moved on (`asLoggedRotation` in
+  loadTodayPlannedWorkouts, `DayLogState.asLogged` for the web): its name and
+  the movements logged under it, without the month's test. The day stops
+  reading as undone/overdue and its sets stop landing under Additional.
+- Additional (logged outside the plan) cards show the name and a count;
+  tapping opens what was in them (a pop-up), on web and phone.
+- Phone week strip: snaps days to the left edge (`SnapPosition.Start`); the
+  default centre snap left half a day at each end with eight days in view.
+- Weekly training: date labels under the bars; kinds named like the workout
+  categories (Strength, Conditioning, Cardio, Sport, Mobility) in fixed
+  colours that never follow the theme's accent.
+- Lift rows: no sparkline or trend means no reserved space, so a name like
+  "Weighted back extension" stays on one line.
+
+## 2026-11 — Weekly training chart, Core rows, the hinge family, sport warm-up (v0.671.0 / app 0.481.0)
+
+- Weekly training is the agreed mockup now (0.670 kept the old bars by
+  mistake): each week's bar split by days of each kind — lifting,
+  conditioning, cardio, sport, other (warm-up/mobility/stretching alone) — a
+  day with two kinds counting in each; a dashed mark at `planned` (the week's
+  workout tasks); tap a week for its seven days (kinds, a few words — muscle
+  groups for lifting, Row/Run, Hockey — and done / planned / missed / rest).
+  Beside Workout days on the web, after it on the phone.
+- Core is shown by what it's done for (`heat.coreMoves`, core-moves.ts): per
+  movement, the day's longest hold or most reps, weight only as context
+  ("12 × 25 lb"); a hold counts as time when it has more timed days than rep
+  days. Rows and a page like a lift's (best, 30 days, sessions, last, changed
+  days marked), replacing Core's lift rows and its hard-sets summary.
+- The hinge family — deadlifts, RDLs/stiff-legs, good mornings, back
+  extensions (and their kin), kettlebell swings — is always the Deadlift group
+  (`Involvement.forcePrimary`; `shownGroup` for grouping), whatever it's filed
+  under: a back extension filed under Back sits with the deadlifts. Legs are
+  the lightly shaded assist for all; Back (upper) only where a bar hangs from
+  the hands (deadlift, RDL). Core and Arms dropped from the deadlift's
+  secondaries: bracing and grip are real, but lighting them made the map read
+  as everything. The training heat map follows these groups.
+- Long names wrap to two lines on day cards, lift and core rows and warm-up
+  cards instead of one line with an ellipsis.
+- Sport warm-up: the label is "Hockey" unless the event's title, event type
+  or calendar names another sport (a subscribed feed's titles are matchups,
+  so the title is never the label). Which events count is still the sport
+  flag on the event type or the calendar. The card is white like the
+  Warm-up's, with Skip and a done check (`WorkoutSuggestionAnswer`
+  key `sportWarmup`); never part of the plan.
+
+## 2026-11 — Lift rows and a page per lift (v0.670.0 / app 0.480.0)
+
+- The six tiles per movement, "Additional charts" and the Lift progress card
+  are gone from the Workouts page. Each muscle group's lifts are one card of
+  rows: best and last set, a sparkline of the top set per session (last 12),
+  and the 30-day change ("+10 lb") or weeks since the best ("Flat · 6 weeks").
+  Agreed against a mockup; the lift's page is enough for the detail.
+- A row opens the lift's page (web: a pop-up; app: a full screen): the rep
+  range chips and the dot chart, now with light weeks shaded (sessions with
+  intent LIGHT, by their Monday week), days changed by Adjust today or
+  Lighter today marked (`HeatMap.marks`, labels Sick / Hurt / Low energy /
+  Short / Lighter), the record circled, and the next planned top set drawn
+  dashed ahead (`liftNext`: the next planned day within two weeks with
+  nothing logged, its logger target's top set; `GET workouts/lift-next`).
+  Then tiles — record, est. max, 30 days, since best, sessions, last — best
+  weight for each rep count, and the last five sessions.
+- Estimated max is a tile, not a chart line (asked for): Epley from the best
+  set of 12 reps or fewer, rounded down to 5 lb / 2.5 kg
+  (`lift-stats.ts estimatedMax`; the app mirrors it).
+- Workout days and Weekly training sit side by side on the web (stacked under
+  640 px; the day squares shrank to 14 px so 16 weeks fit half the window).
+  On the phone Weekly training moved up to follow the Progress card, which
+  ends with Workout days.
+- The Routines button's "Warm-up · Mobility · Stretch" line is gone: in a
+  third of the row it wrapped past the card's fixed height and showed as
+  clipped lines on the phone.
+
+## 2026-11 — A repeating task's next occurrence is always on the list (v0.669.0)
+
+The generator only makes occurrences inside its 30-day window, and the task
+list shows a series by its occurrences, so a series with nothing due in the
+next 30 days (every 90 days, yearly, a first due date months out) vanished
+from the list. Before 0.668 the start was always today, which hid this. Now a
+series with nothing in the window keeps its next occurrence (looked for up to
+1100 days past the window). The reconcile reads occurrences from the window
+on with no end, so that row is seen on later runs and not made again, and is
+dropped as an orphan once the window has an occurrence of its own.
+
+## 2026-11 — Repeating tasks: first due date, presets and Custom (v0.668.0 / app 0.478.0)
+
+- Bugs fixed: the server capped `interval` at 52 for every unit (meant for
+  weeks), so "every 90 days" saved as 52; and turning Repeat on hid the due
+  date and the app sent today as the start, so the date picked was lost.
+- A repeating task's due date is its **first due date** (`startDate`), and
+  repeats count from it. The "no due dates for recurrent tasks" notice is gone.
+- Repeats: Daily, Weekly on <its weekday>, Monthly on the <day>, Yearly on
+  <date> — each "every one" from the first due date — or Custom: repeats every
+  N days / weeks / months / years (ascending), weekdays for weeks, and Ends.
+  The "Every X" field left the main form; Ends stays on the main form too so a
+  weekly task with an end date needs no Custom.
+- New YEARLY; `interval` 1–999. WEEKLY with no weekdays lands on the start's
+  weekday (the old "pick at least one weekday" error is gone). Monthly on a
+  day a month lacks lands on the last day (it used to skip the month); yearly
+  on Feb 29 lands on Feb 28. Hours and minutes are left out until there's a
+  use: tasks are once a day with a reminder time.
+- The rule and its label live in `src/lib/tasks/recur-rule.ts` (pure,
+  tested); the three copies of the repeat label (tasks page, tasks API, admin)
+  now share `recurLabel`. The occurrence walk's guard went from 4000 to
+  40000 days so a counted yearly series reaches its end.
+- Existing series keep their saved interval; one saved as 52 needs editing.
+
+## 2026-11 — "+ Additional": day extras (v0.667.0 / app 0.477.0)
+
+- "+ Conditioning" is now "+ Additional": Conditioning (Pick one, Build one,
+  Write your own, as before) or Mobility, Stretching or Isometrics — a
+  routine or an isometric workout added to that day only.
+- Stored as `DayExtra` (userId, date, kind, ref; migration 147_day_extras).
+  At most 6 a day; the same one twice is one. On the day each shows like a
+  plan entry under the id "extra_<id>" (`isExtraId`): a routine card in its
+  Mobility / Stretching section, or an Isometric card that opens the Core
+  logger.
+- Weekly plan rows were not used: 40-odd queries read PlannedWorkout as the
+  weekly plan, and each would need to learn to skip a one-day row. Instead
+  the few places that act on a plan entry by id resolve an extra id
+  (`extraPlanFor`): `setMovementSkipped`, `logPlannedWorkout`,
+  `logMovementSets`, `setWarmupDone`, `setPlanWarmup` (Switch changes the
+  extra's routine) and `plannedSlotFor` (an isometric move's sets come from
+  its workout, so the logger has targets).
+- Optional: extras never count toward the day being done. The day's progress
+  bar, the title, the task, the overdue list and the strip all read the plan
+  without them; `loadTodayPlannedWorkouts({ withExtras })` adds them only for
+  the day's cards (the phone's day read and `loadDayLogState`), and an
+  Adjust today trim leaves them alone.
+- An extra's card has ✕ (take it off) instead of Skip. Anything logged for
+  it stays; once off, its session shows under Additional like any one-off.
+- Logging an isometric extra whose movements match a planned Isometric
+  rotation's current workout can move that rotation on, as any log of those
+  movements would.
+
+## 2026-11 — Your version of a program (v0.666.0 / app 0.476.0)
+
+- Ending a program, or switching to a different one, keeps its setup as the
+  person's version (`ProgramVersion`, one per person per program, migration
+  146_program_versions; a newer one replaces the older). It's read with the
+  same `currentSetup` "Make changes" uses (refactored to take an already
+  loaded program, so it runs before the row is marked ENDED), plus
+  `currentExtras` and the training maxes.
+- Saved only when `setupDiffers` from the default: days, a slot's movement, a
+  removed slot, companion sets or added lifts. Maxes alone never count (they
+  always differ), nor do extras (they start from whatever plan the person
+  had, so there's no fixed default to compare with). Carrying on into the
+  next cycle (`next`) saves nothing. `snapshotVersion` never throws.
+- Picking a program that has a version asks first: Your version (with its
+  date) or Default, plus "Forget my version". Your version opens the normal
+  setup seeded from it (`initial`, extras as `current`, its maxes as
+  training maxes; a main lift without one gets 90% of the best logged).
+- `cleanVersion` makes a saved version fit to start today: a movement gone
+  from the pool goes back to the slot's default, a gone added lift is
+  dropped, and a program whose number of days changed has no version.
+- A table, not a column on PersonProgram: history rows pile up, and Forget
+  needs one clear record.
+- Programs ended before this release have nothing saved.
+
+## 2026-11 — Late days stay until done; companion progression; Back keeps drafts (v0.665.0 / app 0.475.0)
+
+- Overdue: a past day's scheduled workout stays in the late list until
+  `planDone` (every tracked movement logged or skipped). Before, logging any
+  one movement dropped the whole workout, so a half-done leg day vanished.
+- Companion lifts (not a program's own main lift; RANGE or SAME schemes, last
+  time the same kind of work): targets go set by set from last time — each
+  set keeps its weight and steps up (10 lb lower / 5 upper, half in kg) only
+  when that set reached the top of its reps, or last time's feedback was
+  Easy. A range aims one rep higher per set up to the top, then restarts at
+  the bottom, heavier. After different work (heavy triples before a 5 × 10)
+  the old estimate still applies. Main lifts and 5/3/1 waves are unchanged.
+- Back never logs: typed-but-unticked values are kept as a draft per day and
+  movement (in memory while the page/app runs) and restored, unticked. Log
+  (and "Finish for now") still logs what's typed and complete.
+- Warm-up ticks persist per plan entry, routine and day (web: localStorage;
+  app: in memory while it runs).
+- Involvement rules for good mornings (Deadlift, with Legs, Core, Back),
+  back extensions/hyperextensions/reverse hypers/supermans/Jefferson curls
+  (Core, with Legs) and kettlebell swings: the lower back shades as Core.
+
+## 2026-11 — Training heat map replaces the volume heat map (v0.664.0 / app 0.474.0)
+
+The range-averaged volume shades (three accent tints, 1 week to All) didn't
+separate well and moved a lot between ranges. `training-heat.ts` replaces
+them with one cumulative state per muscle group, stepped week by week
+(Monday weeks) from its first week of real work:
+
+- Warmth −3..5, 0 neutral. A trained week (≥2 counted sets, heat.ts credit;
+  assisting muscles half) is +1, or +2 while below its earlier peak (fast
+  return). 5 needs a new best on one of its movements in the last 6 weeks,
+  else it tops out at 4.
+- A missed week is −1 down to 0; blue only from the 4th consecutive missed
+  week, one step at a time, deeper every 2 weeks, to −3 (strength largely
+  holds ~3 weeks untrained). Training again melts blue straight to 0.
+- Strength: each main movement's weekly best (Epley e1RM, longest hold or
+  most reps) against its best of the previous 12 weeks; the week's median
+  under 95% counts as a decline, two in a row cools −1 a week (can go blue);
+  a plateau stops it. Not judged: LIGHT/TEST sessions, adjusted or lighter
+  days, and a movement's first session after 21+ days off. Program-agnostic:
+  any logged movement, any program or none.
+- Pauses: a week with 4+ days in a pause changes nothing (`pausesFor`
+  returns none until pauses exist).
+- Endurance (the heart): sport, cardio, rowing, running, rucking and
+  conditioning minutes × effort (Easy ½, Solid/none 1, Hard 1½, Too hard 1¾).
+  ≥120 a week warms, <40 counts as missed, between holds; ≥200 allows the
+  top step. Hockey and the rest feed endurance only, not muscle warmth.
+- Colours fixed across themes: pale yellow → red (no maroon, so the top
+  stays bright in dark mode), three blues, the figure's grey for neutral.
+  Tapping a muscle shows its one-line reason and its bests.
+
+## 2026-11 — Stretching routines; program title only on program days (v0.663.0 / app 0.473.0)
+
+- Stretching is a routine kind ("stretching", library `STRETCH_LIBRARY`,
+  keys `str-*`), done with a tap like Mobility; no tracking. Range comes from
+  regular timed holds over weeks. Research behind the holds (ACSM FITT-VP):
+  static holds 10–30 s for most adults, 30–60 s for older adults, about 60 s
+  per joint in all, 2–3+ days a week with daily best, to mild tension, never
+  pain. Every library hold is 30 s or more (most 45–60 s, each side).
+  Routines: Full body, Goalie hips (90/90, butterfly fold, frog, pigeon, hip
+  internal rotation, kneeling hip flexor, deep squat), Front splits, Middle
+  splits, Hamstrings and low back, Shoulders/chest/neck, After skating.
+- `STRETCHING` becomes a simple category (isSimpleCategory): new entries
+  hold a routine, no movements. An older Stretching entry with movements is
+  left as it was and logs them (the routine paths filter
+  `exercises: { none: {} }` / `_count.exercises === 0`).
+- Day title: `program` (and its "Week n of m" line) shows only on a weekday
+  the active program put work on (`dayHasProgramWork`: an entry with a
+  `programRole`). Otherwise, with a program running, the title is the
+  day's own plan name from `loadWorkoutPlanNames`.
+- App: the movement screen's title shrinks to fit (down to 15 sp) before it
+  cuts off, and Swap is an outlined icon, so the bar keeps its height.
+
+## 2026-11 — Warm-up on a sport day (v0.662.0 / app 0.472.0)
+
+- A sport day is one with a sport-flagged calendar event the person is in
+  (`sportOn`, same people as the "Did you play?" prompts), whether or not it
+  has happened yet.
+- The planned workout's warm-up comes first: nothing changes unless chosen.
+  Inside the Warm-up window a switch picks Workout or the sport ("Hockey" for
+  anything on the ice, else the event's title); the sport's routine is the
+  library's Hockey legs, for that day only (WorkoutSuggestionAnswer key
+  `warmupFor`). "None" is the card's existing Skip, which doesn't count
+  against the day.
+- Whenever the day's Warm-up isn't for the sport — no Warm-up planned, or a
+  morning lift and an evening game — the Warm-up section shows an optional
+  "Hockey warm-up" row that opens the routine with timers. It's never part
+  of the plan and isn't logged.
+
+## 2026-11 — Isometric days (v0.661.0 / app 0.471.0)
+
+- A third rotation kind, `iso`, on the Core machinery: `ISO_LIBRARY` (six
+  workouts, every move a TIME hold with a range to work up through),
+  `CoreWorkout.kind` / `CoreDay.kind` "iso", own workouts in `CoreWorkout`
+  with kind "iso". Logged, targeted and moved on weekly exactly like Core.
+- The entry is category `ISOMETRIC` with no muscle group (no muscle group
+  fits holds, and a new one would touch every muscle-group list); its own day
+  section, "Isometric". `coreEntries` takes WEIGHTS + CORE/ARMS or any
+  ISOMETRIC entry whose `core` parses.
+- Monthly test (`ISO_TEST`): max wall sit (legs), dead hang (grip,
+  shoulders) and push-up hold (chest, arms), first, on the month's first
+  isometric day. No plank: Core days test it and both can share a day. One
+  "Monthly test" card on the day; `coreTests` / `coreTestName` carry it,
+  while `coreTest` stays Core's plank only so an older phone doesn't call
+  the holds a plank test. No score table (unlike the PFT plank); the
+  movements' own history shows the trend.
+- Twelve new library holds (category ISOMETRIC): split squat hold, lateral
+  lunge hold, horse stance, glute bridge hold, single-leg glute bridge hold,
+  Copenhagen plank, push-up hold, chin-up hold, mid-thigh pull hold, farmer
+  hold, overhead kettlebell hold, plate pinch hold. One-sided ones switch
+  sides set by set (`switchesSides`).
+- On a test day a workout move that's also a test hold (a wall sit) is done
+  once, as the test.
+- Short on time drops an Isometric entry (it isn't a pick); Low energy and
+  Sick keep it.
+
+## 2026-11 — Warm-up card back to name + routine (v0.660.0 / app 0.470.0)
+
+0.658 listed every step on the day's warm-up card; the ask was to see
+Shoulder prep among the moves inside the routine, which it already is. The
+card shows the entry and routine names again. App: the day header's date no
+longer wraps — a weighted Spacer took half the row from it.
+
+## 2026-11 — Mobility (v0.659.0 / app 0.469.0)
+
+- A new category, `MOBILITY` (migration 145), built on the Warm-up pieces: a
+  plan entry with no movements, its routine in `PlannedWorkout.warmup` (one
+  id or `rot:<ids>`, a step each week, no "Match the day"), done with a tap
+  through the same `setWarmupDone`. Unlike a Warm-up it isn't optional: a
+  planned Mobility holds the day open like any workout.
+- Routines share `WarmupRoutine`, with a `kind` column ("warmup" |
+  "mobility"); the library is `MOBILITY_LIBRARY` (keys `mob-*`), seven
+  routines: Hips, hang and squat (rotational hinge, deep squat rock, dead
+  hang, external rotation on the incline bench, band internal rotation PNF,
+  long-lunge hip flexor, horse stance), Hip opener, Spine and upper back,
+  Shoulders and overhead, Ankles and knees, Skater hips, and Joint circles
+  (CARs).
+- Steps gain `cue` (how to do it), shown behind an ⓘ and editable as
+  "How (optional)". Every library mobility step has one.
+- Its own day section, `MOBILITY`, after Conditioning by default.
+- Short on time drops Mobility (it isn't a pick); Low energy and Sick keep it.
+- `plan/add-pool` now takes a rotation (or "match") for a Warm-up as it's
+  added, not only one routine.
+- Next (ROADMAP): the day's "+ Conditioning" becomes "+ Additional" with a
+  picker — conditioning, mobility, stretching, isometrics.
+
+## 2026-11 — Adjust today replaces Go light (v0.658.0 / app 0.468.0)
+
+- Four paths, each its own short flow; stored as the day answer
+  `"adj:" + JSON` (src/lib/workouts/adjust.ts) and applied where the plan is
+  read, like Go light was. Old `go:` answers read as their nearest path.
+- **Low energy**: same movements and sets at 65%. **Sick**: a lighter version
+  (main lifts at 50%, no BBB/FSL sets, no conditioning) or an easy day
+  (warm-up and cardio, no lifting). No above/below-the-neck question: too
+  sick to train is Rest / skip. **Hurt**: movements whose name (or entry
+  muscle group) loads the area come out, the rest at normal weight; a named
+  conditioning workout goes if any of its movements loads it.
+- **Short on time**: 15/30/45, no "Any". A quick warm-up always first (4 min,
+  6 with Shoulder prep on a lifting day). Weights keep the first main lift's
+  warm-up and work sets (never cut), then other main lifts, then BBB/FSL
+  sets, then extras, as they fit. Minutes per set come from the median gap
+  between the person's own logged weight sets (last 90 days, 20 s–8 min,
+  at least 15 gaps), else 2.5 per work set and 1 per warm-up set.
+  Conditioning uses its workout's minutes (or cap); cardio is 10/15/20 as
+  picked. The server works out what's kept on apply and stores it, so the
+  day doesn't shift as sets are logged. When the picks can't fit it offers
+  dropping a pick or the next longer time.
+- Low energy, Sick and Short on time log as LIGHT (nothing moves on); Hurt
+  counts normally.
+- What's dropped is reported as `adjusted.dropped` (plan ids and movement
+  ids). The web day page filters its plan by it (Go light never trimmed the
+  web page); the phone's `GET /workouts` already leaves dropped entries out of
+  `workouts`, `simple`, `conditioning` and `picks`.
+- Not built yet: Hurt's "a day for the healthy parts" when nothing is left
+  to lift; for now it offers Rest / skip (ROADMAP).
+- Shoulder prep has three sets of moves that take turns by day
+  (SHOULDER_PREPS); the warm-up card lists each step, prep included.
+
+## 2026-11 — Game "How hard?": the check mark finishes it (v0.657.0 / app 0.467.0)
+
+0.656 removed the "How hard?" question after Yes; the ask was only to drop
+the extra Done step. The question is back after Yes, and choosing an effort
+(the check mark) saves it and clears the card. Skip still closes it without
+an answer. The Additional card's edit stays for changing it later.
+
+## 2026-11 — Snap, one-tap game confirm, flexible minutes (v0.656.0 / app 0.466.0)
+
+- Week strip snaps to whole days (CSS scroll-snap on the web, a snap fling
+  on the phone).
+- "Did you do <game>?" Yes now saves and clears in one tap; the "How hard?"
+  card and its Done step are gone from Home. How hard (and anything that
+  hurt) is set from the session's card on the day page, whose section is
+  now "Additional" (was "Logged").
+- A confirmed session's minutes count toward weekly activity, and a stick
+  and puck or drop-in often isn't stayed for its full slot. Event types get
+  `sportFlexTime` ("Time varies", admin, only for sport types); the
+  Additional card's edit shows a minutes field only for those, and the server
+  only changes minutes for them — games and practices keep their length.
+  `POST /workouts/sport-session`, `editSportSessionCore`.
+- Go light's time adds Any (0): every main lift stays.
+- Warm-up chooser: Match the day lists its routines with ⓘ; Rotation uses the
+  Core rotation's layout (numbered squares, "In the rotation, in order",
+  steps · Yours, edit and ⓘ).
+
+## 2026-11 — Warm-ups by the day; Shoulder prep (v0.655.0 / app 0.465.0)
+
+- Seven library routines, no weights, 6–8 min, each tagged with a focus:
+  Squat and legs (lower), Deadlift and back (hinge), Upper push, Upper pull,
+  Core day, Arms day, Hockey legs (hockey + lower). The person's own
+  "Regular warm-up" stays their full-body routine.
+- A Warm-up entry's `warmup` string now carries a mode with no migration:
+  an id (one routine), `"match"`, or `"rot:<ids>"`. Match maps the day's
+  first strength entry's muscle group to a focus (LEGS→lower, DEADLIFT→hinge,
+  BACK→pull, CHEST/SHOULDERS→push, ARMS, CORE, else full) and steps through
+  the matching routines one per week; a rotation also steps once a week
+  (`weekIndex`, Monday-based) — by the calendar, not by completion, since a
+  warm-up is done on nearly every workout day and a stateless rule can't
+  drift.
+- **Shoulder prep** (90/90 external rotation 2–5 lb, band external rotation
+  with the elbow at the side, band pull-aparts, scap push-ups) is appended on
+  any day with a strength entry — Core and Arms days included — unless the
+  routine already has rotator cuff / external rotation work. The 90/90
+  position loads the cuff against gravity; at the side it needs a band
+  (a dumbbell there mostly works the biceps and front shoulder).
+- Resolved server-side in `dayWarmupRoutines` (cardio-run's simple plans and
+  `warmupsForDay`), so both apps show the right steps unchanged; the plan
+  editors' chooser gains a three-way switch.
+
+## 2026-11 — Go light (v0.654.0 / app 0.464.0)
+
+- A "Go light" button beside Rest / skip, today only. Up to three answers
+  (why: low energy / sore / short on time / sick — sick asks above or below
+  the neck; minutes 10/20/30; anything hurt) pick one suggestion and two
+  alternatives (`goLightOptions`, pure, go-light.ts):
+  - **Same lifts, lighter** — each strength entry's first movement (its main
+    lift) at 60%; extras and Core/Arms rotation days dropped. Low energy.
+  - **Short and sharp** — 1/2/3 main lifts for 10/20/30 min at 80%. Busy.
+  - **Mobility and an easy row** — no strength at all. Sore, hurt or sick.
+  - Sick below the neck adds "Rest might be best today" with Rest / skip.
+- The choice is the day's suggestion answer (`go:<key>:<minutes>`, the row
+  the "make it lighter" suggestion already used), so `lightFactor` scales
+  every target, `dayIntentFor` marks the day LIGHT (sessions drawn hollow on
+  charts, as a program's light week), and `loadTodayPlannedWorkouts` trims
+  the plan with `goKeep`. Because progress reads that same plan, finishing
+  what's left completes the day and keeps the streak; Undo deletes the answer
+  and the plan comes back whole. Light sets aren't excluded from records —
+  at 60–80% they don't beat them.
+- One route, `POST /api/v1/workouts/go-light` (options / apply / undo).
+
+## 2026-11 — Week strip scrolls freely; reset in the corner (v0.653.0 / app 0.463.0)
+
+Paging a whole 8 days per swipe felt stiff, and the Today link repeated the
+"Today" on the date line. The strip is now one scrolling row of every day it
+reaches (~2 months back, ~1 ahead), eight in view, no snapping; ‹ › jump 7
+days; dates show at once and dots fill in as their 8-day pages load (the same
+`page` API, fetched for whatever is in view, once per day load). A reset
+icon in the top right (only when the strip or the day is away from today)
+scrolls back and selects today.
+
+## 2026-11 — Week strip holds still (v0.652.0 / app 0.462.0)
+
+The Today link took its own line only when off today, so the card grew and
+the page jumped as you paged. On the phone it now sits at the end of the
+date line (same height either way); on the web its line is always there,
+invisible on today. On the phone, opening a coming day also blanked the
+strip and looked frozen: each day load cleared the fetched pages and the
+page in view was never asked for again. Pages now stay until a fresh copy
+replaces them, the page in view refetches after every load, and the pager
+opens on the page holding the shown day. A coming day shows no progress
+bar. Network pauses Android makes while the app is in the background
+(blocked/unblocked around each widget refresh) are no longer logged to
+diagnostics; changes while the app is in use, and real losses, still are.
+
+## 2026-11 — Week strip pages; Arms days (v0.651.0 / app 0.461.0)
+
+- **Looking ahead.** The day page's strip pages 8 days at a time (‹ › or a
+  swipe inside the strip only — on the phone a HorizontalPager like the Bible
+  page's cards, so the rest of the page and the side menu behave as
+  everywhere else). Back 8 pages, ahead 4. A "Today" button appears off
+  today; no hint text. Days ahead come from `loadWeekStrip(…, end)` with a
+  new `planned` flag; `stripState` reads a future day as rest / planned /
+  none (planned = dashed ring). Opening a future day shows its plan faded and
+  untappable, marked planned, with no Rest / skip, suggestion or benchmark.
+  New route `GET /api/v1/workouts/strip`.
+- **Arms days** reuse Core's rotation rather than a second system: CoreDay
+  JSON gains `kind: "arms"`, own workouts gain a `kind` column (migration
+  143_rotation_kind), `ARMS_LIBRARY` holds 7 workouts (ids `lib:arms-*`) for
+  the home gym including the dip bar/belt and the bench's preacher pad, and
+  five arms movements joined the library (Dumbbell preacher curl,
+  Concentration curl, Weighted dip, Kettlebell curl, Kettlebell overhead
+  extension). An Arms entry is muscle group ARMS with `core` set, so the day
+  page's one-card/one-screen logger, the rotation sync (moves on at the next
+  arms day) and the plan line all work unchanged. No plank test on Arms.
+- "Rest day!" → "Rest day".
+
+## 2026-11 — Rest days look like rest days (v0.650.0 / app 0.460.0)
+
+- The home Workouts card reads "Rest day!" on a rest day: the plan's Rest
+  ("planned") or Rest / skip pressed ("skipped"), from `workoutRestFor`. A
+  skipped day where something else was logged (a game, another workout) reads
+  "Complete for today!" — skipping the plan and playing a game is a workout
+  day. A planned rest day stays "Rest day!" whatever is logged. The card now
+  shows on a rest day even with no workout task.
+- Week strip: a rest day is a grey filled dot with its date (the app drew a
+  moon). Rested + something logged = done. Planned rest days (new
+  `restPlanned` on strip days) read as rest unless something was logged.
+- A skipped day's plan stays on the day page but faded (40%), on web as on
+  the app, so nothing looks open; a planned rest day still shows only what
+  was logged.
+
+## 2026-11 — On a planned day, the plan decides "complete" (v0.649.0)
+
+Three paths completed the day's workout task outright: confirming a game
+from the calendar (`confirmSportCore`), `logWorkoutSession` and
+`logCustomEntry`; and `workoutTaskTarget` counted any unplanned session as
+finishing the day. So one game read "Complete for today!" with the planned
+lifts still open. Now all of them go through `settleWorkoutTask` with
+`fallbackComplete`: on a day with a plan, only the plan's movements (logged or
+skipped) complete it; on a day with nothing planned, a game or extra still
+completes it as before. The one override kept is the plain "I worked out"
+button — a bare session with no name, category or event. `workout.settledV2`
+re-runs the one-time repair over the overdue window, reopening days an extra
+had closed (it only ever lowers COMPLETE).
+
+## 2026-11 — Dumbbell weight is one bell's (v0.648.0)
+
+The question "two dumbbells — what do I enter?" had no written answer. The
+code already behaved one way throughout: equipment sizes are single bells,
+the finisher picks a single bell's size, records and e1RM compare a movement
+only with itself, and nothing converts between barbell and dumbbell weights.
+So the rule is one bell, the number on it — for a pair (fly, press, farmer
+carry) or one held in both hands (goblet squat) — and nothing is doubled or
+halved. `aboutWithBellNote` (bells.ts) adds that line to the movement's ⓘ
+whenever it uses dumbbells or kettlebells (by equipment, or "dumbbell",
+"kettlebell", "DB", "KB" in the name), so both apps show it with no change.
+
+## 2026-11 — Hockey renamed Ice time (v0.647.0 / app 0.457.0)
+
+The page lists public skate as well as hockey, so the menu, page titles and
+admin card read "Ice time" and the icon is an ice skate. Only what people see
+changed: the route (/hockey), API paths, settings keys and code names
+(`HockeyIcon`, `KairosIcons.Hockey`, hockey-view.ts) stay as they were.
+
+## 2026-11 — A planned rest day is a rest day (v0.646.0 / app 0.456.0)
+
+A weekday the plan marks Rest (and plans nothing else) used to look like an
+empty day: Rest / skip, + Conditioning, suggestions. Now `restPlanned` makes
+it read "Rest day" with none of that, the same as a day marked rested. Log an
+additional workout stays, and anything logged (a game, a row, conditioning)
+lists under Logged — on such a day `loggedOtherFor` includes cardio and HIIT
+sessions, which normally show in their own sections. It stays a rest day.
+
+## 2026-11 — Workout plan: "Saved" after each change, Done at the bottom (v0.645.0 / app 0.454.0)
+
+The plan editor saves every change the moment it's made, but nothing said so,
+which left leaving the page feeling unsafe. Rather than a draft with Save and
+a discard warning (every edit is its own server write, and undoing them could
+strand a slot already logged today), each change now confirms with a short
+"Saved", and a Done button at the bottom leaves. Web: PlanBuilder watches the
+plan, start date and pause state coming back changed (and the section order's
+save) and shows a toast. No exit warning: there is never anything unsaved.
+
+## 2026-11 — Core rotation moves on at the next core day; plank test card (v0.644.0 / app 0.453.0)
+
+- `stepCoreDay` used to move the rotation the day after a log. The plan entry
+  then held the next workout's movements, so the day just logged matched none
+  of them: it read as not logged ("logging late", an overdue nag) though it
+  was done. Now a log moves the rotation on when its weekday comes round again
+  (log + 7 days), and `since` becomes that day. Until then the logged day
+  keeps the workout that was done.
+- Entries stored before this (no `v: 2`) get a one-time repair in
+  `syncCoreDays`: if the rotation moved on the old way and that weekday hasn't
+  come round again, it steps back to the workout that was logged (and puts the
+  plank test back if that early move marked it done).
+- The monthly plank test stays the entry's first planned movement (so logging,
+  adherence and the heat map need nothing new) but the day page shows it as
+  its own "Plank test" card, opening just the plank; the core card leaves it
+  out. Served as `coreTest` on the day's workouts.
+- Plan editors show a Core day like a warm-up: "Core", then the workout's
+  name as an accent link that opens the rotation. The movement list and
+  "N in the rotation" line are gone from the row (the rotation shows them).
+
+## 2026-11 — Plank test shows with Core's charts (v0.643.1 / app 0.452.1)
+
+0.643.0 only drew the plank card when Core had no weighted charts. With a
+suitcase carry or weighted back extension logged, Core is a charted group, so
+the card never appeared. It now leads Core's section either way, and with no
+plank logged it says so instead of vanishing.
+
+## 2026-11 — Plank test as core's benchmark (v0.643.0 / app 0.452.0)
+
+- Below the body map, Core opens with the plank test instead of only the
+  hard-sets summary: best and last (with Marine Corps PFT points and dates),
+  the change since the test before, time still to 3:45 (100 points), days
+  since the best, and the number of tests — then a chart of every test with
+  dashed lines at 1:10 (pass) and 3:45 (full marks). The hard-sets summary
+  stays underneath.
+- A "test" is a day's longest plank, whether from the monthly plank test or a
+  plank in a workout: any single long hold is the same benchmark, and it means
+  a log from before the monthly test existed still counts. Side planks don't.
+- `isPlank` now also matches "Planks" and "Plank test", so pool items named
+  either way count. Served as `heat.plank`, worked out in `plankTests`.
+
+## 2026-11 — Times in m:ss, sets in pairs, the side-switch timer (v0.642.0 / app 0.449.0)
+
+- Timed sets show and take minutes and seconds. Typing works like a
+  microwave — digits fill from the right (1, 2, 6 → 1:26) — so a number pad
+  is enough; stored as seconds (`clock-entry.ts`). Set boxes are sized to
+  their contents (m:ss, two-digit reps, a weight) instead of filling the row.
+- Movements done a side at a time (`switchesSides`: side plank, suitcase /
+  overhead / single-arm carries, Copenhagen) are a set per side, so their sets
+  come in pairs: the core library plans 4, and an odd count in your own core
+  workout rounds up. Library text says "one side per set, switching each set".
+  `MovementLog.sides` tells the clients.
+- On the Core day screen, Timer works on the next movement with open timed
+  sets, and only that one. A side-at-a-time movement opens `SidesTimer`:
+  Start on Left/Right, a 1/2/3 s pause, a stopwatch with Switch — each Switch
+  keeps that side's time, pauses, and times the next — until every open set
+  has a time, which fill its sets in order (ticked by you). Done stops early
+  with what's been timed.
+
+
+## 2026-11 — Public skate on the Hockey page (v0.641.0 / app 0.448.0)
+
+ice-time 0.1.3 adds a Public skate section and marks every section's `kind`
+("hockey" or "skating"). `sectionKind` reads it (or, from an older ice-time,
+guesses from the name: about skating and not hockey). `withEventTypes` gives
+each section its event type for "Add": the hockey type for hockey, a type
+named for skating (or none) for skating — never Hockey practice for a public
+skate. The page and `/api/v1/hockey` attach it per section; the phone uses a
+section's own type when the server sends `kind`. A public skate counts
+"Everyone" in ice-time: that's the counts having no skater/goalie split, not
+who may come.
+
+
+## 2026-11 — Core day screen, like 5/3/1; carries log distance (v0.640.0 / app 0.447.0)
+
+- The Core day screen drops the per-movement cards and controls: each
+  movement is a heading (name, today's target, ⓘ) over its set cards, like
+  5/3/1's Warm-up / Main sets. Skip (the whole workout), Timer and Log sit
+  once at the bottom; the timer's time goes into the next open timed set
+  down the page (filled, ticked by you). One "how did it feel" at the end,
+  saved against every movement (the heat map reads effort per movement). No
+  "Same as last time" there: the greyed hints already are last time (or the
+  target), and ticking a blank set logs its hint. Web: `SectionHandle`
+  (save, skip, takeSeconds, feel) registered by each embedded
+  `MovementLogger`.
+- Carries (`isCarry`: "carry"/"farmer" in the name) log weight × distance:
+  the reps field is yards (metres with kg), `MovementLog.repsUnit`, the
+  target reads "3 × 40 yd", and best-at-reps chips are off. Library carries
+  say "Log the weight and the distance"; core workouts plan 3 × 40 yd.
+
+
+## 2026-11 — Core day on one screen; Weights → Strength (v0.639.0 / app 0.446.0)
+
+- A Core day shows as one card on the day page (name, "6 movements · 2
+  logged"). It opens `CoreLogger` (day-log.tsx): each movement's
+  `MovementLogger` in its own section (`embedded`: no back, no Log of its
+  own; Skip and Timer as small buttons), and one Log that saves every
+  section's typed sets and goes back. Sets still save as they're ticked, and
+  each movement keeps its own record, effort and skip. The day payload marks
+  Core days (`TodayPlanned.core`) for the phone.
+- The WEIGHTS category reads "Strength" everywhere it's shown (catalog,
+  options, day sections); the stored value is unchanged.
+
+
+## 2026-11 — Progress focus, warm-up chooser, home card lines (v0.638.0 / app 0.445.0)
+
+- The body map and charts open on today's muscle groups, else the next
+  planned day's (`focusGroups`, focus.ts) — never the last one trained,
+  which showed yesterday on a day whose group had no weight charts. A group
+  with no weight charts (Core of holds and reps) still gets its region when
+  planned or trained, and a summary block from the heat data: hard sets a
+  week over 12 weeks and its bests then → now (`HeatGroupSummary`).
+- Add workout → Warm-up shows the routines (`WarmupChooser`) in the Core
+  rotation's layout — a row each, ⓘ steps, pencil on your own, New warm-up —
+  and the entry is created with its routine (`add-pool` takes `warmup`). The
+  plan line's Warm-up window uses the same chooser.
+- Home card lines (`cardLines`, day-title.ts): the title is the program's
+  main lifts, else the strength work (a Core day counts), else
+  conditioning, else cardio; the line under it is everything else once,
+  never the warm-up and never what the title says. Off a program too. The
+  day page's title uses the same.
+- Core stays a Weights muscle group for now (offered: rename Weights to
+  Strength).
+
+
+## 2026-11 — Core days (v0.637.0 / app 0.444.0)
+
+A Core day is a Weights · Core plan entry with a rotation (`PlannedWorkout.core`,
+JSON; migration 142). Add it from Add workout → Weights → Core → Core
+rotation (Pick movements still works as before); change it from the entry's
+Rotation button.
+- Core workouts: eight in code (`CORE_LIBRARY`, `core-library.ts`) and a
+  person's own (`CoreWorkout` table, made from the rotation list). Each
+  movement says how it's logged — reps, a timed hold, or weight × reps
+  (carries count lengths) — matching the movement library. The library ones
+  cover the core's jobs: resist arching (fallouts, hollow holds), resist
+  twisting (Pallof press, one-sided carries), resist side-bending (side
+  plank, suitcase carry), bend forward under load (leg raises, crunches) and
+  rotate with power (med-ball throws, slams) — Escamilla 2010 (rollouts
+  beat crunches), McGill's Big 3, Behm 2010 (heavy lifts already train the
+  core), Szymanski 2007 (med-ball rotational power).
+- The entry's movements are rewritten to the workout now due by
+  `syncCoreDays` (core-run.ts), run before the plan or a day is read: the
+  rotation moves on once the current workout was logged on an earlier day
+  that counts for that weekday (a missed week repeats it; logging never
+  swaps today's plan). Pure step in `stepCoreDay`, tested.
+- The monthly test goes first on the month's first core day — a max plank,
+  `hold:1x70-225` (1:10 PFT pass to 3:45 full marks) — then the week's
+  workout as usual, so the test day is the hardest core day, not the
+  easiest. Plank is kept out of the library workouts so the test never
+  collides with it (a plan entry holds a movement once).
+- New set scheme `hold:SxMIN-MAX` for timed holds: targets five seconds
+  past last time's shortest hold, within the range; target sets carry
+  `seconds`, and the loggers use them as the hint.
+- Library adds crunch, reverse crunch, bicycle crunch, V-up and flutter kick.
+
+
+## 2026-11 — Core days, timed holds, two-row legend (v0.636.0 / app 0.443.0)
+
+- Workout days marks a day for a group trained without weights (a core day of
+  planks and leg raises) from `heat.days` (`unweightedDays` in heat.ts): the
+  main group of every bodyweight or timed set, except sets in a conditioning
+  (HIIT) workout and warm-up/cardio sessions. Core is a group like Arms: it
+  shows only when core was the main work, never from squats or the warm-up.
+- Timed holds count on the heat map against the longest hold: two-thirds or
+  more counts 1, 40% ½. A plank counts in full at 1:10, the Marine Corps PFT
+  minimum (one table for every age and sex; 1:10 = 40 points, 3:45 = 100,
+  even steps between — the in-between table wasn't confirmed). The plank's
+  best shows its PFT points (`pftPlankPoints`).
+- The Workout days legend is four to a row in lined-up columns, so a seventh
+  group starts a tidy second row (the user's pick over a side legend or a Key
+  pop-up).
+- Library: McGill curl-up, TRX Pallof press, back extension hold, overhead
+  carry, toward premade core blocks (proposed, not built).
+
+
+## 2026-11 — Body-map heat view (v0.635.0 / app 0.442.0)
+
+A flame toggle on the body map swaps the primary/secondary view for hard sets
+a week per muscle, over 1 week, 4 weeks, 12 weeks (default), 6 months or all
+time; the toggle and range are kept per device. The server counts
+(`src/lib/workouts/heat.ts`, pure, tested; `heat-run.ts` loads), so both
+clients show the same numbers; it rides on the web board (`PersonWorkout.heat`)
+and `/api/v1/workouts/progress` (`heat`).
+
+What counts, from the research on hypertrophy and strength:
+- A set's credit is by proximity to failure, estimated from the person's own
+  best (Epley from sets of 12 or fewer, as of that day): within 5 reps of the
+  limit counts 1, 6–9 short ½, further off 0. Sets under half the day's top
+  weight for the movement (warm-ups) count 0. Bodyweight sets are judged
+  against the most reps logged.
+- How it felt overrides the estimate: Hard / Too hard → 1, Easy → at most ½.
+- The main muscle gets the credit; muscles it only assists get ½.
+- Heavy sets (6 reps or fewer at 80%+ of the estimated max) are counted on
+  their own, main muscle only — load matters for strength.
+- Shading: one hue, under 4 / 4–9 / 10+ a week; tapping a muscle opens a
+  pop-up with sets a week, heavy sets a week and the best weight at the most
+  common rep count for up to three movements, then → now.
+Warm-up and cardio sessions are left out. Deadlift shades the lower back and
+glutes, as the normal map does.
+
+
+## 2026-11 — Progress is history, not the plan (v0.634.0 / app 0.441.0)
+
+The server already sent every movement with logged weights (v0.6xx), but
+both clients narrowed what they drew to the movements the current plan
+tracks whenever there was a plan: the web's `trackedSeries`, the phone's
+`universe` in WorkoutChart. Changing programs (Arms no longer programmed)
+made Arms vanish from the body map (not selectable), the records and the
+Workout days grid. Both now draw every movement with logged weights; the plan
+still decides what the map opens on (today's groups) and the "today" slice.
+
+
+## 2026-11 — Companion weights a step lighter (v0.633.0)
+
+From real use: 105 for 5 × 10 (after a 165 × 3) was a little heavy and 100
+was right. `weightForReps` now takes 5% off per set (at most 30%) instead of
+4% (at most 25%): from 165 × 3, 100 for 5 × 10, 115 for 3 × 10, 115 for 5 × 5.
+Web only; the phone shows the server's targets.
+
+
+## 2026-11 — Companion weights by sets; neon timer numbers (v0.632.0 / app 0.440.0)
+
+**Companion weights:** the estimate from a heavier, lower-rep set picked a
+weight for one set of the target reps with about three to spare (165 × 3 →
+125 for 10), whatever the number of sets, so 5 × 10 asked for too much.
+`weightForReps(last, reps, unit, setCount)` now takes the most that set's
+strength allows once for these reps (Epley max ÷ (1 + reps / 30)) and takes
+4% off per set, to at most 25%, rounded down: from 165 × 3, 105 for 5 × 10
+(about 60% of the max), 115 for 3 × 10, 120 for 5 × 5. A weight already done
+for the reps still holds until changed.
+
+**Timer numbers:** the profile's choices show "1:30" in each font and colour
+on a dark tile; the colours are neon (green, blue, pink, yellow, orange, red,
+plus Plain and Theme colour).
+
+
+## 2026-11 — Leaving a lift early keeps the rest (v0.631.0 / app 0.439.0)
+
+A lift with sets logged today opened with only those sets: the program's
+remaining target sets were gone, so an accidental Log after the first warm-up
+set left nothing to finish. The set logger (`rowsFrom`) now lists today's
+logged sets, then the targets still to do (blank, with their hints). Log with
+sets not yet done asks first ("Finish early?": Keep going / Finish for now);
+finishing saves what's logged and the rest stays for later. Only saved sets
+are ever sent, as before.
+
+
+## 2026-11 — Timer numbers: font and colour (v0.630.0 / app 0.438.0)
+
+The workout timers (conditioning and warm-up) take a number font (Standard,
+Condensed, Monospace, Serif) and colour (Plain, Theme colour, Amber, Green,
+Red, Blue), kept on the device like the timer's look (`TIMER_FONT_KEY`,
+`TIMER_COLOR_KEY`, `useDigits` in conditioning-timer.tsx), set in the
+profile's Workout timer card. Get-ready and rest keep their own colours so
+they still stand out. The phone has the same under Settings → Appearance.
+
+Checked: 5/3/1's warm-up sets are 40% × 5, 50% × 5, 60% × 3 of the training
+max (Wendler; not in the deload week), as built.
+
+
+## 2026-11 — Bodyweight movements log reps; warm-up check; first side (v0.629.0 / app 0.437.0)
+
+**Reps only for bodyweight:** a program's lifts were planned with metric
+WEIGHT whatever the movement, so push-ups (and pull-ups kept under HIIT)
+asked for a weight. Starting a program now plans a movement whose pool
+"Logs as" is REPS, or one from outside Weights, as REPS. The library's
+bodyweight movements set REPS on a matching pool movement with no "Logs as"
+when tagged. Migration 141 does both for existing data (by library key) and
+fixes plan entries. A weighted version (weighted pull-ups) is its own
+movement.
+
+**Warm-up card:** the Mark done button is a hollow accent check that fills in
+when done; the card opens the routine (Mark done stays in the window).
+
+**First side:** the warm-up timer asks Left or Right (kept on the device)
+when its run has an each-side step; `warmupIntervals(…, first)`.
+
+
+## 2026-11 — Thinner outlines; the home workout card's second line (v0.628.0 / app 0.436.0)
+
+**Outlines:** the secondary button outline is 1 px (it was 2 px from 0.627,
+which read as heavy). The accent colour is what makes it read as a button.
+
+**Home workout card:** the dashboard's workout task now has a `subtitle`
+(`loadWorkoutDayExtras` + the day's sport events): on a program day, the
+plan's other entries that aren't the program's lifts or the warm-up
+(conditioning by its workout's name, cardio, a workout of one's own), then any
+game on the calendar for the person that day (`sportLabels`: its event type or
+subscribed calendar, with its start time). Off a program the title already
+names every workout, so only games are added. The phone shows it under the
+title as Chores shows its second line, and the card is at least as tall as a
+two-line card.
+
+
+## 2026-11 — Recent workouts by day; programs across changes; weights that hold (v0.627.0 / app 0.435.0)
+
+**One button style:** the workout pages had four slightly different "quiet"
+buttons (a hairline outline, read as disabled). They now share
+`src/app/exercise/buttons.ts`: `PRIMARY_BTN` (filled accent) and
+`SECONDARY_BTN` (2 px accent outline, accent text, on the surface colour) in
+three sizes, plus `DANGER_BTN`. Sizes are separate constants because a height
+class added at the call site fights the one inside. The phone's plain
+OutlinedButtons in the workout screens became `AccentOutlinedButton`, and its
+pills (Add set, Swap) match; timer screens (their own palette), Delete and
+Stop rotation keep theirs.
+
+**Companion weights hold:** a fixed or rep-range scheme no longer steps up by
+itself. The weight is the one already done for the target reps; it changes
+when the person changes it, or when a heavier, lower-rep set elsewhere in the
+last session allows more (estimate ÷ (1 + (reps + 3) / 30), about three reps in
+reserve, so a guess starts on the light side). A program's own main lift on a
+rep scheme (Sets of ten, Full body) still steps up as its program says
+(`progress`). Sets are straight sets at one weight, as Wendler's assistance
+and BBB work are; ramp-up sets are for the main lifts only.
+
+**"Logging late"** only on a past day that had something planned.
+
+**Recent workouts by day:** one entry per day (`groupHistory`): the main work
+and conditioning ("Legs", "Hockey game · Back · Cindy"), else cardio, else the
+warm-up; prefixed with the program the day was part of when weights were done
+("5/3/1 · Legs"), from every program the person has run (`loadProgramSpans`:
+startedOn up to endedOn). Deleting an entry deletes the day's sessions
+(`ids`). The day page's Logged list and title leave a warm-up out the same way
+(`loggedTitle`).
+
+**Programs across a change:** `programInfoFor` uses the program running on the
+day (`loadProgramOn`: the active one from its start, else an ended one that
+covered it), so the day before a change still shows its program and week, and
+its title is the program and what was logged when the plan has changed since.
+Setting up the running program again (Change program → the same one) now
+carries it on like "Next cycle, with changes" without moving the block: same
+start and week, entries outside the setup kept, a blank training max kept.
+
+
+## 2026-11 — Program-day titles; companion weights; ⓘ everywhere; next cycle with changes (v0.626.0 / app 0.434.0)
+
+**Titles:** a program day's title is the home card's label, the program and the
+day's main lift ("5/3/1 · Bench press", `programDayTitle` over
+`loadWorkoutPlanNames`). A game auto-logged from a subscribed calendar has no
+event type, so `LoggedOther.label` falls back to the calendar's name, then
+"Sport".
+
+**Companion weights:** a fixed or rep-range scheme took last session's heaviest
+weight whatever its reps, so a 5 × 10 row after a pyramid to 165 × 3 asked for
+165 × 10 five times. The weight is now the heaviest already done for at least
+the target reps (stepped up once every set got every rep, as before), or, when
+that's lower, what the best recent set allows for the target reps with about
+two in reserve (`weightForReps`: Epley estimate ÷ (1 + (reps + 2) / 30),
+rounded down to a loadable weight; 165 × 3 → 125 for 10s). Wendler gives no
+percentage for assistance work (rows, chins, dips): enough reps, done well, short
+of failure; BBB's supplemental sets stay at 50% of the training max. This
+applies wherever targets are computed (programs and hand-built plans).
+
+**ⓘ:** program setup (main and companion picks, from each option's `about`,
+the pool's own or the library's), the plan editor's movement rows (web and
+phone) and the Log an additional workout exercise picker.
+
+**Next cycle, with changes:** the end-of-cycle window adds it beside Next
+cycle / Repeat / Switch. It opens the program setup on the plan as it is
+(`currentSetup`: days, each slot's movement, removed slots, companion sets,
+other lifts on program days as added ones; the Maxes step edits the raised
+training maxes directly). Starting it (`next: true`) keeps the program row
+(start date, history) and moves to the next block, rebuilds the program days,
+and puts back every plan entry the setup doesn't cover: workouts on other days,
+stretching, sport, rest days, a warm-up on a non-program day. Next cycle and
+Repeat never touched the plan, so edits made during a cycle (a warm-up routine,
+added workouts) carry on as they are; only Change program rebuilds from scratch
+(after saving the old plan to My plans).
+
+**Save, share or export** is accent-outlined (2 px) on web and phone.
+
+
+## 2026-11 — Visible buttons; Conditioning in its place; day titles; warm-up countdown (v0.625.0 / app 0.433.0)
+
+**Buttons that read as buttons:** secondary actions on the day page (Rest /
+skip day, + Conditioning, and on the phone Log an additional workout) have a
+2 px accent outline and accent text on the surface colour. The grey hairline
+outline read as disabled.
+
+**+ Conditioning in its place:** the day always has a Conditioning section
+(`withSection`, the same rule as the cardio stub), placed where the person's
+section order puts Conditioning; the one-off conditioning list and
++ Conditioning render inside it rather than after every section.
+
+**Day titles:** on a program day the title is the program's name and the
+line above it is just the week ("Week 1 of 4"), matching the home card.
+Otherwise the title is the kinds of work (`dayHeadline`: Weights, Cardio,
+Conditioning…; a Warm-up only when it's all there is), not the muscle groups.
+A past day titled from what was logged uses `LoggedOther.label`: a session
+auto-logged from a calendar event goes by the event's type ("Hockey game"),
+not its title; the Logged card keeps the title with "Hockey game · Done"
+under it. `programInfoFor` returns null before the program's `startedOn`, so
+earlier days no longer show the program's week.
+
+**Warm-up countdown:** a timed step's Timer opens a full-screen countdown in
+the timer's colours (`usePalette`, now exported). It runs that step and the
+timed steps straight after it (an each-side step as two intervals, "· left"
+and "· right"), a get-ready before the first and a pause chosen before it
+starts between the rest (`WARMUP_GAPS`, kept on the device), "Next: …", 3-2-1
+beeps, a tone and a buzz at each change, Pause and Skip. The steps it ran are
+ticked. The schedule is pure (`warmupSchedule` / `warmupAt`) and measured
+from the clock, so a slow tab doesn't drift. It replaces the count-up timer.
+
+**Companion choices by name:** a pool movement with no pattern tag and no
+library match was invisible to companion slots (a household's "Sandbag
+lunge"). `guessPattern` types it from its name (lunge/squat/step-up → Squat;
+deadlift/RDL/good morning/hip thrust/bridge/swing/back extension/leg curl →
+Hinge; plank/sit-up/crunch/leg raise/ab/rollout/hollow → Core; row/pull/chin
+→ Pull; press/push-up/dip/bench → Push). A weights movement that still has
+no type fits by muscle group (the slot's `groups`, else its own group).
+
+**"· new" (unchanged):** marks a library movement that isn't in the
+household's pool. Starting a program with one adds it to the pool, after
+which it shows without the mark.
+
+**Concept2 (unchanged, noted):** the check runs only when a day page opens
+or reloads (or Check now), never in the background, and the server throttles
+it to once every 5 minutes.
+
+
+## 2026-11 — Companion exercises by kind; Warm-ups home; plan tools tidied (v0.624.0 / app 0.432.0)
+
+**Companion exercises:** a companion slot names a kind of movement (`patterns`,
+optionally `groups`, on the role — Push, Pull, Hinge, Core, Legs, Hamstrings,
+Single leg or core) and offers movements of that pattern (the pool row's own
+`pattern` tag, else the library movement of that name), never one of the
+program's main lifts (by the main roles' names; Romanian deadlift is no
+longer a main-lift fallback). It also offers library movements the household
+has the equipment for but not in its pool yet ("lib:<key>", shown "· new");
+starting the program adds them (`applyLibrary`) and uses their ids. A slot
+with nothing named falls back to the first fit, so it isn't blank. A pick is
+planned under its own muscle group (a good morning under Legs), the slot's
+when it has none (pull-ups → Back). The Lifts step lists days in weekday
+order; "Companion exercises", "+ Add exercise". The Maxes step's training max
+reads "Training max 120" with an ⓘ that explains it.
+
+**Warm-ups' home:** the Workouts page's third button is Warm-ups (Create /
+edit): yours and the ready-made ones, each opening to its steps, Edit (a copy
+for a ready-made one) and New. Rest / skip moved to the day page ("Rest /
+skip day", shown until something is logged). "HIIT / CrossFit" is the label
+with "Create / edit" under it, the same as Warm-ups.
+
+**Plan tools:** the plan editor's four grey chips became one button at the foot
+of the plan, "Save, share or export", opening Save to My plans, Share with the
+household, Export a file, Import a file. Opening a saved or household plan is
+with the programs (Start / Change program), so it's not repeated here. A
+parent's (role ADMIN) shared plan is approved at once; anyone else's still
+goes to a parent (`plan/share` answers "shared" or "pending").
+
+**Rotation:** a rotation is another way to plan, so it's chosen with the
+programs (a Rotation card under Programs in the chooser) instead of a tab /
+button in the weekly plan editor.
+
+## 2026-11 — Grouped sets; past days show what was logged (v0.623.0 / app 0.431.0)
+
+**Grouped sets:** a lift with warm-up or supplemental sets shows them under
+their own headings — Warm-up, Main sets, then "5 × 10" or "5 × 5" — each
+numbered from 1. Target sets carry `supplemental` (BBB, FSL) as they carry
+`warmup`.
+
+**Past days:** the day page laid a past day out from today's plan, so after a
+program (or an import) rewrote the plan, last week's Chest day showed today's
+Deadlift card, unlogged, and nothing of what was actually done. Now:
+- `planIds`: the plan entries in effect that day (made before the day ended,
+  the same rule tasks and the phone already used); the web shows only those
+  for a past day.
+- `loggedOther`: everything logged that day outside those entries, by
+  session name, each movement's sets in a few words, under "Logged". Cardio
+  and conditioning are left out (their own cards show them).
+- `loggedAny`: "logging late" only shows on a past day with nothing logged;
+  the title names what was logged when nothing was planned.
+`GET /api/v1/workouts` adds `loggedOther` and `loggedAny`.
+
+## 2026-11 — Warm-up routines; timer light or dark (v0.622.0 / app 0.430.0)
+
+**Warm-up routines.** A Warm-up plan entry is still done with one check, but
+can now show a routine: `PlannedWorkout.warmup` holds "lib:<key>" (a
+ready-made routine in `src/lib/workouts/warmup-library.ts`) or the id of the
+person's own `WarmupRoutine` (migration 140; steps as JSON); null is a plain
+check. A step is REPS (an amount as text — "10–15", "5 × 3" — nothing logged)
+or TIME (seconds; on the day a plain count-up timer: Start, Stop, Reset), and
+either can be "each side". Nothing in a routine is logged: the routine is a
+guide, the check is the record. The 5/3/1 warm-up sets stay with the lift
+(v0.621), so dropping the warm-up never drops them.
+- Ready-made: Jumps and throws (5/3/1: jump rope, then 10–15 fast jumps and
+  throws, per Wendler), Hips and shoulders, Quick 5 minutes, Lower body.
+- The day: tapping the Warm-up card opens the routine in a window (steps with
+  a tick each and timers on timed ones), with Switch (changes that day's plan
+  entry) and Mark done; the card's own check completes it without opening.
+- The plan editor: a Warm-up entry shows its routine; tapping it opens the
+  chooser (Just a check, ready-made, your own, + New warm-up). Editing a
+  ready-made one saves your own copy. Deleting your routine turns entries that
+  used it back into a plain check.
+- Starting a program: the Extras step's Warm-up is None / Just a check / a
+  routine, starting from the plan's own. The workouts file and My plans keep
+  the routine id (dropped on import if it isn't there).
+
+**Timer look.** Dark stays the default (a high-contrast screen readable across
+a room). Light uses the app's surfaces and accent with amber for get-ready and
+red for rest; "Match the app" follows the app's light or dark mode. Kept per
+device: web Profile → Workout timer (localStorage), phone Settings →
+Appearance → Workout timer.
+
+## 2026-11 — 5/3/1 warm-up sets; setup labels and maxes; rowing in metres (v0.621.0 / app 0.429.0)
+
+**Warm-up sets** belong to the lift, not the Warm-up card, so leaving the
+warm-up out never drops them: `Program.warmupSets` (5/3/1, BBB, Beginners,
+Wave loading) puts 40/50/60% × 5/5/3 of the training max before the main sets,
+flagged `warmup` on the target set; none in a light week. The logger labels
+them "W" and numbers the working sets from 1. They log like any set (light, so
+they never set a record).
+
+**Setup:** companion slots are named by type — Push, Pull, Hinge, Core, Legs,
+Hamstrings — not by a specific exercise the household may not have (Good
+mornings listed every Legs movement). The hinge slot files under Deadlift so
+Romanian deadlifts are offered. A slot's options carry `timed`; a timed choice
+shows Time instead of a set scheme (the server already writes it by time). The
+last step is Maxes: the field is your best (pre-filled from what's logged,
+editable), with the training max (90%, rounded to 5) under it; the client sends
+the training max.
+
+**Rowing in metres:** the weekly readout under the chart summed rowing into
+miles. Rowing now reads in metres (what Concept2 reports); other distance uses
+the household's unit (Admin → Units, mi or km), a run logged in metres
+converted to it. Runs can still be logged in metres.
+
+**Workouts page order:** today's groups first, in the plan's order (a program
+writes the main lift's group first), then the rest A–Z, on web and phone. The
+phone's progress blocks now name each movement.
+
+## 2026-11 — Wendler programs; step-by-step setup; My plans; end of cycle (v0.620.0 / app 0.428.0)
+
+**Programs** (`src/lib/workouts/programs.ts`), matched to Wendler's own
+templates as closely as the app's shapes allow:
+- **5/3/1** (`wendler-531`): 4 days (Press, Deadlift, Bench, Squat), the
+  5/3/1 weeks at 65/75/85, 70/80/90, 75/85/95% of the training max, the last
+  set of weeks 1–3 a "+" set, week 4 the deload (40/50/60%). Assistance is the
+  Triumvirate from the original book: dips 5 × 15 and chin-ups 5 × 10; good
+  mornings 5 × 12 and hanging leg raises 5 × 15; dumbbell bench 5 × 15 and
+  dumbbell rows 5 × 10; leg press 5 × 15 and leg curls 5 × 10. Each slot falls
+  back through similar names (no leg press → a split squat or lunge).
+- **Boring But Big** (`wendler-bbb`): the same weeks plus 5 × 10 at 50% of the
+  training max after the main sets (not in the deload), then one assistance
+  lift (chin-ups, hanging leg raises, dumbbell rows, leg curls).
+- **5/3/1 for Beginners** (`wendler-beginners`): 3 days — squat + bench,
+  deadlift + press, bench + squat — each with + sets and First Set Last 5 × 5
+  at the first set's %; 3-week cycles, no deload; push, pull and single-leg or
+  core at 5 × 10–20 (50–100 reps).
+- **Wave loading** (`wave-loading`): two waves of 3, 2, 1 in one session, the
+  second 2.5% heavier, each week 2.5% heavier again (75 → 80% base), week 4
+  light; the old Strength waves companions (no rowing).
+- Supplemental sets are part of the main lift's targets (`Program.supplemental`
+  FSL / BBB), so they log on the same movement with their % shown. `WaveSet.plus`
+  marks a + set; the logger's reps hint reads "5+". Strength waves is gone;
+  `strength-waves` reads as `wendler-531` (`RENAMED`), so a running one keeps
+  its plan and gains + sets. A hand-built wave stays without + sets.
+- Rowing stays only where it belongs: In-season full body (conditioning for a
+  sport) and Just get moving (an easy row). 5/3/1 templates plan none; cardio is
+  the person's own, kept by the Extras step.
+
+**Setup, one flow in windows** (web `program-card.tsx`, phone
+`ProgramsScreen.kt`): Choose (Programs / My plans / Household) → Days (a
+weekday per program day; two program days may share one) → Lifts (main lifts
+tagged 5/3/1 or Waves; companion lifts with their own sets, swap, remove, + Add
+a lift) → Extras (warm-up on by default, cardio days starting from the plan's
+own plus the program's rowing days, conditioning days starting from the plan's)
+→ Training maxes (90% of the heaviest logged, rounded to 5, editable; blank
+finds them the first week) → Start, which opens the plan editor. On the
+server, a day the old plan had cardio or conditioning on keeps that entry
+(Kalsu stays Kalsu); a new day gets "Cardio" or "Conditioning" (pick on the
+day); the warm-up copies the old plan's (with its movements) or adds an empty
+one. A program's rowing on a cardio day is "Rowing · <program>" — the Cardio
+card's title says it's the program's, and the person's own row isn't doubled.
+Older clients (no extras) get the program's rowing as before.
+
+**My plans** are SharedPlan rows with status PRIVATE (no new table): only the
+owner lists or opens them (through `plan/shared/use`, which already allowed an
+owner), and household lists and Admin filter to PENDING/APPROVED. Starting a
+program saves the plan it replaces as "<date> · before <program>", skipped
+when the plan is empty or the same as the last saved. The old snapshot on the
+program (Go back to my old plan) stays as it was.
+
+**End of cycle:** a window that opens on its own when a cycle is done (and
+from "Cycle done · what's next?" on the card): each lift's raise to the
+training max, starting at its `step` (10 lb lower body, 5 upper, half in kg),
+0 holds it; Next cycle, Repeat (all 0), or Switch program (the chooser,
+including My plans). `programs/block` takes `raises`.
+
+**Logger headers (#18):** only a main lift's target title names the program
+and week; a companion lift shows its sets, with the week only when light or a
+test.
+
+## 2026-11 — Deadlift group; program fixes; 5/3/1 logger; + Conditioning (v0.619.0 / app 0.427.0)
+
+**Deadlift is a muscle group** (`DEADLIFT`, colour #9c6b3c). Migration 138
+adds the enum value; 139 uses it (a new value can't be used in the
+transaction that adds it). 139 moves every pool movement in Weights whose name
+contains "deadlift" (Romanian and trap bar too) into it, turns a plan entry
+that held only deadlifts into a Deadlift entry (renamed when it was called
+Core, Legs, Back or Full body), and splits a mixed entry: the deadlifts go to a
+new "Deadlift" entry on the same day. Both are safe to run twice. On the body
+map the posterior-hip region is labelled Deadlift and shades from the Deadlift
+fill.
+
+**Program setup:** a slot offers every active movement in its group, or whose
+name matches the slot, in any category (pull-ups are filed under HIIT). Top
+weights are pre-filled with the highest weight ever logged; the training max
+stays 90% of it. Starting a program keeps a timed movement's metric (planks log
+by time, no scheme); 139 fixes plans already written.
+
+**Strict sets:** a set with a `pct` is a 5/3/1 set. The set number shows the
+percentage instead of "Top", the × becomes a plates button that opens the
+calculator loaded for that weight (switching the bar reloads the plates), and
+the "Remaining sets −5 / +5" row is hidden. Elsewhere it stays.
+
+**Timed movements:** the Calculator tile becomes Timer, which opens the
+conditioning timer (for time); its result fills the next set's seconds.
+
+**+ Conditioning on any day:** a button under the sections opens Pick one /
+Build one / Write your own in a window; what's logged lists as an extra. A
+conditioning session no longer counts as an unplanned workout, so a finisher
+doesn't complete a lifting day.
+
+**Lighter day:** asks only when the same muscle group was answered Too hard
+twice in a row (one answer per group per day), or three training days in a row
+each had a Too hard; Hard alone never asks; never in the 14 days after a
+program starts or the plan changes.
+
+**Workout days chart:** rows are the plan's days plus every weekday with a
+logged day in the last 16 weeks. **Home card:** on a program a day reads
+"<program> · <main lift>".
+
+## 2026-10 — "How did it feel?" slider; one Cardio card (v0.618.1 / app 0.426.1)
+
+Every "How did it feel?" (a movement's sets, cardio, conditioning, sport) is
+one control, `EffortPicker` (web) / `EffortChooser` (phone): a four-step
+slider with the thumb in the theme colour (grey until answered, starting at
+Solid) and a check beside it that saves the answer; the check fills once
+saved, and moving the slider again asks for it again. "Something hurt?" is a
+small bandage icon by the question that opens the areas in a dialog (web
+window / phone AlertDialog), with "Nothing hurt" to clear it; the chosen area
+shows in red by the icon.
+
+Cardio is a single card: its title (the entry's name when there's one, else
+the plan's), then ⟳ Concept2 (check now) and + (add more) on the card, or
+Skip and Add cardio when nothing is logged. The Add cardio button under the
+card and the "Check Concept2 now" link below it are gone. A Concept2 row has
+no delete (it comes from the rower; Undo still restores a hand entry it
+replaced); a hand entry keeps its trash icon.
+
+## 2026-10 — Export and import for everyone; household plans (v0.618.0 / app 0.426.0)
+
+**The workouts file** (`src/lib/workouts/plan-file.ts`, pure): kind
+`kairos-workouts`, format 1. It holds the weekly plan (each entry's weekday,
+name, category, muscle group, rest, its named workout by name, and its
+movements by name and category with how they're logged, tracked and the set
+structure — a wave as just "wave"), the day page's section order, the
+person's own named workouts plus any shared ones the plan uses (so the file
+stands alone), and, if asked, everything logged. No ids anywhere, so a file
+works in another household. Reading a file keeps what it recognises and drops
+the rest; a file newer than the server is refused.
+
+**Import**: Replace swaps the whole weekly plan (ending a running program,
+which wrote the old one; its "go back" plan isn't kept) and takes the order;
+Add puts each entry on its day unless one with that name is already there,
+and a workout added to a rest day makes it a training day. Movements match by
+name within their category, shared ones first; missing ones are added to the
+person's own pool. Named workouts match by name among approved and own ones;
+missing ones are added as the person's own (unapproved, shareable as
+before). A wave restarts on the day it's imported. Program roles aren't
+carried. History is never imported (no duplicates, no rewriting the past).
+Rotations aren't in the file.
+
+**Household plans** (`SharedPlan`, migration 137): Share this plan stores the
+plan as a workouts file under a name, PENDING until a parent approves it in
+Admin → Workouts (or dismisses it). Approved plans list for everyone under
+Household plans with who shared it and the plan in a line; starting from one
+is the same Replace / Add as an import. The sharer can withdraw a plan still
+waiting; Admin can take an approved one down, and plans people started from
+stay theirs. Sharing a single named workout keeps the existing request flow.
+
+**Where**: the plan builder on the web (four buttons, each opening a window;
+Export downloads, Import reads a chosen file) and the plan screen on the
+phone (four buttons, sheets; Export and Import use the system file picker).
+
+## 2026-10 — Conditioning, part 2: Pick one, Build one, Rx/Scaled, the monthly benchmark (v0.617.0 / app 0.425.0)
+
+**The workouts library** (`src/lib/workouts/wod-library.ts`, pure): 19 daily
+workouts across AMRAP, EMOM, Tabata, for time and timed stations, 6
+benchmarks (Cindy, Helen, Annie, a home Fran, a kettlebell Grace, Karen) and
+2 heroes (Murph, Kalsu), all from the movement library's names and the
+household's kit (plus "Run"). Each has a how-to, about how long it takes, and
+a Scaled version stored per movement (`HiitWorkout.scaled`, JSON; a field
+left out is the same as Rx). Admin adds them like the movement library: all,
+or picked in a window; matched by `libraryKey`, or by name among shared
+workouts, so nobody's workout is overwritten; a missing movement is added to
+the pool under HIIT. Heroes are flagged `heroWod` and are listed last, never
+suggested.
+
+**Pick on the day**: a HIIT plan with no workout and no movements (the plan
+builder's "Pick on the day", named Conditioning). Any conditioning logged
+that day completes it (`loadDayPlanProgress`, `hiitLogged` on the day
+state), and while one is planned a conditioning session doesn't count as
+"unplanned" (so it can't finish a lifting day on its own). Its card offers
+Pick one (approved and your own workouts; filters for length, format and
+"Equipment we have"; not done lately first), Build one, and Write your own
+(the existing workout builder: the web's form in a window, the phone's
+personal workout screen).
+
+**Build one** (`src/lib/workouts/finisher.ts`, pure, seeded): 8/12/15/20
+minutes; AMRAP, EMOM, Tabata, rounds for time or a chipper; focus Any,
+Kettlebell, Clubs, Slam/med ball or Bodyweight. It picks 2–5 movements, one
+per piece of kit, with weights from the sizes on hand (nearest to a target);
+Scaled is lighter and trims the hard reps by a third. Nothing is stored
+until it's logged (a session under its name) or saved ("Save to our
+workouts": the person's own, unapproved, kind BUILT, shareable as before).
+The phone asks the server to build (`workouts/conditioning/build`) so there
+is one generator.
+
+**Rx / Scaled**: a toggle wherever a workout has a Scaled version; the
+result records it (`WorkoutSession.version`) and shows "· Scaled". The
+household best counts Rx results only. People under 16 (from their birthday)
+start on Scaled and can switch.
+
+**The monthly benchmark**: offered once a person's first conditioning result
+is 30+ days old (Yes / Later = 30 days / No thanks), kept in settings
+`workouts.benchmark.<userId>`. When on, days 1–7 of each month show that
+month's benchmark (the benchmarks in turn) until it's logged or "Not this
+month" (`workouts.benchmark.skip.<userId>`).
+
+Logging moved into `writeConditioning` (wod-run.ts) so the web, the phone's
+new `workouts/conditioning/log` and planned workouts share one path; the
+phone's planned workouts now log there too (by hiitWorkoutId, with the
+version). Migration 136 adds the columns; all optional.
+
+## 2026-10 — Ask before replacing a result; Add cardio in a window (v0.616.1 / app 0.424.1)
+
+A conditioning result logged from the timer replaces that day's earlier one,
+so "Start again" asks first, and the timer's Log step says what it replaces.
+Typing a result (Edit result) shows the old one and isn't asked about. Add
+cardio opens a dialog (web) / a sheet (phone) instead of growing the card.
+On the phone, the plan screen's pickers (category, muscle group, log as, sets,
+copy from) open the full-screen radio list the calendar uses for Type and
+Calendar (`OptionPickerOverlay`), not a small drop-down menu.
+
+## 2026-10 — Conditioning timer, part 1 (v0.616.0 / app 0.424.0)
+
+The conditioning release is split. This part: the timer, EMOM, and the
+planned workout's card. Pick one (filters, the named-workouts library with
+how-tos and Rx/Scaled versions, younger users on Scaled), Build one (the
+finisher builder from household equipment), Write your own on the day, and the
+monthly benchmark offered after a month come next.
+
+**One set of timer rules** (`src/lib/workouts/timer.ts`, mirrored in the
+phone's Timer.kt): AMRAP counts the cap down (12 min default) with "+1 round";
+EMOM is a segment per minute (capSec is the length, 10 min default), cycling
+the movements; Tabata is 20 s on / 10 s off × 8 for each movement; timed
+stations a segment per station; everything else a stopwatch stopped with Done.
+Cues per second reached: ticks on the last 3 seconds of the clock or an
+interval, a tone at each interval change, a halfway cue on a countdown of 2+
+minutes, a long tone at the end. Get ready is 0 / 5 / 10 / 15 s (10 default)
+with ticks on 3-2-1. Time is measured from the clock (performance.now /
+elapsedRealtime), never counted by the interval, so a slow tab or a busy phone
+doesn't drift. Web: Web Audio unlocked by the Start tap, Wake Lock while it
+runs, vibration where the browser has it. Phone: ToneGenerator on the alarm
+stream (audible over music), vibration, the screen kept on. Sound and the
+get-ready length are kept per device (localStorage / SharedPreferences).
+
+**The card** (`conditioningFor`): the workout, its movements, today's result,
+your last before today and the household best (lower time wins, more rounds or
+reps win), Start, Log a result, Skip, and "How did it feel?" once logged (slot
+`hiit:<plannedWorkoutId>`, so it feeds the lighter-day suggestion). One result
+per workout per day: the web's logHiitWorkout now replaces today's earlier one
+(`replace`), and the phone logs through the plan with replace. Results are
+matched by the workout's name (first 40 characters), since the web logged under
+the workout's name and the phone under the plan's.
+
+## 2026-10 — Warm-up and Cardio never make a day late (v0.615.1 / app 0.423.1)
+
+Warm-up and Cardio plans (and an older Rowing / Running / Rucking one) are
+optional (`OPTIONAL_CATEGORIES` in blocks.ts): the task generator gives a day
+with only those no prompt, `loadDayPlanProgress` leaves them out of whether the
+day is done, and a cardio or warm-up session no longer counts as "something
+else logged" that finishes a lifting day. They still show on the day page and
+in its progress, and picking an earlier date still logs them there. A
+warm-up alone never completes a day. With nothing logged yet, Cardio is one
+card (name, Check Concept2 now, Skip, Add cardio), like the Warm-up.
+
+## 2026-10 — Cardio, Warm-up, day order and set structure (v0.615.0 / app 0.423.0)
+
+**Cardio is one plan category.** Rowing, Running and Rucking leave the plan
+picker (they stay in the one-off logger, and existing plans keep working). A
+Cardio plan has nothing in it: it's done by any cardio session that day (row,
+run, ruck, or "other cardio" logged as CARDIO: jump rope, bike, other), a
+Concept2 row included; an older Rowing / Running / Rucking plan is now done the
+same way. The day page shows one Cardio card listing the day's cardio, each
+with "How did it feel?", plus Add cardio (activity, then meters / distance /
+time / load as it applies) and "Check Concept2 now". Cardio done on a day with
+none planned still gets a Cardio section, where the person's order puts it.
+The Concept2 "Extra" section is gone.
+
+**Warm-up is a plan category with no content**: Mark done (its session, named
+after the plan) or Skip. **Stretching is its own section** now (it used to be
+the Warm-up section).
+
+**Day order.** Sections are Warm-up, Cardio, Strength (each muscle group, in
+plan order), Conditioning, Stretching, Sport; "Other" always last. One order
+for every day (`workouts.order.<userId>`) and optionally a weekday's own
+(`workouts.order.<userId>.<0-6>`); `cleanOrder` keeps known kinds once and puts
+any missing one right after the last kind the default puts before it. The plan
+page lists each day's workouts in that order, with "Order of the day" at the
+top and "Order" per day.
+
+**Set structure in a hand-built plan.** Each weights movement can take Any
+sets, 3 × 5, 5 × 5, 3 × 8–12, 3 × 10–15 or a 5/3/1 wave (`SCHEME_CHOICES`),
+when adding it or later on the plan page. A wave chosen by hand is stored as
+`wave:<start>` and runs Strength waves' four weeks from that day (week 4
+light, `HAND_WAVE`), with a training max of 90% of the best weight lifted for 3
+or more reps; with no such set yet, last time's weights fill the hints.
+Programs still store plain `wave` and use their own maxes.
+
+**How it felt, beyond lifts.** Cardio entries (`cardio:<sessionId>`) and sport
+events after "Did you do it? Yes" (`sport:<eventId>`) store effort and hurt in
+`WorkoutFeedback` like a movement does, so a hard game or row now counts
+toward the lighter-day suggestion.
+
+## 2026-10 — Recent workouts show cardio numbers (v0.614.1)
+
+The history line (`historyResult`) only knew weight and reps, so a row, a run
+or a hold read "Logged". It now shows metres, time and pace for a row
+(`rowSummary`, the same words as the day page), distance and time for a run,
+the load for a ruck, and the time for a hold. Both clients print the server's
+line, so the phone needed nothing.
+
+## 2026-10 — Concept2 Logbook (v0.614.0 / app 0.422.0)
+
+Each person connects their own Logbook with the long-lived token Concept2
+offers under Edit Profile → Applications (no OAuth app to register). The token
+is checked against `/api/users/me`, kept in the setting `concept2.token.<id>`
+and never sent to a client; results are only read.
+
+Sync is pull, never in the background on the server: the day page asks when it
+opens (the server goes to Concept2 at most every 5 minutes), every 15 minutes
+while it stays open, and on "Check Concept2 now". It asks for rower results
+updated since a day before the last good check (14 days back the first time,
+never more than 90). SkiErg and bike results are skipped: no category for them
+yet.
+
+`Concept2Result` (migration 133) is the ledger: one row per result, so nothing
+is imported twice, including after Undo. A result becomes a Rowing session on
+its day, named after that day's planned rowing so the Cardio block counts done
+(otherwise "Rowing", shown under Extra), with the pace and stroke rate in the
+notes. When the day already had rowing entered by hand and no Concept2 row yet,
+the first Concept2 row replaces it and keeps a copy; Undo restores the hand
+entry, removes the Concept2 row and keeps that result out. Later rows the same
+day are added alongside. Deleting a Concept2 row from history removes it from
+the day too.
+
+## 2026-10 — Movement library, equipment and how-to (v0.613.0 / app 0.421.0)
+
+The starting library is data in code (`LIBRARY` in `src/lib/workouts/library.ts`,
+reviewed in the library doc): about 140 movements, each with how it logs, a
+type (squat, hinge, push, pull, carry, core, conditioning, mobility), the
+equipment it needs, an optional bodyweight ladder and step, and a one- or
+two-line how-to. Strength and core go under Weights by muscle group;
+conditioning moves under HIIT; mobility under Stretching. Run, row and ruck
+stay their own categories and aren't in the library.
+
+Nothing is added on its own. Admin → Exercise shows "N new · M to tag" with Add
+all or Pick. Merging matches shared movements by name in any category (case,
+plurals and hyphens ignored), tags them in place and fills a missing how-to;
+it never renames, never overwrites a how-to someone wrote, never touches
+personal movements, and remembers the library key so a rename doesn't bring a
+duplicate back. Running it again does nothing.
+
+Household equipment and the weights or sizes on hand live in the setting
+`workouts.equipment` (starts from `DEFAULT_EQUIPMENT`; edit, add or remove in
+Admin). Nothing reads it yet: the conditioning builder will, so it moved to
+the conditioning release with the timers, EMOM and the workouts library.
+
+Questions about what a movement is are answered where it's picked: ⓘ beside
+the name in the set logger, Swap lists, and the plan builder opens the how-to
+and a "Watch how" video search (no links stored, nothing to go stale). Admins
+can write or edit any movement's how-to.
+
+## 2026-10 — Suggestions (v0.612.0 / app 0.420.0)
+
+Rules are pure and explainable (`suggest.ts`, thresholds in `RULES`), one card
+per surface, each saying why, never applied until the person picks. Day card,
+first match: back after 14+ days off (ease in at 90%), an area that hurt in the
+last 7 days (lighter at 80%), two of the last three efforts Hard or Too hard
+within 10 days (lighter at 80%). None inside a program's light or test week:
+the program already decided. Movement card, first match: a recent hurt area
+that works this muscle group (swap), the next weight (same top set the last two
+times and it felt Easy or Solid: +5 upper / +10 lower; never when a program
+target or a lighter day sets the weights), a lift with no new best in 6 weeks
+over 4+ sessions (try a variation, or see programs).
+
+Answers live in `WorkoutSuggestionAnswer` (migration 131) and hide that card
+for the day. "light" / "ease" also write the day's lightness; the server then
+returns each movement's target (or last time's sets) at that share, so both
+clients just show the hints, and the session records `intent` LIGHT (drawn
+hollow). A set more than 10% over the heaviest of the last two weeks gets a
+note on the set: flagged, never blocked. The program invite now also shows on
+the home page (web person page, phone home).
+
+Not yet: hockey-aware rules (game tomorrow, tournament weeks) and balance by
+movement type need game detection and the movement tags that come with the
+library (release 6).
+
+## 2026-10 — Home page workouts open the day page (v0.611.1)
+
+The person page's workout prompt (`WorkoutLauncher`) still opened the old
+"Scheduled" log step, so every-set logging was only reachable from Exercise.
+It now renders the same `DayLog` (with `initialDate` = the prompt's own day, so
+a carried-over workout opens on its day) and the "Log an additional workout"
+form under it. The old step stays only as a fallback when no workout card data
+is passed.
+
+## 2026-10 — Programs (v0.611.0 / app 0.419.0)
+
+A program is a template in the repo (`programs.ts`): weeks, days, slots, set
+schemes. Starting one asks which weekdays, a pool movement for each slot (the
+best name match to start with, or left out) and a recent top weight for main
+lifts (training max = 90%, rounded to 5 lb / 2.5 kg). It then writes an
+ordinary weekly plan: one planned workout per muscle group per day (plus
+Rowing where the day has it), each movement carrying its scheme in
+`PlannedExercise.scheme` and its slot in `programRole`. The plan it replaced
+(and an active rotation, switched off rather than deleted) is kept in
+`PersonProgram.previousPlan`; ending offers "Go back to my old plan" or "Keep
+this plan". Changing program keeps the very first plan as the one to go back
+to.
+
+Targets (`targetsFor`) fill the logger's hints in place of last time: waves use
+the week's percentages of the training max (without one, last time's weights);
+rep ranges add a step once every set reached the top, else aim one rep higher;
+same-weight adds a step once every rep was done. Light weeks drop a set at 80%;
+test weeks work up to a heavy 3 at the best weight lifted for 3+. Nothing is an
+estimate: every number comes from what the person gave or lifted.
+
+Weeks run Sunday–Saturday from `blockStartedOn`. Targets keep cycling after a
+block; the Workouts page shows "Block done" until the person picks Raise my
+maxes (+10 lb lower body, +5 upper; half in kg) or Repeat — the app suggests,
+people decide. A day logged in a light or test week records
+`WorkoutSession.intent`, and charts draw it hollow.
+
+The invite shows on the Workouts page (web person card, phone Workouts) for
+someone with no plan, rotation or program and nothing logged in 30 days. Not
+now snoozes 30 days; Don't ask again is permanent (`workouts.invite.<userId>`).
+The home page placement waits for the suggestions release.
+
+## 2026-10 — More kinds of progress (v0.610.0 / app 0.418.0)
+
+Records are by exact rep count, from real sets only (`repRecords`). A set is a
+"new best" when nothing earlier was as heavy for as many reps or more
+(`isNewBest`); with no history at all nothing is, so a first session doesn't
+light up every set. The logger shows up to four record chips, the usual counts
+(1, 2, 3, 5, 8, 10) first, and a chip turns green with today's weight once
+beaten. Records come with the movement's sets (`workouts/sets` `records`,
+before the day) and each client applies the rules, so a typed set can show as
+a best before it reaches the server.
+
+Effort (Easy / Solid / Hard / Too hard) and "something hurt" are per planned
+movement per day (`WorkoutFeedback`, migration 129), asked once a set is saved.
+Hurt picks a joint or region from a list rather than the body map: the map is
+muscle groups, and it's the knee that hurts, not "legs". Release 5's suggestions
+read both.
+
+Charts can show one rep range at a time (1–3, 4–6, 7–12: `bandPoints`), so a
+set of 5 is compared with other sets of 4–6. Tapping a point names it with its
+reps on both clients.
+
+Weekly training: days, sets and minutes for 12 weeks, and weeks trained in a
+row (`weeksInARow`): a week counts when every workout due was done or excused
+and something was due or logged. The current week adds once it qualifies and
+never breaks the run. Light weeks, skips and rest days never break it.
+
+Session intent (light days drawn hollow) moved to release 4: programs plan the
+light weeks, so that's where it's set.
+
+## 2026-10 — How a movement is logged lives on the movement (v0.609.0)
+
+A pool movement had no idea how it was logged; only the plan entry did, and
+new entries took the category default, so a plank on a weights day asked for
+weight. `PoolExercise.metric` (nullable, migration 128) is the movement's own
+"Logs as". New plan entries without a chosen metric take it (`poolMetrics`),
+and the web and phone pickers preselect it; a plan entry's own metric still
+wins. The migration times holds (the `isHoldName` words, also used when a
+movement is added to the pool) and moves their WEIGHT/unset plan entries to
+time, except where that person has logged a real weight for the movement (a
+weighted plank stays weighted). Logged history is not rewritten. Admin →
+Exercise sets "Logs as" per movement; plan entries that were on the old
+setting follow, ones set differently keep theirs. The starting library (plan
+release 5) tags every movement the same way.
+
+## 2026-10 — Every-set logging on the phone (v0.608.0 / app 0.414.0)
+
+`/api/v1/workouts/sets` (GET one movement's sets + last time's, POST every saved
+set) is a thin wrapper over the web's `loadMovementLog` / `logMovementSets`, so
+both clients save through one function. The POST is a replace, which makes an
+offline-queued copy safe to replay. `GET /api/v1/workouts` adds `title`,
+`strip` (the last 8 days, `loadWeekStrip`), each block's `category`, and per
+movement `setCount` / `summary` / `last`; the phone applies the same split rule
+as `daySections` to decide which plans open the set logger. All new fields are
+appended with defaults, so older phones decode as before.
+
+The web's day page regained a back-date picker ("Another day", up to 90 days
+back, the old range): 0.607.0's week strip only reached 8 days.
+
+## 2026-10 — Build fix (v0.607.1)
+
+0.607.0 didn't compile: `logMovementSets` cast the plan's category to
+`string | null` and passed it back into a Prisma `where`, which only takes the
+`WorkoutCategory` enum. It's now typed with Prisma's own enum.
+
+The sandbox's preflight couldn't see it because the Prisma client can't be
+generated there (the engine download is blocked), so every Prisma-typed value
+reads as `any`. The client *can* be generated: point Prisma at a dummy schema
+engine (`PRISMA_SCHEMA_ENGINE_BINARY` set to a script that exits 0, plus
+`PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1`). Generation doesn't run the
+engine. `scripts/preflight.sh` now does this itself: it generates the client
+when it's missing, type-checks the whole project with it (must be 0 errors),
+and deletes `src/generated/` again, since it isn't ignored by git. It falls
+back to the old changed-file report only if generation fails. Checked by putting
+the bug back: the new preflight flags both lines.
+
+## 2026-10 — The day page and every-set logging, web (v0.607.0)
+
+Release 2 of the workouts rework (ROADMAP → Workouts rework). "Log workout"
+on the Exercise page is now the day page: a week strip, a card for each missed
+day still open, then the day's workouts laid out in sections. A movement opens
+its own page to log every set.
+
+**No schema change.**
+- **Sections:** derived from each planned workout's category by
+  `daySections` (blocks.ts): STRETCHING → Warm-up; ROWING/RUNNING/RUCKING →
+  Cardio; WEIGHTS/ISOMETRIC → its muscle group; HIIT → Conditioning; SPORT →
+  Sport. The `block` and `scheme` columns the plan sketched wait for the plan
+  builder release, where they're first edited.
+- **Same-group plans:** two plans for one muscle group on a day (two "Arms")
+  share a section. Display only.
+
+**Only strength movements change.**
+- **Split into movements:** a strength workout is split into one row per
+  movement only when every movement it tracks is logged in weight, reps or
+  time. Anything else (a tracked distance, nothing tracked) stays one card.
+- **Unchanged cards:** warm-up, cardio and HIIT keep the card they had
+  (`PlanRow`), so they log exactly as before until their own releases.
+
+**Sets.**
+- **Save:** `logMovementSets` (mark.ts) replaces a planned movement's sets
+  for the day with the list it's given, so add, edit, remove and repeat are one
+  idempotent call.
+- **The logger sends the movement's saved sets:**
+  - on every ✓
+  - on every removal of a saved set (asked first)
+  - on Log or Back (which also save anything typed but not ticked)
+- **Page refresh:** only the leaving save refreshes the page, so ticking
+  sets doesn't re-render the Exercise page between sets.
+- **Emptying a movement:** removing every set deletes the plan's session once
+  it's empty, so the day reads as not logged.
+- **Swaps:** stored as always (the done movement, `swappedFromId` = the
+  planned one).
+- **Late logging:** same as the old Overdue list. `date` = the day it counts
+  for, `completedOn` = today.
+
+**Hints.**
+- **Source:** last time's sets for the movement being done: its most recent
+  earlier day, in set order. Set N's hint is last time's set N.
+- **Display only:** hints are placeholders, never values, so nothing is
+  typed over.
+- **Adding a set** copies the set above.
+- **"Remaining sets ±5"** (±2.5 kg) moves only the placeholders of sets not
+  entered; what's typed or saved never moves.
+- **The calculator** opens loaded to the next unticked set's weight
+  (`platesFor`) and "Use for set N" fills that box (lb only, as the calculator
+  is).
+
+**One top set for older readers.** Before this a movement had one set a day,
+and several readers took "the" set by whichever came last. They now all use
+`topSet` (heaviest, more reps on a tie):
+- the phone's plan value (`loadTodayPlannedWorkouts`)
+- the web's prefill map (`loadLoggedWeights`)
+- "last time" in movement stats
+- the day list and history summaries, which now read "5 sets · top 185 × 1"
+  for one movement with several sets
+
+**The phone can't silently undo sets.** The app still logs one value per
+movement, and re-sends a plan's movements on Log. `logPlannedWorkout` now
+leaves a multi-set movement alone when the value sent equals its top set.
+A changed value is still an edit and replaces the sets, as before. The phone
+gets the set logger in its own release.
+
+**Week strip.** The last 8 days (`loadWeekStrip`): the day's workout task
+status, rest days, and whether anything was logged. `stripState` reads them as:
+
+| State | Rule |
+|---|---|
+| done | task complete, or something logged on a day with nothing planned |
+| partly done | task pending, something logged |
+| rest | a rest day taken |
+| not logged yet | inside the overdue window |
+| missed | outside it |
+| today | today's day |
+
+Missed days are grey, never red.
+
+Tested: the pure helpers (`test/workout-day.test.ts`), the save/read path
+against an in-memory database, and the page in a browser with sample data. Not
+run against the real database or built here (no Prisma client in the
+sandbox).
+
+## 2026-10 — Workout export (v0.606.0)
+
+The start of the workouts rework (ROADMAP → Workouts rework). Before
+changing how workouts are logged or suggesting programs, the plan is built
+from what people actually do, so Admin → Workouts gets a download of the
+whole area as JSON (`exportWorkouts` in `src/lib/actions/workout-export.ts`).
+It's a server action handing the client a string that becomes a Blob
+download, like the scoring snapshot, rather than a route, so there's no new
+API surface and it sits behind `requireAdmin` the same way.
+
+- **People:** role, child or parent, and **age in years**, never the
+  birthday.
+- **"Hide names"** replaces names with "Person 1, 2…" in the household's own
+  order and leaves out the free-text session and HIIT notes, since those can
+  name people too. Session names, task titles and movement names stay. They
+  come from plans and the pool, but a custom one could still hold a name.
+- **Ids become names** (movements, HIIT workouts) so the file reads on its
+  own. Pool ids are kept on the pool list for joining.
+- **Every set** is included, plus swaps, skipped movements and the workout
+  tasks' due/done status, which is the only record of how consistently
+  someone trained, since a skipped day has no session.
+
+Reads only.
+
+## 2026-10 — Paper plates picture redrawn (v0.605.1 / app 0.413.1)
+
+`kairos:paper-plates` was one of the pictures sliced with the grid cell
+instead of the object, so the stack ran off the bottom (and both sides) of
+its canvas; the missing pixels were never in the file, so it was redrawn
+rather than repaired: a stack of five white plates with a blue leaf rim, drawn
+at 4x and scaled down to the old 160x134 so list rows don't shift. A
+hard-opaque-edge scan of all pictures flagged 35 others; looked at side by
+side, every one is a whole object whose flat side touches its box (cans,
+trays, bottle caps), not a cut. `air-freshener` and the legacy `ic:sorbet`
+square are still the ones to regenerate.
+
+## 2026-10 — Change your own password (v0.605.0 / app 0.413.0)
+
+`changeOwnPassword` in `src/lib/accounts.ts` is the one rule for the web
+profile page (shown only on your own profile, when you sign in with a password)
+and the phone (`POST /api/v1/auth/password`). It needs the current password,
+at least `MIN_PASSWORD` (8) characters and a different one, and is rate-limited
+per person (8 tries / 15 min) so the current-password check can't be guessed
+at. It bumps `credentialVersion`: every other browser session and phone is
+asked for the new password; the one that made the change stays signed in (web
+re-issues its session cookie at the new version; the phone's device row is
+moved to it). The phone endpoint lives under `/auth/` deliberately — the app
+never queues `/auth/` requests for offline replay, so a password is never
+written to its offline queue. New-account join still accepts 6 characters; only
+a change asks for 8.
+
+## 2026-10 — The phone's drawer hides sections by the web's rule (v0.604.0 / app 0.412.0)
+
+`hiddenNavFor(visibleIds)` in `src/lib/personal-scope.ts` is now the one rule
+for both the web sidebar and `GET /api/v1/nav` (`{ hidden: ["hockey","money"] }`):
+Hockey until ice-time is connected; Money when the person (and, for a parent,
+the children) have no entries. The phone is always personal, so it uses
+`visibleIdsFor(person)`. The app caches the list (DataStore) and re-asks on
+start, after a sync and on opening the drawer.
+
+## 2026-10 — Scoring rework: partial days, one unit for growth and the month (v0.603.0 / app 0.411.0)
+
+The full map is docs/SCORING.md. What changed and why, from a snapshot where
+the kids carried 4–7× the parents' load yet had 0–3 perfect weeks (parents 9–10)
+and characters that barely grew:
+
+- **Day credit** = effort finished ÷ effort due (0..1). Growth, "This month",
+  the family goal and egg luck all run on it. All-or-nothing perfect days made
+  every reward except level favour short lists. Never lower than the old rule for
+  any history (tested), so nothing shrank on update.
+- **Today counts live** and is drawn lighter; it can fall the same day if a task
+  is unchecked or added. Retiring a companion banks **settled** growth (to
+  yesterday) so today moves with the one taking over — no double count (tested
+  with several switches a day).
+- **One thing at a time.** No egg while growing or deepening — unchanged, now
+  documented and tested.
+- **Luck** from the last 14 days' average credit, not the streak (one missed
+  chore zeroed it).
+- **Family goal** counts days of work (target unchanged, default 15). Season
+  tiers are still computed for old apps but not shown; "This month: X / target
+  days" replaces them so the month means one thing.
+- **Life** gets 10 XP per confirmed team-sport event. Confirming already
+  completes the day's workout task (Strength); this is the team, not the workout.
+- **Bar colours** come from what earned the growth (`growthMix`), not the
+  all-time XP mix, which recoloured squares without filling any.
+- **Snapshot** reports the real rules and adds days of work, completion by
+  skill, today's credit, growth, phase, luck and the last 14 days.
+- **"How scoring works"** is one source (`scoring/guide.ts`) for web `/scoring`
+  and the app's Settings, with the live numbers filled in.
+
+## 2026-10 — Hockey layout: the shared tablet has its own (v0.602.2)
+
+Reported: rearranging Hockey on the web tablet rearranged the phone too. A
+shared device is still signed in as someone, and 0.601 keyed the layout by that
+person, so tablet and phone shared one. The web now keys it by
+`webHockeyPrefsOwner()`: the person on a personal device, `shared` on a shared
+one (`hockey.prefs.shared`; person ids are cuids, so no clash). The phone is
+always personal. Layouts saved on the tablet before this stay with the person
+who was signed in; the tablet starts again collapsed.
+
+## 2026-10 — The 0.602.0 back-fill was wrong; removed (v0.602.1)
+
+Reported straight after 0.602.0: a companion hatched a few days earlier showed
+as a full adult. The back-fill computed "everything earned since the first hatch
+− what the shelf holds − the active companion" and gave the difference to the
+active one. That only works if the shelf holds what each companion really
+earned. Companions shelved before 0.576 hold `growthBanked = 0`, read as their
+stage's floor (12 for an adult) — but they earned far more than that while they
+sat as adults waiting for the next egg. That surplus isn't lost growth, yet the
+back-fill counted it as missing and handed months of it to a fresh hatchling.
+
+Removed. Kept: the attribution rule in `companions-growth.ts` (household day,
+week credited to whoever holds it when it ends), so swaps no longer lose
+anything from here on. Growth already lost to past swaps is not restored
+automatically: swaps aren't recorded, so there is nothing reliable to rebuild
+it from.
+
+A companion that was retired to the gallery (a swap or a hatch) while 0.602.0
+was deployed banked the inflated total; those rows need a hand fix.
+
+## 2026-10 — Gallery swaps were dropping growth; it is credited back (v0.602.0)
+
+Reported: switching characters in the gallery (and back, or any mix) and the
+growth bar stops moving; some people's characters had fallen well behind.
+
+Two leaks, both at the hand-over between the companion leaving and the one
+arriving:
+
+- **The tenure day was the UTC date.** `tenureStartedAt.toISOString()` made a
+  swap after ~7 PM Central start "tomorrow". The leaving companion banks days
+  before today, the arriving one counted from tomorrow, so the swap day went to
+  neither. Someone who swaps most evenings lost most days.
+- **A week counted only if it STARTED inside the tenure.** The leaving one banks
+  finished weeks, the arriving one skipped the week already under way, so any
+  mid-week swap lost that week's +2 for both.
+
+Fix — one attribution rule, `src/lib/companions-growth.ts`, with no gap and no
+overlap: a day belongs to the companion active at its end (tenure starts on the
+household day it was activated, `todayISO(date)`), and a perfect week to the
+companion active when the week ended (its last day on or after the tenure's
+first day). Replayed over 200 random swap histories: banked + live always equals
+everything earned.
+
+**The growth already lost.** Swap history isn't stored, so it can't be put back
+on the companion that missed it. Instead, at read time, `unclaimedGrowth` =
+everything earned since the person's first hatch − what the shelf has banked
+(floored as the gallery shows it) − the active companion's growth, never below
+zero, and that is added to the active companion. It is banked with it like the
+rest when it next goes to the gallery, after which it is zero again. Derived,
+not stored: no migration, and it keeps self-correcting if anything ever drops
+growth again. A household whose shelf was floored up by migration 124 can only
+come out at zero here, never negative.
+
+Checked by running the real `loadProgression` against a fake database for an
+evening swap plus a mid-week swap: 17 growth where the old code gave 11.
+
+## 2026-10 — Hockey: each person's own section order and open sections (v0.601.0)
+
+Every section starts collapsed. Opening one, or reordering with **Arrange**,
+is saved for the signed-in person and follows them between the web and their
+phone. Stored as one JSON setting per person (`hockey.prefs.<userId>` in
+`AppSetting`: `{ order, open }` by section name) rather than a new table — it's
+a few names, read only by Hockey, and needed no migration. One rule,
+`arrangeSections` in `src/lib/hockey-view.ts`: placed sections first in the
+person's order, the rest after in the feed's order; names that no longer
+exist are ignored. The web page and `GET /api/v1/hockey` both apply it; the
+phone saves through `POST /api/v1/hockey/prefs` with the whole layout each
+time, so a write queued offline replays safely. With no one signed in the
+layout works but isn't saved. The explanatory footer was removed from the page.
+
+## 2026-10 — Hockey page reads a separate ice-time container (v0.600.0)
+
+Rink schedules come from **ice-time**, its own container and repo, which reads
+the rink's registration pages and serves `GET /api/sessions`. Kairos stores
+only ice-time's address and token (`hockey.feedUrl`, `hockey.feedToken` in
+`AppSetting`, set under Admin → Hockey) and asks for the week each time the
+page opens — no session data is stored, no rink is named anywhere in Kairos.
+Blank address = Hockey hidden from the sidebar (`hiddenNavHrefs`, now applied
+on every device, not just personal ones).
+
+- **One shaping rule:** `buildHockeyView` (`src/lib/hockey-view.ts`, pure)
+  turns the feed into days, columns and each session's Add button; the web
+  page and `/api/v1/hockey` both use it, so the phone only draws it. The feed
+  is untrusted: every field is checked, sign-up links must be https.
+- **Add to calendar** opens the normal New event form pre-filled: name
+  "Section: Rink", the session's start/end, the "Hockey practice" event type
+  (else any type with "hockey" in the name), and the location from a saved
+  address whose name matches the rink. Sessions with a goalie list are booked
+  as the goalie session ("Add goalie session"); the rest say "Add to calendar".
+  Owner: the signed-in person on their own device; the form asks on the shared
+  tablet. The phone fills in its own person and can add participants.
+- **Web shows all 7 days** ("Nothing scheduled" on empty days); the phone
+  hides empty days.
+- **Freshness** shown is the oldest enabled schedule's last good read on
+  ice-time, not the time of the request.
+- **Admin-entered address is fetched server-side.** Admin-only and needed by
+  design; no redirects to other hosts are relied on.
+
+## 2026-10 — Black-and-white characters checked against their original sheets (v0.599.2)
+
+With the original sheets for Newsreel Nettie, Reel Rascal Ollie, Eugene,
+Inkbelle, Curtain-Call Curly and Knox, each stage was re-cut (border-connected
+flood; floor line removed except under the feet) and compared with the file
+in use. Identical — so NOT clipped, despite the outline check flagging them:
+Ollie, Eugene, Knox (all stages), Curly's hatchling, and Nettie and Inkbelle's
+juvenile/adult once cut the same way. The outline check over-reports: some
+hands are drawn with white touching the edge of the outline in the original.
+Actually clipped and replaced: Curly's juvenile (83 px short — the whole
+raised fist and part of the arm) and Inkbelle's hatchling (4 px of glove).
+Colourful characters: no reliable automatic test (their outlines mix
+shades); a visual pass found nothing certain, so they wait for their sheets
+rather than being patched by guesswork.
+
+## 2026-10 — Old-Reel Rufus re-cut from the original sheet (v0.599.1)
+
+All three Rufus sprites had been cut a little narrow: the right edge went
+through a hand (half the hatchling's mitten, the juvenile's right hand, the
+edge of the adult's wave). A visual pass missed it — a straight cut through
+pixel art reads as drawing — so the tell is now an outline check: on the
+black-outlined characters, a light pixel ON the image edge means the outline
+was cut away. Re-cut from the original sheet (background by border-connected
+flood, floor line dropped, near-black/near-white snapped to flat colour).
+The same check flags other black-and-white characters with clipped hands
+(Newsreel Nettie, Reel Rascal Ollie, Eugene, Inkbelle, Curtain-Call Curly's
+juvenile; possibly Knox) — those need their original sheets; not patched by
+guessing at the missing pixels.
+
+## 2026-10 — Character sprites: stray lines removed (v0.599.0)
+
+Scanned all 163 companion PNGs for pieces separate from the character and
+for a floor line under it, then looked at every hit. Fixed:
+- **Neighbour bleed** (a sliver or a chunk of the next sprite on the sheet,
+  touching the image edge): Curtain-Call Curly ×3 (the adult had part of a
+  neighbour's hand), Turbo Tusk adult/juvenile; a stray speck on Pluck's
+  hatchling.
+- **Floor lines** under Inkbelle, Newsreel Nettie and Old-Reel Rufus (every
+  stage) plus loose squares beside them. Only the bottom strip at least 95%
+  as wide as the bottom row is taken, and in it only pixels outside the feet's
+  lowest row — so flared feet and sloped shoes keep their shape and outline. (A
+  first, looser rule clipped Nettie's and Rufus's feet; caught by comparing
+  before/after.)
+- **Chillwing**'s perch had every other pixel row transparent (read as stray
+  lines); the 1–2-row gaps are filled from the row above, so it's a solid
+  branch with the feet on it. Kept, not removed: the feet are part of it.
+Left as drawn: Victory Vip's ground (intended) and Boombug's spread legs.
+Web only — the app loads the sprites from the server.
+
+## 2026-10 — Grocery icon batch 2: 16 icons, men's/women's deodorant (v0.598.0 / app 0.408.0)
+
+The rest of the October request, cut the same way as batch 1 (detected rows,
+caption matched by position, border-connected flood, every piece kept,
+captions OCR-checked, each crop compared to its source and viewed on white
+and on the dark-mode tile). White-bodied items (styrofoam cup, pore strip,
+deodorant, buttermilk, wipes, bowl, gift card, clear jar, cup rims) use a
+stricter flood so their white edges aren't eaten; their soft shadows are left,
+since in dark mode every picture sits on the light tile (0.596).
+
+Deodorant: the existing blue stick stays `kairos:deodorant` (so items already
+using it don't change) and is now women's — "women's deodorant", "secret",
+"degree" and plain "deodorant" map to it; the new black-and-white stick is
+`kairos:mens-deodorant` ("men's deodorant", "old spice"). The suggestion list
+says "Women's deodorant" / "Men's deodorant". Phrase care: "sandwich cookies",
+"oreos", "joe-joe's" never take plain "cookies"; party/solo/plastic and
+foam/styrofoam cups need their word, so "k-cups" and "paper cups" are
+untouched; "pens" can't match "penne"; "toilet/flushable wipes" leave "baby
+wipes"; "naan bread" beats bread; "chocolate syrup" beats syrup; "candy" now
+has a picture ("ginger candy" keeps its own).
+
+## 2026-10 — Repeating events "duplicated" across days: three bugs, self-repairing (v0.597.0)
+
+Reported: a work event ending at midnight showed as duplicates spanning
+several days. Reproduced with the real save and calendar code (an in-memory
+database stand-in) rather than guessed. Today's create paths are clean for a
+midnight end, on web and phone, across DST; three other faults remain:
+
+**1. Old multi-day series.** Before v0.590 a series' "Ends" beside Starts could
+be days after the start (an end of 12:00 AM read as before the start, so a
+later date got picked). Each weekly occurrence was then drawn across several
+days, every day labelled "4:00 PM – 12:00 AM" — a row of apparent duplicates.
+0.590 stopped new ones but left the rows. Now `occurrenceSpanMs` gives every
+stored repeating event its one-occurrence length when read (all-day: one day;
+timed: start → the end's clock time, same day or next morning; a sane ≤ 24 h
+span untouched), and `repairEventRows` rewrites such rows.
+
+**2. Overnight pieces.** An occurrence running past midnight is drawn on two
+days; the web editors and the phone's detail screen sent the TAPPED piece's
+day as the occurrence. Editing "this event" from the after-midnight piece
+saved an override for a date the series never had: the original stayed and an
+edited copy appeared a day later. Deleting from it tombstoned nothing.
+`occurrenceDayFor` / `occurrenceOfRow` resolve a day to the occurrence that
+covers it (its own start wins; else the day before's, if it reaches past
+midnight). Every path uses it: web and phone update, the delete core, the
+calendar's override skip, and the repair (which moves an override filed on
+the wrong day back to its occurrence, shifting an edited copy saved on that
+day back with it; skipped if the right day already has an override). The web
+editors now open an occurrence by `startDayISO`; old phone builds are covered
+by the server. Daily overnight series can't be told apart after the fact
+(every day is an occurrence) — the fix prevents new ones.
+
+**3. Series edit from a later date.** The whole-series shift was measured from
+the series' first start instead of the opened occurrence, so editing the
+series from week 3 without touching the date moved its start to week 3 and
+dropped weeks 1–2. Both paths now measure from the resolved opened
+occurrence; a real weekday move still shifts every week.
+
+Also: the sport-prompt and class-attendance "ended" checks use
+`occurrenceSpanMs` (a multi-day span kept them from ever ending), and the
+delete core reads the series' first day in the household zone (the UTC
+date was a day late for evening starts). No migration: the repair needs the
+household time zone, which lives in the environment.
+
+## 2026-10 — Emoji grocery icons get the dark-mode tile too (v0.596.1 / app 0.407.1)
 
 0.596.0 tiled only the pictures, so a dark list mixed tiled pictures with
 bare emoji (apples, bread, anything typed in). Emoji now get the same tile.
@@ -2144,7 +4844,7 @@ byte-for-byte what it was, an inline-flex tile in dark mode with the emoji
 sized by container units (66cqh). App: the emoji branch draws the same tile
 when dark, with the emoji's size derived from the tile through the density.
 
-## 2026-10 — Grocery icons on a light tile in dark mode (v0.407.0 / web 0.596.0)
+## 2026-10 — Grocery icons on a light tile in dark mode (v0.596.0 / app 0.407.0)
 
 An audit of all 310 grocery pictures on a dark page found ~100 with a pale
 edge or soft grey drop shadow left from their original white backgrounds —
@@ -2162,478 +4862,1061 @@ matcher rule, picker entry, suggestion and app map entry. Still to
 regenerate: `air-freshener` (part of its white can was erased with the
 background) and the legacy `ic:sorbet` square.
 
-## 2026-10 — Grocery icon batch (v0.406.0 / web 0.595.0)
+## 2026-10 — Grocery icon batch: 49 baking, produce, meat and bakery icons (v0.595.0 / app 0.406.0)
 
-49 new `grocery_*` PNGs, the same files as the web's
-`public/grocery-icons/kairos/`, mapped in `KAIROS_DRAWABLES` and added to
-`GROCERY_SUGGESTIONS` (kept identical to the web list). How they were cut
-and made dark-mode safe is in the web repo's DECISIONS for 0.595.0.
+Sliced from one generated sheet by detected rows (icon band, caption band)
+rather than a fixed grid, each item matched to the caption under it. The
+background is a border-connected flood of near-white only, so white inside
+an object stays; every piece above the caption is kept (berries, beans,
+candies); specks under 60px are dropped. For dark mode: the outer edge is
+un-mixed from white, soft grey drop shadows near the outline are turned to
+alpha (except on white-bodied items — sugar bag, coconut jar, poultry, the
+clear salad tub), enclosed white holes are cleared where they are holes
+(bagels), and the sugar pile used a stricter flood so it isn't eaten. Every
+crop was checked on light and dark beside its source cell and OCR'd for
+caption leaks.
 
-## 2026-10 — Body map light-mode grey (v0.405.1 / web 0.594.1)
+Matcher changes beyond the new rules: `whole chicken` moved from the
+rotisserie icon to `whole-chicken`; `black beans` moved from `canned-beans`
+to `black-beans`; `cold cut turkey/chicken` and `deli turkey/chicken` go to
+`cold-cuts`, `cold cut ham` to `deli-ham`. Bare "apple" keeps its emoji;
+"ginger ale", "jelly beans", "english muffins", "pork chops" and "ground
+turkey" keep theirs. Slug notes: the sheet prints `cacao-powder`; the token is
+`kairos:cocoa-powder` (both "cocoa powder" and "cacao powder" match it). The
+sheet's `espreso-powder` typo is `kairos:espresso-powder`.
+
+## 2026-10 — Body map light-mode grey (v0.594.1 / app 0.405.1)
 
 The near-black light-mode figure from 0.594.0 was too heavy. Light mode now
 uses a mid grey (#b4c1cf) with white seams, pastel assisting muscles (fade
 toward white) and a dark selection ring; dark mode keeps the light figure.
 
-## 2026-10 — Dark-mode fixes, body map figure, Shopping (v0.405.0 / web 0.594.0)
-
-Screens that hard-coded light colours now follow the theme: Add an item and
-the startup screen use `colorScheme.background` (they were `Color.White`);
-the money banners (Money page, home reminder) and the overdue workout card
-pick dark tinted colours when `KairosThemeState.dark`. The body map's
-figure is swapped against the page by `figureColors(dark)` — dark figure on
-light cards, light on dark — matching the web's `--color-figure*` vars.
-`grocery_paper_plates` gets its plate face back (it had been cut out with
-the sheet's white card) and `grocery_ground_sausage`, which was blank, is
-the ground-meat tray recoloured. The section is labelled Shopping; the route
-and code keep "groceries".
-
-## 2026-10 — Widget header icons: grey, lighter lines (v0.404.1)
-
-The + now uses the same muted color as refresh, and both header icons draw
-with 1.5 strokes (in a 24 viewport) instead of 2. Scaling the icons up to
-28/32dp had scaled the lines with them (about 2.7dp on the +), which read as
-bold; at 1.5 they land near the old icons' line weight while staying large.
-
-## 2026-10 — Widget header buttons without circles (v0.404.0)
-
-The + and refresh buttons drop their filled circles and are drawn as bare,
-larger icons (`HeaderButton`, replacing `RoundButton`): + at 32dp in the
-theme color, refresh at 28dp in the muted text color so it sits quietly in
-the card (28/24dp on tiny widgets). The tap area stays 40dp (34dp tiny), with
-a rounded corner kept only to shape the press ripple. The picker preview
-matches, and loses the today circle the widget itself dropped in 0.402.0.
-
-## 2026-10 — Anniversary type (v0.403.0 / web 0.591.0)
-
-Anniversary joins the type list and the reminder-defaults list (no reminder by
-default, like Birthday), forces all-day + yearly like Birthday
-(`isOccasionKind`, mirroring the web's `isOccasion`), and has its own color slot
-under Custom colors. The name picker already comes filtered from the server.
-
-## 2026-10 — No today circle on the widget; repeating events have one end (v0.402.0 / web 0.590.0)
-
-- The widget's day labels are all drawn alike — the date is already in its
-  header. The number box keeps a clear background (reused list rows).
-- New repeating events: the end date beside Starts is hidden (all-day) or
-  reduced to an end time, "Ends the next day" when it runs past midnight, and
-  kept in step with the start. The server applies the same rule on every save
-  (`fitRepeatingSpan`, web DECISIONS), which also covers editing a series here,
-  where the repeat can't be changed.
-- The "all-day events also showing the day before" fix is server-side
-  (web 0.590.0); nothing in the app computes those days itself.
-
-## 2026-10 — Widget Solid / Accent styles (v0.401.0; renamed from Quiet in 0.401.1)
-
-The second style ("Accent"; briefly "Quiet") is no longer "like Home": the names on each line made it
-unreadable at widget size. Accent keeps Solid's content (title, time, place)
-beside a color bar, and outlines tasks in the theme color instead of filling
-them. Tasks draw the same views in both styles (an accent box with an inner box
-inset 1.5dp, since Glance has no border) so reused list rows stay right. The
-month is always written in full, in a normal weight, with the day number bold;
-narrow widgets shrink the font rather than abbreviate. Appearance lost its
-explanatory lines and its labels were shortened (Solid / Accent, App / System /
-Light / Dark), at the owner's request.
-
-## 2026-10 — Birthday in Profile; a date picker with month and year quick picks (v0.400.0 / web 0.589.0)
-
-Profile gains a Birthday card (`GET`/`POST /api/v1/me/birthday`), saved the
-moment a date is picked or cleared. The server applies the same rule as the web
-form (`checkBirthday`: a real date, 1900 on, not in the future) and its message
-is shown as-is. The picker is `ui/common/QuickDatePicker.kt`: the app's own
-pop-up (AnimatedDialog), a Sunday-first month like the calendar, with the month
-and year in the header as buttons — the year opens a year grid, then the month
-grid, then the days. Material's DatePicker offers only a year list, and paging
-back decades month by month is what a birthday needs least. The other date
-pickers in the app are unchanged; this one is in `ui/common` so they can move
-to it.
-
-## 2026-10 — Widget fixes after first use (v0.399.0 / web 0.588.1)
-
-- **Stray circles** around Thursday and Saturday, with dark text: the launcher
-  reuses list rows, and the day label only set the circle's background on
-  today's row, so a reused row kept it. Every row now draws the same views and
-  sets the background either way (transparent when not today). The same rule
-  now holds for the "who" text on the color-bar style.
-- **Multi-day all-day events** are listed once, on their first day in view,
-  with "through <day>" (server drops the repeats; widget only).
-- **Narrow widgets**: `SizeMode.Exact`; under 280dp the header says "Oct 19" at
-  20sp, under 220dp 18sp with smaller buttons.
-- **Tasks** are 30dp lines with 13sp text, shorter than an event.
-- **Widget light/dark** is its own setting (Like app / System / Light / Dark),
-  so the app can stay light while the widget follows the phone.
-- **Picker preview**: a static sample week (`previewLayout`), made-up events.
-
-## 2026-10 — Home-screen widget; theme follows the phone (v0.398.0 / web 0.588.0)
-
-A calendar + tasks widget, designed on a mockup first. Decided with the owner:
-- **Glance**, not hand-built RemoteViews: one Compose-style file, and the
-  colours come from the app's own palette (`widgetPalette`).
-- **Events colored by the server**: `/api/v1/widget` runs the Calendar's own
-  filter and recolor (`personalEventRules`), so "others grey" under Custom
-  colors applies to the widget unchanged.
-- **Whole family by default**, a per-phone "Only mine" setting. Tasks are always
-  the phone owner's own, because the widget can tick them off.
-- **Event style is a per-phone setting**: solid boxes (default) or the home
-  page's color bar with who it's for.
-- **The task's icon is its checkbox**: an empty rounded square, ticked when
-  done. The rest of the task opens Tasks with that task tinted for a few seconds.
-- **No "no due date" line**: a task always has a due date (blank = today). The
-  top line counts overdue tasks instead and opens Tasks.
-- **+ opens a chooser**: Android widgets can't show a popup, so + starts a
-  see-through activity drawn as a dialog (New task / New event), which opens
-  the app on Assign a task or New event.
-- **7 days**, empty days left out.
-- **Theme mode System / Light / Dark** replaces the dark-mode switch; System is
-  the default for anyone who never touched the switch, and the widget follows
-  the app's setting.
-
-Built without an Android build here: the widget files were compiled with
-`kotlinc` against stubs of the Glance API (Kotlin-level errors only); the first
-real build is the check that the Glance calls match the library.
-
-## 2026-10 — Reps on a one-off weights log (v0.397.0 / web 0.587.0)
-
-The "log a different workout" wizard took a weight only. Its value step now
-shows a reps box beside the weight when the metric is WEIGHT (`showReps`), and
-`CustomLogRequest` gains `reps: Int? = null`, appended last. Optional; blank
-logs exactly as before. Reset with the rest of the form when the type changes.
-
-## 2026-10 — Skip is saved per movement; reps refill (v0.396.0 / web 0.586.0)
-
-Skip on a movement was local only: it greyed the row and left it out of the
-log, but nothing reached the server, so it vanished on reload and could not
-count toward the day. It now calls `POST /api/v1/workouts/skip` (optimistic,
-rolled back on failure). A swapped row skips under the planned movement's id;
-a one-result block (HIIT) sends `""`. Overdue blocks skip the same way — they
-used to rest the whole day from any one movement's tile. Skipping no longer
-blanks a typed value. The server decides whether the day is complete (every
-movement logged or skipped — web DECISIONS, v0.586); the tick beside a plan's
-name follows the same rule locally, ignoring untracked movements.
-
-Reps did not refill because the server never sent them; `PlannedMovementDto`
-gains `reps`, `skipped` and `tracked`, appended with defaults. A movement's Log
-with an empty box no longer sends anything (an empty log used to clear every
-movement already logged on the plan). The reps placeholder says "reps".
-
-## 2026-10 — Character page reloads after a gallery swap (v0.395.0 / web 0.585.0)
-
-`CharacterViewModel` loads once (cache first, then the server) and survives the
-trip to the gallery, so after "Make this my companion" it went on showing the
-companion it loaded before — the web and the gallery, which ask the server
-fresh, showed the new one. `CollectionViewModel` now takes an
-`onCompanionChanged` callback; the gallery bumps `AppContainer.companionRevision`
-after a successful swap, and `CharacterScreen` reloads when it changes (a
-shared signal rather than ON_RESUME, which is unreliable under the drawer nav).
-The reset-to-hatchling half of the report was server-side: web DECISIONS,
-"A companion brought back keeps its stage".
-
-## 2026-10 — "Your turn" on the home card (v0.394.0 / web 0.584.0)
-
-The home Chores card now pulls any up-for-grabs chore with `furthestBehind`
-out of the grey summary line into its own row: the same red "!" the Chores
-detail uses, "Your turn: <chore>", and "You did it longest ago". Who that is
-stays the server's call — including the admin's Turn reminder opt-outs (web
-DECISIONS, v0.584) — so the app adds no rule of its own. Always-open chores
-off your "Available for" list no longer reach the phone at all (server-side).
-
-## 2026-10 — Family-goal votes: one a month, and the card is the server's call (v0.393.0 / web 0.583.0)
-
-Rationale in the web DECISIONS ("One family-goal vote a month"). App side: the
-home card no longer decides for itself whether to nudge — it shows for a goal
-(carried, chosen or earned) or when the server's `homeNudge` is "vote" / "pick",
-so the rule lives once (web `coopHomeNudge`). An older server omits the field
-and the nudge simply doesn't show. On the Family goal screen the button reads
-"Move my vote here" when your vote is on another idea; the server does the move.
-
-## 2026-10 — Companion as profile picture, chosen in the gallery (v0.392.0 / web 0.582.0)
-
-Full rationale in the web repo's DECISIONS ("A companion can be the profile
-picture"). App side: the gallery's enlarge dialog gains "Use as profile
-picture" (only when the server sends `stageImages`), which opens a three-stage
-picker — reached stages show their art and are tappable, unreached show an egg
-and "Not yet" (their art is never sent), and the picture in use is ringed. The
-pick posts `/me/avatar/companion`, and `SessionRepository.setCompanionAvatar`
-adopts the returned person, so the rail and every avatar update at once.
-
-The result shows in its own `pictureNotice`. The view model's older `message`
-(set after "Make this my companion") has never been displayed by the gallery;
-surfacing it here would have changed that flow unasked, so it is left alone.
-
-All three avatar views (rail, `PersonAvatar`, Profile preview) draw a companion
-through one composable, `CompanionAvatarArt`: fit, not crop, no framing.
-
-## 2026-10 — Hand-offs go to the activity on screen (v0.391.0)
-
-An `.ics` opened from Gmail landed on Home with nothing imported. The log showed
-two MainActivity instances: the mail app's "Open with" starts a fresh one, while
-an older, stopped one lingered. Both compositions collect the app-wide one-shot
-flows in AppContainer (`pendingRoute`, `pendingIcs`), and a stopped activity's
-composition still runs — so the hidden one, not stuck behind the new one's 2 s
-splash, consumed both: it navigated itself to Calendar and opened the filled-in
-form where nobody could see it. The new one then finished its splash on Home.
-
-Fix: `rememberActivityOnScreen()` (ui/common) — the hosting ACTIVITY is at least
-STARTED — gates the `pendingRoute` effect in AppRoot and the `pendingIcs` effect
-in CalendarScreen. It deliberately reads the activity's lifecycle, not the
-NavBackStackEntry's, because drawer navigation can leave an entry below RESUMED
-while its screen shows. The same race could send a notification tap to the
-hidden instance, so that is fixed too. Any new hand-off through AppContainer
-must be consumed behind the same gate.
-
-Considered and not done: `launchMode="singleTask"` would avoid the second
-instance, but changes how Back and recents behave across the app for a problem
-the gate already solves.
-
-## 2026-10 — Launcher icon inset is a fraction, not dp (v0.390.0)
-
-The adaptive icon's foreground wrapped the logo in `<inset android:inset="20dp">`.
-A dp inset doesn't scale with the size the icon is drawn at: on the home screen
-(large) 20dp per side is a normal margin, but the system "Open with" sheet draws
-the icon small and the same 20dp per side left almost nothing for the logo — a
-speck in a white circle. Now `18.5%` (20/108 of the adaptive canvas): identical
-on the launcher, proportional everywhere else. Any future inset or padding in an
-icon layer should be a percentage for the same reason.
-
-## 2026-10 — Release notes are short, for the household (v0.390.0)
-
-`CHANGELOG.md`'s top section is the update prompt's text (release.yml), so it is
-written for end users: a few one-line bullets of what changed. No explanations,
-no "Needs web x.y" lines, no internals — the reasoning lives here instead.
-Rule in RELEASING.md step 2.
-
-## 2026-10 — Calendar files open in Kairos, read on the phone (v0.389.0 / web 0.581.0)
-
-Tapping an `.ics` attachment (or sharing it to Kairos) opens New event filled in
-from the file. Full rationale in the web repo's DECISIONS ("One calendar file,
-read in two places"); the app-side choices:
-
-- **Read on the device** — the owner's call: no connection needed, no server
-  work. The rule is `ui/calendar/IcsImport.kt`, a line-for-line mirror of the
-  web's `src/lib/calendar/ics-import.ts` (the web uses it for its Import .ics
-  button). The two are held to parity by the web repo's
-  `scripts/ics-parity/check.sh`, which compiles THIS file with `kotlinc` and
-  diffs both readers over thousands of files. Change one, change the other,
-  run it. Its first runs found a split emoji at the note cap and a crash on a
-  three-digit year; both fixed in both, and `readIcsFile` never throws.
-- **Intent filters, not a default.** VIEW and SEND for `text/calendar`,
-  `text/x-vcalendar`, `application/ics`, `application/x-ical` on MainActivity.
-  Android shows the chooser the first time; "Always" is the user's. SEND covers
-  mail apps whose own "open" doesn't offer Kairos, and also takes a shared
-  `EXTRA_TEXT` that is itself a VCALENDAR.
-- **Read off the main thread, once.** The content URI is read on IO (a mail app
-  may still be fetching the attachment), capped at 1 MB, into
-  `AppContainer.pendingIcs`, and `pendingRoute = "calendar"`. `handleIntent`
-  only imports when the activity is fresh (not a rotation or restore), so a saved
-  event can't be re-opened as a second import.
-- **The Calendar screen consumes it** once its data has loaded — the draft is put
-  on `data.timezone`, the household clock new events default to — which also
-  means it waits through sign-in, since `pendingRoute` is only acted on in the
-  authenticated app. One event → `AddEventOverlay(importDraft = …)`, keyed on the
-  draft so a second file restarts the form; several events, a cancellation, or
-  nothing usable → an `AnimatedDialog` saying so (several points to subscribing,
-  which is a parent job on the web).
-- **Owner defaults to the person on the phone**, as for any new event; the
-  Calendar picker can still change it. The type starts as Event so the
-  description, which becomes the note, is kept.
-- **An imported form is always "dirty"**, so closing it asks first instead of
-  silently dropping the file.
-- `CLIENT_BUILD` is back to `versionCode` (446). It had been left at 430; nothing
-  broke only because `/api/v1/meta` reports `minClient: 0`.
-
-## 2026-10 — Notes open on their own screen; the owner is a picker (v0.387.0–0.388.0 / web 0.580.0)
-
-A short note on Events and Medical appointments only. `takesNotes` /
-`NOTES_MAX` in `NoteField.kt` mirror the web's `event-notes.ts` exactly — a
-blank `eventTypeId` is "no type" on both, so the phone never offers a field the
-server would discard; a custom event type (stored as OTHER) is deliberately
-excluded. 0.387 put the note inline; 0.388 made the row behave like the address
-and title rows: tap it and the note opens on its own screen with Save, closing
-without saving leaves it unchanged, and the row shows one line. The note is
-displayed only in the event detail, under the address, never on grid chips.
-
-The Calendar row now lists My calendar, Family calendar and each person, the
-same choice as the web's Whose. Picking an owner drops them from Share with.
-The server resolves and re-checks the owner (`create-event.ts`), so the picker
-is a request, not an authority.
-
-## 2026-10 — Each movement has its own buttons (v0.386.0 / web 0.579.0)
-
-Every movement on a Log workout card gets its own Rest / skip, Calculator and
-Log buttons under its own rule, so two movements added to one plan look exactly
-like two plans sharing a muscle group. Logging one leaves the others alone (the
-server clears only what a submission covers) and only the pressed button shows
-the spinner. The calculator writes back to the movement whose button opened
-it, not the card's first movement. "Edit weight" is read from what is logged for
-the day, so it survives reopening the page, not just a save in the same session.
-
-## 2026-10 — Companions: stage is earned, phase is current (v0.381.0–0.385.0 / web 0.574–0.578)
-
-The web DECISIONS has the full thread; the rule the phone must keep: **`stage`
-is earned growth, `phase` is what the companion is doing now, and nothing about
-one may be inferred from the other.** Conflating them caused three bugs in a row
-(shiny read as adult, so a shiny hatchling got an adult sprite; stage segments
-hidden because shiny was read as finished; an egg held by a companion that
-never grew). The
-sprite follows growth actually done, never the glow.
-
-What the card is now: one row of squares that fills with growth and breaks at
-each stage boundary (break positions come from the server, not hardcoded), the
-skill-blend colours kept on it; deepening on its own short bar, offered only on
-a fully grown companion and worked through as a phase. No monthly hatch cap.
-0.383: tap a companion in the gallery to make it active again — it resumes the
-growth it had, the current one is shelved keeping its own, and the dialog says
-so before you tap. Don't remove the bar or its segments because they look
-redundant: the XP bar was deleted once by mistake and had to be restored.
-
-## 2026-10 — School rows show ahead / behind (v0.380.0 / web 0.573.0)
-
-Behind work is tinted on the row itself (it clears when done), not just a red
-date under a heading that scrolls away. Pulled-forward or pushed-back work says
-"ahead of Oct 20" / "moved from Oct 8" beside its due date, from the task's
-original due date (web migration 119). An older server simply doesn't send it.
-
-## 2026-10 — The history block beside the fields (v0.378.0–0.379.0 / web 0.569–0.570)
-
-Three fixed lines to the right of the entry fields, above Log weight: Best
-(heaviest ever, weight only), Best reps (most reps ever, with the weight), and
-Latest (the last session even when below both). A line with nothing behind it
-shows a dash so the block keeps its shape. No dates and no repeated unit on the
-phone — the unit is already beside the box. The labels start in one column and
-values end in another; "Recent" became "Latest" to match the web. The numbers
-come from the server (`stats`, see "The history summary is server-computed").
-
-## 2026-10 — The history summary is server-computed (v0.377.0)
-
-Best / Best reps / Last arrive as a field on the movement rather than being
-derived on the phone. The phone has the logged sets it needs for today, not the
-whole history, and computing a record locally would mean two answers to "what is
-my best bench" — which is exactly the class of bug that cost the last two days.
-
-`MovementStatsDto` is appended last and nullable, so an older server omits it and
-the block simply doesn't render. Nothing constructs `PlannedMovementDto`
-positionally, but it still went last.
-
-Rendered per movement, under its entry fields. On a one-movement card that is
-the space above the Log weight button, which is where it was wanted; on a card
-with three lifts each keeps its own, which a card-level block could not do.
-
-## 2026-10 — Aligning the fields by structure, not by numbers (v0.376.0)
-
-The entry boxes now sit in the same three weighted cells as the action tiles
-below them, rather than being positioned with widths and spacers that happened to
-look right. Both rows are `fillMaxWidth` children of the same Column with the
-same 8dp gaps, so cell N and tile N resolve to the same x-extent on any screen.
-Nothing has to be re-tuned for a different phone, which is the failure mode of
-the alternative.
-
-Each box is `weight(1f, fill = false).widthIn(max = NUM_FIELD_W)` — capped at
-three digits, but able to shrink below that on a narrow screen instead of
-overflowing its cell. A plain fixed width is what put sixteen columns off the
-right edge of the attendance grid in 0.372.
-
-One constant for every numeric box on the screen, so weight, reps and seconds
-cannot drift into three sizes again — which is what they were.
-
-`MovementRow` is the only implementation of that row and both call sites go
-through it, so this lands everywhere the fields appear without a second copy to
-keep in step.
-
-## 2026-10 — The goal card loads on its own, not with the dashboard (v0.375.0)
-
-The obvious place for the home-screen goal card was the dashboard payload, next
-to `money` — that is how every other home card gets its data, in the one read
-the screen already makes.
-
-It went in its own view-model instead. The goal needs the server's progression
-query, the heaviest read there is, and `/dashboard` is the single most-hit
-endpoint in the app: folding it in would make every home refresh on every phone
-pay for the goal card. A separate `CoopViewModel` means the dashboard paints
-first and the card appears when it arrives — the same reasoning as the web's
-Suspense boundary, reached by a different mechanism. It is also cache-backed
-through `PayloadCacheStore`, so on a return visit or offline it paints
-immediately from the last payload.
-
-The side benefit is that this needed no server change at all. `/api/v1/coop`
-already returns everything the card needs, including `isAdmin` and now
-`carried`, so this is an app-only release.
-
-`CoopDto.carried` is appended at the END of the data class and nullable. Against
-a server older than web 0.565.0 the field is absent, decodes as null, and the
-card falls back to the current month — no failure. Nothing constructs `CoopDto`
-positionally, so appending was safe here, but the field still went last out of
-habit after the `WorkoutLogRequest` near-miss.
-
-A carried goal's gate comes from the carried record (`carried.gateMet`,
-`carried.childrenMeeting`), never from `CoopDto.gateMet`. That top-level field is
-this month's, and using it for a September goal would re-test an already-settled
-month against an empty October counter — closing a gate the family had earned.
-
-## 2026-10 — The client has to say which day it logged on (v0.374.0)
-
-The server cannot infer it. A past `date` on a log means one of two things —
-catching up on an overdue workout, or deliberately back-dating from the date
-picker — and only the client knows which. Stamping "today" on every past date
-would move a back-dated Saturday lift to Sunday, which is the same failure that
-ruled out using `createdAt` server-side.
-
-So `WorkoutLogRequest` carries an optional `completedOn`, set only when today
-differs from the day being logged for. It is appended at the END of the data
-class and every construction of that request is now NAMED rather than
-positional: the request was being built positionally in SessionRepository, so an
-inserted field would have silently shifted `replace` and `detectConflict`.
-
-Captured at submit time, not at replay time. The write queue stores the
-serialized body verbatim from the OkHttp interceptor, so a log queued offline on
-Tuesday and synced on Thursday still reports Tuesday — which is when the workout
-was actually done.
-
-Older builds omit the field entirely and the server treats it as absent, so a
-phone that has not updated behaves exactly as it did before rather than failing
+## 2026-10 — Dark-mode tints, body map figure, Shopping (v0.594.0 / app 0.405.0)
+
+**Status tints.** Banners and error boxes use Tailwind's stock pale tints
+(`bg-amber-50`, `bg-red-50`, `text-red-700`, …). In dark mode they stayed pale
+cards holding the page's light text. Rather than add `dark:` variants to
+~200 class lists, `globals.css` re-maps those classes once under `html.dark`:
+tints become dark washes of the same hue, borders soften, deep text shades
+lift to their light counterparts. Solid fills (white-text buttons) are left
+alone. A new pale tint or deep text shade needs a line there.
+
+**Body map.** The figure is set per mode (light mode revised in 0.594.1)
+through `--color-figure`,
+`--color-figure-fade` (what assisting muscles mix toward) and
+`--color-figure-ring`, plain `:root` vars because no utility uses them. The
+app's `figureColors(dark)` holds the same three values.
+
+**Icons.** `paper-plates.png` had its white plate face cut out with the
+icon sheet's white card, so the page showed through it; the face is filled
+back in (inside the outline only). `ground-sausage.png` was fully
+transparent; it is now the ground-meat tray recoloured. Store icons still
+carry a white tile.
+
+**Name.** The Groceries section is labelled Shopping (sidebar, admin card,
+admin heading, app menu and title). Routes, models and APIs keep "groceries".
+
+## 2026-10 — Web workout buttons match the phone; "Complete for today!" (v0.593.0)
+
+**Log tiles.** The web's three action tiles now follow the phone's
+`WorkoutActionTile`: Skip and Calculator are outlined with theme-color text
+(Skip greys out when skipped); Log is filled until the movement is logged,
+then eases over 0.7s to a soft grey tile with theme-color text. After a save
+the label reads "logged" for 2.5s, then "edit <noun>"; a spinner replaces the
+icon while that tile saves. A save made on the card is remembered on the card
+(`savedHere`), because the server prefill was read before it. Only the saving
+tile is disabled, as on the phone.
+
+**Person page.** The workouts card's summary says "Complete for today!" on
+the same rule as the phone's home row: every workout task for today is
+complete and nothing is overdue.
+
+## 2026-10 — Shopping trips last a day; Marine Corps Birthday (v0.592.0)
+
+**Trips.** A trip stayed open until someone tapped Done, so a forgotten one
+kept the shopper "shopping" for days on every screen. A trip now lasts the
+household day it started: `endStaleTrips` finishes any trip started before
+today's household midnight exactly as Done does (ticked lines drop off, the
+rest go back to the saved list, the trip row is removed). No cron: it runs
+before every trip read and write (`loadGroceries`, `loadCart`,
+`loadDashboardTrips`, adding a line, starting a trip), so the first look on a
+new day — web or phone — already sees the store back to "Shop". The phone
+reads trips from the server, so it needed no change.
+
+**Marine Corps Birthday**, Nov 10, Observance, on by default. Migration 127
+appends it once to a saved `holidays.enabled` list (idempotent; a value that
+isn't a JSON array is left alone — tested both). New `schoolDay` flag on a
+holiday: while the no-school list was never saved it defaults to every enabled
+holiday, and this one would otherwise have become a no-school day.
+
+## 2026-10 — Anniversary event type; occasion names not suggested (v0.591.0 / app 0.403.0)
+
+`EventKind.ANNIVERSARY` (migration 126, `ADD VALUE IF NOT EXISTS`, run twice
+on Postgres 16) behaves exactly like BIRTHDAY: choosing it forces all-day +
+yearly on both forms, it takes its own kind color under Custom colors and is
+colored uniformly (not greyed as someone else's), only a parent can make or
+delete one. `occasions.ts` holds the list (`isOccasion`) so the places that
+treat birthdays specially now take both.
+
+Event names: a title with "birthday", "b-day" or "anniversary" in it names one
+person or couple, so `rememberEventName` no longer stores it and the picker
+(web + `/api/v1/event-names`) leaves existing ones out. They stay in the admin
+event-name list and the database. Profile birthdays are unchanged.
+
+## 2026-10 — All-day events read in UTC; one end date for a repeating event (v0.590.0 / app 0.402.0)
+
+Reported: a yearly birthday set to 11/3 showed across 11/2–11/3, and a
+repeating event shows two "Ends" (beside Starts, and under Repeats).
+
+**The extra day.** All-day events are stored at UTC midnight (`toDateColumn`)
+— personal events, feeds, pauses alike — but were READ with `localParts` in
+the household zone. West of UTC that puts the start at 6–7 PM the evening
+before, so every one-day all-day event covered two days (reproduced with
+HOUSEHOLD_TZ=America/Chicago: 2026-10-21 read as 10-20 → 10-21; with UTC it
+reads correctly, which is why it hid in tests). `eventTz(allDay)` /
+`eventParts` now read all-day instants in UTC; `occurrencesIn` takes its base
+wall clock in the zone it's given (it used the household zone regardless), and
+the calendar passes UTC for all-day series. Also switched: school days and the
+school year (PAUSE events), event search, and the series-edit anchors on both
+save paths. Storage is unchanged, so no migration. Not changed: reminder times
+on all-day events (still minutes before UTC midnight). Known edge: a
+single-occurrence edit made earlier on an all-day series recorded the day it
+was then shown on (one early), so that one occurrence may show twice until
+edited again.
+
+**Two ends.** For a repeating series, the end beside Starts is how long each
+occurrence lasts, not when the series stops; setting it to the stop date made
+a yearly event one occurrence years long, overlapping all the others.
+`fitRepeatingSpan` (all save paths, web and phone, create and series/future
+edits): all-day → one day each time; timed → at most 24 hours (overnight is
+fine), longer is refused with a pointer to Ends under Repeats. The forms
+follow: while Repeats is set, the web hides the end date (all-day) or keeps
+only the end time with "next day" when it runs past midnight; the app does the
+same for new events. A single-occurrence edit is a one-off and keeps its own
+end. Checked the neighbours: "repeat ends before it starts" was already
+refused on the web; count/until are one-or-the-other; the phone can't set a
+series end at all (Repeats only), so the clamp is its only guard. Events saved
+before this keep their long span until their series is next edited.
+
+**Birthday years.** A profile birthday's year isn't used anywhere — the
+calendar shows month/day each year. Kept (it's the real date, and an age could
+use it later). Feb 29 birthdays now fall on Feb 28 in other years; they
+showed on no day at all before.
+
+## 2026-10 — Typed birthdays; month and year quick picks in DateField (v0.589.0 / app 0.400.0)
+
+Birth years were hard to get right: the profile's date picker could only page
+month by month. `DateField` gains `typeable` — the field becomes a text box
+shaped as mm/dd/yyyy while you type, saved once it is a whole real date in
+range, put back on leaving if it isn't — used for the birthday. Every
+DateField's header now has the month and the year as buttons: the year opens a
+year grid (min/max bounded, scrolled to the shown year), then the months, then
+the days. One rule for what a birthday may be, `checkBirthday` (real date, 1900
+on, not in the future), serves the web action and the phone's new
+`/api/v1/me/birthday`. Rendered and exercised in Chromium: typing 07041979
+submits 1979-07-04; 02/30/1990 is flagged and not saved.
+
+## 2026-10 — Widget: a multi-day all-day event is listed once (v0.588.1 / app 0.399.0)
+
+A week-long all-day event (a visit) filled the widget with the same line on
+every day. `loadWidgetPayload` now keeps only its first day in view — keyed on
+event id + occurrence start, so a daily repeating all-day event still shows
+each day — and the app adds "through Sat" (or "through Oct 31" past the week).
+Only the widget does this; the Calendar still shows it on every day it covers.
+
+## 2026-10 — Android home-screen widget feed (v0.588.0 / app 0.398.0)
+
+`GET /api/v1/widget?scope=family|mine` (`loadWidgetPayload`): the next 7 days
+that have something on them — events plus the person's own open tasks
+(category OTHER) — and a count of their overdue tasks. Events go through the
+same filter and recolor as the person's Calendar: the inline `keep`/`recolor`
+in `loadCalendarPagePayload` became `personalEventRules`, and
+`loadPersonalEvents(userId, days, people)` uses it, so the widget can't color an
+event differently from the app. "family" passes every active person as the
+people to load; other people's events then take the person's "others" color.
+Tasks are only ever the person's own: the widget can tick them off. Tasks always
+have a due date, so the widget's top line counts overdue tasks rather than
+"no due date" ones (decided with the owner).
+
+## 2026-10 — Reps on a one-off weights log (v0.587.0 / app 0.397.0)
+
+"Log an additional workout" (also the only way to log for someone with no
+plan) took a weight and nothing else, so a one-off lift lost its reps. Both
+clients now show weight × reps for a WEIGHT log; reps are optional and the
+weight stays the record, as on a planned log. `CustomLogInput.reps` /
+`POST /api/v1/workouts/log-custom` `reps` (older apps omit it).
+
+The web's `logCustomWorkout` was a second copy of `logCustomEntry` — the same
+drift `completePlannedWorkout` had until v0.566. It now delegates, keeping only
+the session gate and revalidation, so reps were added in one place.
+
+## 2026-10 — Re-judge days completed under the old rule (v0.586.1)
+
+Reported after 0.586: a day logged half-way earlier that day (curls, not
+triceps) still read "Complete for today!" on the phone and 1/1 on the web
+card. The task was set COMPLETE by the pre-0.586 rule, and 0.586 only
+re-judges a day when something on it is logged or skipped — nothing did.
+
+`resettleCompletedWorkoutsOnce` runs at the end of `generateWorkoutTasks`
+(every dashboard load, web and phone): it re-judges each COMPLETE workout task
+in the overdue window with the same target rule `settleWorkoutTask` uses
+(`workoutTaskTarget`), lowers the ones that aren't done to PENDING (or SKIPPED
+when everything was skipped), and records `workout.settledV1` in AppSetting so
+it never runs again. It only ever lowers a COMPLETE, and skips revalidatePath
+because it runs during render. A day that stays complete after this had
+something logged outside the plan that day (a custom log, a sport, "I worked
+out"), which completes a day by design.
+
+## 2026-10 — A workout day is complete only when every movement is (v0.586.0 / app 0.396.0)
+
+Reported: on a day with several planned movements, logging one made the day
+read "Complete for today!"; reopening the log lost the reps just entered; the
+phone's reps box said "rep".
+
+**Completion.** `logPlannedWorkout` ended with `completeWorkoutTask`, so any
+one movement completed the day. It now ends with `settleWorkoutTask`, which
+reads the day's plans and applies one rule (`planDone`): every movement the
+plan asks a number for is logged or skipped. Untracked movements never hold a
+day up; a plan with nothing to enter is done once marked complete; a plan
+logged as one number (a run, a HIIT result) once logged or skipped.
+All done with something logged → COMPLETE; all skipped → SKIPPED (excused —
+asked for: a skip counts toward the movement, but skipping everything is not a
+workout); otherwise PENDING. Something logged outside the plan (custom log,
+sport, "I worked out") still completes the day, as before, and a rest day is
+never touched. A log never reopens a SKIPPED day (it may be a missed workout
+closed on purpose); a skip change can, since it may be undoing its own close.
+The HIIT writer settles too. The overdue list uses the same `planDone`.
+
+**Skip is per movement and saved.** New table `WorkoutMovementSkip`
+(userId, date, slot; migration 125) — slot is the planned pool-exercise id, or
+`plan:<id>` for a one-result plan. The web's per-movement "Rest / skip" used
+to rest the WHOLE day; the phone's skip was local only and vanished on reload.
+Both now toggle that one movement through `setMovementSkipped`
+(`POST /api/v1/workouts/skip`, `skipMovement` on the web), on overdue days too.
+The whole-day Rest button on each overview is unchanged. Logging a movement
+clears its skip. A swapped row skips under the planned movement's id.
+
+**Reps.** The phone never received logged reps (`PlannedMovement` carried the
+value only), so they could not refill; `reps` is now sent. On the web the plan
+refilled from sets fetched when the dialog opened, so leaving the log step and
+returning remounted it with pre-log data; both fetches now re-run on `step`.
+
+**Found on the way.** A log with no entries (a Log tapped with a blank box)
+reached `deleteMany({ sessionId })` and cleared every movement already logged
+on the plan. An empty submission now deletes nothing, and both clients stop
+before sending one. The custom-log unit for REPS said "rep" in two copies of
+the unit table; both say "reps", like `metricUnit`.
+
+**"Already logged — update?" per movement.** The phone's conflict check fired
+whenever the plan had a session that day, so the second movement of a
+three-movement day always asked to overwrite something not yet logged. It now
+fires only when a movement being sent (or the one-result slot) already has a
+set, and names that set.
+
+## 2026-10 — A companion brought back keeps its stage (v0.585.0 / app 0.395.0)
+
+Reported: a child's first pet, raised to adult, showed as a hatchling after it
+was made active again; the phone's character page meanwhile showed a different
+companion than the web and the gallery.
+
+**The reset.** Hatching can't repeat a species — `pickHatch` draws only from
+species not owned, and `Companion` is unique on (userId, species) — so the
+"start over" came from bringing a companion back. A returning companion's
+growth is `growthBanked + growth since tenureStartedAt`. Migration 121 (v0.576)
+added `growthBanked` as 0 on every row and called that "right for existing
+rows" — true of the one active then, not of companions already on the shelf.
+The gallery showed those at their minted stage (`mintedStage ?? 2`, often
+adult), but they banked nothing, so bringing one back restarted it at 0.
+
+Fix, read-time first: `bankedGrowthFloor(mintedStage)` — banked growth is
+never below the threshold of the stage the companion was minted at — applied
+where progression computes the active companion. Activation now stamps
+`mintedStage ?? 2` on the row it brings back (what the gallery displayed).
+Migration 124 stamps `mintedStage = 2` on rows that have none: shelved ones,
+and active ones brought back from such a shelf (tenure started > 1 day after
+hatching). Rows active since before 0.576 (no tenure start) and fresh hatches
+(tenure starts at hatch) are left alone. Tested on Postgres 16 with one row of
+each kind, run twice.
+
+**The phone showing the old one.** The character page's view model loads once
+and outlives a trip to the gallery, so after "Make this my companion" it kept
+showing the previous companion; it also keeps the cached copy silently if a
+refresh fails. App 0.395 bumps `AppContainer.companionRevision` after a swap
+and the character page reloads on it. If a phone still shows the wrong one
+after a full restart, the refresh is failing — look at its log.
+
+## 2026-10 — Shared chores: one list per chore, a separate reminder list, and counts you can open (v0.584.0 / app 0.394.0)
+
+**"Available for" on every shared chore.** Each chore always had its own list,
+but the admin card hid it on always-open chores — and nothing on the server
+read it for them, so showing the picker alone would have been a control that
+did nothing. Now `loadAlwaysOpenChores(day, viewerId)` drops chores the viewer
+isn't on (web person card, personal dashboard, device dashboard), and
+`completeAlwaysOpenChoreCore` refuses a completion from someone off the list.
+The "none set = everyone" rule is read through one helper,
+`src/lib/chores/pool-eligibility.ts`, rather than a fourth inline copy.
+
+**Turn reminder, separate from availability** (migration 123,
+`PoolReminderOptOut`). The owner wants parents able to do a chore any time but
+never told it's their turn. A person on the opt-out list stays in the pool —
+it's up for grabs for them, they can do it — but is never `furthestBehind`, and
+their own last-done is left out of "who's furthest behind", or a parent who
+never mows would hold everyone else's reminder back for good. Admin: a "Turn
+reminder" row under "Available for" on scheduled shared chores, built from the
+people on the chore's list. No rows = everyone eligible can be reminded, so
+existing chores behave as before. Always-open chores have no turn, so no row.
+
+**The app home card calls it out.** `furthestBehind` already reached the phone
+and showed as a red "!" on the Chores detail; the home card buried it in a grey
+line. Now a chore that's your turn gets the "!" and "Your turn: <chore>" in the
+card itself; the grey line remains for the others.
+
+**Web Shared chores counts open.** Each name is a button showing exactly the
+completions its number counts (since the scoring start, always-open included),
+newest first, dated by the household day it was done (`completedAt`, due date
+for older rows). v0.584.1: it opens as a centered pop-up over a dimmed page
+(the Add event overlay pattern), capped at 70% of the screen height with the
+list scrolling inside. The first version dropped down from the chip and ran
+off the bottom of the window, unreadable — a long list needs the middle of the
+screen, not the space below a chip.
+
+## 2026-10 — One family-goal vote a month; the home card stops asking (v0.583.0 / app 0.393.0)
+
+The owner's rules: **one vote per person per month, and it can be changed**;
+parents and admins **may** vote but don't need to; once you've voted the home
+page stops asking.
+
+What the code did before: `CoopVote` was unique per (proposal, person), and the
+vote was a toggle, so one person could vote for every idea. On the web's
+shared-screen face row anyone could also tap anyone's face. The home banner and
+the app card said "vote for the one you want" to everyone until a goal was
+picked, whether or not they had voted.
+
+Now:
+
+- `toggleCoopVoteCore` — tapping the idea you voted for takes the vote back;
+  tapping another MOVES it (your other votes in that proposal's month are
+  deleted in the same transaction). The one implementation, behind both the web
+  face row and the app's button, so they can't differ. The face row stays (the
+  shared screen needs it, per the owner) but now moves a person's vote rather
+  than adding one. The app's button reads "Move my vote here" when your vote is
+  elsewhere.
+- Not a database constraint: a unique (user, month) would need the month copied
+  onto the vote row. The transaction is the rule; migration 122 removed votes
+  cast under the old one (most recent kept per person and month, ties to the
+  larger id, idempotent — tested on Postgres 16 with planted doubles).
+- `coopHomeNudge` (src/lib/coop-nudge.ts, dependency-free and unit-checked) is
+  the one rule for the home card while no goal is chosen: "vote" for a child
+  who hasn't (on the shared screen, until every child has), "pick" for a parent
+  or admin — they don't need to vote, and choosing is their job — otherwise
+  nothing. The web banner calls it directly; the device API sends it as
+  `homeNudge` so the app doesn't keep a second copy.
+
+Unchanged and confirmed: remove (and select / grant) need the admin PIN on the
+web and a parent-or-admin account on the device API.
+
+## 2026-10 — A companion can be the profile picture; a third avatar kind (v0.582.0 / app 0.392.0)
+
+Agreed earlier and built now: any owned companion, at any stage you've reached,
+as your profile picture. **Chosen only in the app** (the owner's call) — gallery
+→ tap an owned creature → Use as profile picture → pick one of three stages.
+The web shows it everywhere a picture appears but has no picker; picking a
+photo or an icon on the web replaces it, as either replaces the other.
+
+**Storage: a third kind in `User.avatarPath`**, `companion:<species>:<stage
+name>`, beside a bare upload filename and `icon:<key>`. No migration. The
+danger was every existing check: seven places decided "not an icon ⇒ an
+uploaded file", so a companion value would have been served as a broken photo
+and, on the next save, passed to `unlink()`. All now use one classifier in
+`src/lib/avatars.ts` — `isUploaded` (only a real file), `isIcon`,
+`companionAvatarOf` (null for an unknown species or stage, which then shows
+initials). New code must not test `!isIcon(x)` to mean "a file".
+
+**Which stages you may pick** comes from the same rule the gallery shows:
+`loadOwnedCompanions` (src/lib/companions-owned.ts), extracted from the
+collection route — the active companion at its live growth stage, a shelved one
+at its `mintedStage`. The route re-checks ownership and stage, so the phone's
+picker is a request, not an authority. A chosen stage is fixed; it doesn't grow
+with the companion.
+
+**Unreached stages aren't spoiled.** The gallery sends `stageImages` only for
+stages reached; the picker shows an egg and "Not yet" for the rest.
+
+**Rendering.** A sprite is transparent art, so it is fitted whole with some air
+(web `object-contain p-[12%]`, app 76% of the circle) instead of cropped and
+framed like a photo; `avatarPosition` is reset and ignored for it. The app
+draws it through one composable, `CompanionAvatarArt`, used by the rail, content
+avatars and the Profile preview. The person payload carries
+`avatarCompanion { species, stage, image }`; an older app ignores it and shows
+initials.
+
+## 2026-10 — One calendar file, read in two places, held to one answer (v0.581.0 / app 0.389.0)
+
+An `.ics` invite from an email now opens New event filled in: on the phone by
+tapping (or sharing) the attachment, on the web with **Import .ics** on the Add
+event form. It fills the form and nothing else — the save goes through the
+existing create path, so there is no new endpoint and no new data.
+
+**Where the file is read was the owner's call: on the phone.** It works with no
+connection and needs no server change. The web cannot do the same in the
+browser, because the times have to land on the household's clock and
+`HOUSEHOLD_TZ` is not exposed to the browser (`dates.ts` would quietly fall back
+to UTC there). So the web reads the file text in the browser and hands it to a
+server action (`readIcsUpload`, gated like saving an event) that returns the
+draft. Two readers, then — and that is exactly the situation that has bitten
+this project before.
+
+So the rule lives once in `src/lib/calendar/ics-import.ts`, with its rules
+written at the top; `IcsImport.kt` mirrors it line for line; and
+`scripts/ics-parity/check.sh` compiles the Kotlin with `kotlinc`, runs 43
+hand-written files plus a seeded random batch (thousands of files, CRLF / LF / CR,
+folding, BOMs, Windows and bogus TZIDs, DST edges, every RRULE shape the form
+can and can't hold) through both in four household zones, and diffs the
+drafts. On its first runs it found two real bugs that agreeing copies would
+have hidden from any example test: a note clipped at 500 characters could end on
+half an emoji (now `clip()` never splits a surrogate pair), and a start in the
+year 1000 shifted across zones to year 999, which **crashed** the Kotlin
+(`LocalDate.parse("999-12-31")`). Years outside 1900–2199 are now unreadable,
+and `readIcsFile` never throws on either side — a file it can't use is "no
+event".
+
+The shape of the answer:
+
+- **One event or nothing.** A file holding several events (counted by UID; a
+  `RECURRENCE-ID` override belongs to its series) is a schedule, and a schedule
+  belongs in a subscription — the form says how many it holds and points to
+  Admin → Calendar. Adding feeds stays a parent job on the web; phones can only
+  show or hide feeds that already exist. METHOD:CANCEL or an all-cancelled file
+  says so instead of adding anything.
+- **Times on the household clock.** A UTC time or a real TZID is converted; the
+  Windows zone names Outlook writes ("Central Standard Time") are mapped; an
+  unknown TZID or a floating time is read as already household time. The phone
+  form defaults new events to the household zone, so the draft lands as is.
+  Known edge, identical on both: a wall time that doesn't exist (02:30 on
+  spring-forward day) resolves an hour early, as `zonedToUtc` does everywhere.
+- **Repeats are carried or dropped, never approximated.** Plain daily / weekly /
+  monthly / yearly from the start date carries over. An interval, an end, a
+  second weekday, exceptions (EXDATE/RDATE) or changed occurrences drop the
+  repeat and the form says so — "every other Tuesday until June" quietly saved
+  as "every Tuesday forever" would be worse than asking.
+- **Only alarm-free, event-level properties count.** A VALARM's DESCRIPTION is
+  not the event's description; first value wins.
+- **The description becomes the note**, under the same 500-character rule as
+  typing one, and the type starts as Event so the note is kept.
+- **Whose calendar**: the file can't know. The web leaves Whose on "Choose" (the
+  save already refuses an unchosen owner); the phone defaults to the person
+  holding it, like any new event there.
+- **Not deduplicated.** Importing the same invite twice makes two events; the
+  file's UID is not stored. Fine for one-off invites; revisit if it bites.
+
+Android specifics: the activity declares VIEW and SEND filters for
+`text/calendar`, `text/x-vcalendar`, `application/ics`, `application/x-ical`.
+An app can't make itself the default — the first open shows the chooser, and
+"Always" is the user's to pick. The file is read off the main thread (a mail
+app may still be fetching it), capped at 1 MB, parked in
+`AppContainer.pendingIcs`, and picked up by the Calendar screen once the
+calendar has loaded (which also waits through sign-in). A recreated activity
+doesn't import the same file again, and an imported form counts as unsaved so
+closing it asks first.
+
+## 2026-10 — A note on two kinds of event; the owner decided once (v0.580.0 / app 0.387–0.388)
+
+**Notes.** Events (APPOINTMENT) and Medical / Dental (OTHER) take a short note —
+flight numbers, a confirmation code, what to bring. A custom event type stores
+as OTHER too but is deliberately excluded: a hockey game is its own category,
+and nobody asked for a note there. The rule is `takesNotes` / `cleanNotes` in
+`src/lib/calendar/event-notes.ts` (500 chars), read by the web form, both server
+actions and the device API, and ported to the phone's `NoteField.kt`. The two
+copies must agree exactly: a blank `eventTypeId` is "no type" on both, because
+a TS/Kotlin pair that disagreed on `""` would have shown a field whose contents
+the server then threw away. (The note cap is also checked by
+`scripts/ics-parity/check.sh`, which compares the two `NOTES_MAX` constants.)
+`cleanNotes` returns null for a kind that can't hold one, which also clears a
+note left behind when the type changes.
+
+On the web the box sits beside the All day switch so the add/edit windows keep
+their size; on the phone the note opens on its own screen like the address
+(0.388), and it displays only in the event detail, under the address — never on
+grid chips.
+
+**Owner.** A parent on the phone can now file an event under anyone in the
+house (My calendar / Family calendar / each person), matching the web's Whose.
+`ownerId` is resolved once in `create-event.ts` (`resolveOwner`) and re-checked:
+a non-parent can only ever file under themselves, whatever the request says.
+
+## 2026-10 — Every movement logs on its own (v0.579.0 / app 0.386.0)
+
+Two movements added to one plan used to render differently from two plans that
+share a muscle group: one Log button for the pair versus one each. How a
+movement got onto the card was deciding how it was logged. Now every movement
+on a weights card carries its own Rest / skip, Calculator and Log buttons under
+a rule of its own, and the card-level buttons remain only for shapes with no
+movement to hang them on (HIIT, a metric-only log, a plan with nothing to
+enter).
+
+It works because of v0.539's rule — the server clears only the movements a
+submission covers — so `complete(only)` sends one movement and the bench press
+saves while the incline press stays open. `useTransition`'s `pending` is one
+flag per row, so a `savingKey` records which button was pressed; only that one
+says "Logging…". The label is per movement too: Log weight / Log time, and Edit
+for a movement already recorded that day.
+
+## 2026-10 — History labels in one column, "Latest" on both (v0.570.0 / app 0.379.0)
+
+The three history lines lined labels and values up by their own lengths, so each
+pair drifted. Labels now start in one column and values end in another. "Most
+recent" became "Latest" — the phone had shortened it to "Recent" to fit, so the
+two clients named the same line differently. The phone made the same change in
+app 0.379.0.
+
+## 2026-10 — One row of squares, broken at the stages (v0.578.0)
+
+The card had drifted to two bars again: the cell row for the skill blend, and a
+separate segmented rail underneath for growth. Two bars is what started this
+whole thread, and adding the second one back was me solving "show the stages" by
+adding furniture rather than by making the existing bar mean something.
+
+The cell row now fills with GROWTH and breaks where each stage ends. The domain
+colours stay, because they were never the problem — they say what earned the
+progress, while the count says how much. One object, two honest readings.
+
+The break is extra margin on the cell before it, not an inserted element. An
+element needs its own width in the row and knocks the squares out of their grid.
+
+The break positions are derived from CLEAN_DAY_STAGES and sent to the phone
+rather than hardcoded in both. A divider drawn somewhere other than the real
+boundary would be worse than no divider.
+
+The "growing" caption is gone: a bar that is filling already says it. Only two
+captions remain, and both say something a bar cannot — "A new egg is ready!"
+and "deepening".
+
+Deepening keeps a separate short rail. It is the one thing on this card that is
+NOT the growth the row measures, so sharing the row would misstate it.
+
+## 2026-10 — Shiny is not finished (v0.577.0)
+
+Second time in three releases the same mistake: treating a PHASE as if it
+implied a stage. 0.575.0 fixed the sprite — a shiny hatchling was being drawn
+as an adult — but left `eggReady: true` in the same branch, so it was still
+being treated as a completed companion with an egg waiting.
+
+The shiny branch now requires adulthood. A companion deepened under the old
+rules keeps its glow and falls through to `growing`, which is exactly right: it
+has not been raised, so it is still being raised. The side effect is that its
+bar shows stage segments again, which is why they appeared to be missing — the
+segments were only ever drawn while growing, and it was never classed as
+growing.
+
+Worth stating plainly because it keeps recurring: `stage` is earned, `phase` is
+current activity, and NOTHING about a phase may be inferred from the other. Each
+time these have been collapsed, legacy data has been credited with work nobody
+did.
+
+Deepening gets a shorter bar. Reusing the full-width growth rail made a smaller,
+separate job look like the same journey starting over.
+
+The caption no longer says "deepened". It described how the egg was earned, and
+what to do next is the same either way.
+
+## 2026-10 — Growth has to survive the shelf (v0.576.0)
+
+Bringing a companion back out of the gallery breaks the assumption the growth
+model was built on: that a companion has exactly one tenure, so measuring from
+`acquiredAt` is the same as measuring its whole life.
+
+Both obvious fixes are wrong. Measuring from `acquiredAt` credits a returning
+companion with every clean day since it first hatched, including the months it
+spent shelved — a hatchling put away in spring comes back a full adult.
+Measuring from the day it returns throws away everything it earned.
+
+So growth is banked on retirement and the current tenure is measured from when
+it started; total growth is the sum. Simulated across a shelf trip: seven days
+earned, thirty-three shelved, and it returns as the juvenile it was rather than
+the adult the naive version would have handed over.
+
+One helper owns taking a companion out of the slot, and both paths that do it —
+hatching something new, and activating an old one — call it. That is the same
+rule as `syncPlanUnitDone` and `logPlannedWorkout`: the second implementation is
+the one that drifts.
+
+A returning companion has `deepeningStartedAt` cleared. It is not mid-deepen; if
+it was deepened before it is still shiny, and if it was not, it gets that choice
+fresh when it reaches adult again.
+
+The gallery dialog says what the swap costs before the tap rather than after it.
+Activating retires whoever is in the slot, and that is not obvious from a button
+labelled "make this my companion".
+
+## 2026-10 — A phase is not a stage (v0.575.0)
+
+`companionPhase` returned `stage: 2` for anything shiny or deepening, on the
+reasoning that only an adult can reach those phases. True going forward, and
+false for data already in the database: the old rules let a hatchling be
+deepened, so a shiny hatchling exists — and 0.574.0 redrew it with the adult
+sprite, crediting growth that was never done.
+
+The stage now always comes from growth, in every branch. A phase describes what
+a companion is DOING; the stage is what it has become, and only one of those is
+allowed to pick the picture.
+
+The XP bar is back. It was removed as part of "three progress ideas, one bar",
+but it was the one deliberate thing of the three — the problem was never that
+it existed, it was that nothing on the card showed growth. So: XP cells on top,
+growth below, each saying what it is.
+
+Growth is drawn as one segment per stage with a gap, rather than a tick on a
+continuous rail. The tick read as a seam in the bar; the gap reads as a
+division. 4px, because 2px read as a rendering artifact at this bar height.
+
+## 2026-10 — Three progress ideas, one bar (v0.574.0)
+
+The companion card showed one bar and the feature had three unrelated notions of
+progress behind it:
+
+  stage       clean days + perfect weeks×2 since that companion hatched
+  egg         LIFETIME XP since the last hatch, against a cost that rose
+  the bar     neither — it was the skill-blend XP bar, coloured by domain
+
+Nobody could say what filled what, which is the whole complaint. XP accrues from
+everything, so eggs filled while the creature in front of you had not grown at
+all: hence "a new egg is ready" under a hatchling, and a shiny hatchling, since
+deepening only ever checked for an egg and never for a stage.
+
+Now there is one currency. Growth raises the companion; reaching fully grown IS
+the egg. Deepening is a second growth phase on top, and the glow appearing is
+both "deepening finished" and "there is an egg again" — one event, not two
+things to correlate. `companionPhase()` returns the phase, the stage and the
+percentage through the CURRENT phase, so the bar measures one thing at a time
+and 100% always means something is waiting to be spent.
+
+The per-season hatch cap is gone. Growth already paces hatching, and the second
+limiter is what produced `eggCapped` — a state whose UI had to apologise for
+itself in three places.
+
+`shiny` is now derived from growth while a companion is active, and written to
+the column when it retires. A shelved companion has no growth left to measure,
+so the flag has to hold the answer there; deriving it while active avoids a
+write-on-read to flip it the moment the phase completes.
+
+Cost of the change: a hatchling can no longer be made shiny. Existing shiny
+companions keep their glow — the flag is still honoured — but that combination
+cannot be created again, which is the point.
+
+The dead constants (`EGGS_PER_SEASON_CAP`, `eggCostFor`) were left in place and
+marked, not deleted. This feature already collapsed under three overlapping
+progress ideas; quietly removing the names is how the next one gets reinvented.
+
+## 2026-10 — An index over a list that removes its own items (v0.573.0)
+
+The extra-work picker kept an index and advanced it after each add. The list it
+indexed is "strictly future, still pending", and adding a lesson to today moves
+its due date to today — so the server drops that item on the next read and
+everything below shifts up one. The index then stepped past the item that had
+just moved into the vacated slot, so every single add skipped an assignment.
+
+Two counters for one movement. The index is gone entirely: the soonest item is
+always `items[0]`, because the list maintains that by construction.
+
+Adding also returns to the subject list now, naming what went in. Staying on the
+subject offered a second add nobody asked for, and was how the skipping got
+noticed in the first place.
+
+Separately, `originalDueDate` on Task. Pulling work forward overwrote `dueDate`,
+the SchoolWork `startDate` and the plan unit's `scheduledDate` with today, so the
+planned date simply ceased to exist and nothing could say whether you were early.
+It is written once, the first time a task moves, and never again — the ORIGINAL,
+not the previous, or a second move would quietly redefine it as "wherever it was
+last". Null for every existing row and for anything that never moves, so there is
+nothing to backfill.
+
+Direction matters in the wording: "ahead of Oct 20" and "moved from Oct 8" are
+different situations, and a bare second date says neither. Built once in each of
+the two row builders, from the same two dates, so the phone and the web read the
+same.
+
+Behind work is tinted on the row rather than only grouped under a heading. The
+heading leaves the screen as soon as the list scrolls, which is exactly when
+being behind matters most. The tint clears when the row is completed — a
+finished assignment is not behind anything.
+
+## 2026-10 — The sandbox cannot see Prisma types, so a script has to (v0.572.0)
+
+0.571.0 failed to build on `task.id`, where the `select` had only asked for
+`userId`. It typechecked locally because this sandbox cannot generate the Prisma
+client — every query result is `any` here, so any property access on one is
+accepted. The Docker build generates the client and is therefore the first place
+the mistake exists at all.
+
+That is the second deploy lost to this blind spot (the first was a nullable
+muscle group used as an index). The gap is structural, not carelessness, so the
+answer is a check rather than more care: `scripts/check-prisma-select.py` reads
+each `findUnique`/`findFirst` with a flat `select`, collects its keys, and flags
+reads of anything else off that variable.
+
+It is deliberately conservative — it skips selects containing a spread, stops at
+any rebinding of the name including a loop variable, blanks comments so it
+cannot flag its own prose, and ignores `prisma.task.update` when a variable
+happens to be called `task`. Each of those was a false positive it produced
+first. A clean run is therefore weak evidence; a hit is nearly always real.
+Verified by reinstating the exact line that broke the build and watching it fail.
+
+It is not in `npm run build`. The builder image is node:22-alpine and may not
+have Python; a check that breaks the deploy it exists to protect is worse than
+no check. It runs in `scripts/preflight.sh`, alongside the typecheck report and
+the JSX-escape scan, before a zip goes out.
+
+## 2026-10 — A stored flag with one writer out of four (v0.571.0)
+
+`ClassPlanUnit.done` is stored, not derived from the task behind it. Four paths
+complete a task — `toggleTask` (ticking it on a card), `claimAndCompleteTask`,
+`api/day.ts` (the phone), and `setSchoolWorkComplete` (the admin school-work
+screen) — and only the last one wrote the flag. So every lesson the children
+actually finished stayed `done = false` and the plan review printed it as
+overdue, indefinitely, while the task sat there COMPLETE.
+
+The flag could have been dropped and the status derived from the task on read,
+which would make this class of bug impossible. It was not, because a unit can be
+marked done with no task behind it at all — work skipped at upload time, via
+`setPlanUnitDone` — so the flag carries information the tasks do not.
+
+Instead `syncPlanUnitDone` lives in `lib/school/plan-unit-sync.ts` and every
+completion path calls it, including the one that already worked: its inline copy
+was deleted in favour of the shared call. A no-op for any task that isn't
+schoolwork, so callers invoke it unconditionally rather than testing first.
+
+Migration 118 repairs the existing rows. Recoverable, unlike the lost reps in
+0.566, because the Task rows still hold the answer. It sets `done` and never
+clears it: a unit flagged complete with no task is the admin-marked case above,
+and clearing those would re-open work that was finished off the books. Verified
+against a scratch Postgres over all five shapes — already-true, card-completed,
+pending, skipped, and admin-marked-without-task — and it is idempotent.
+
+Separately: ten screens were printing `\u00b7` and `\u2014` as literal text. The
+detector added after the first two of these only looked at lines containing a
+`>`, and every one of these sat on a line starting with `{` or a bare word. It is
+now `scripts/check-jsx-escapes.py`, which strips comments, template literals and
+strings and inspects what is left.
+
+## 2026-10 — Best weight and best reps are different questions (v0.569.0)
+
+The first cut of this block showed "Best" as the record set, weight AND the reps
+done at it, and then only showed a reps line when those reps existed. That
+collapses two questions into one and answers neither well.
+
+They are now three fixed lines:
+
+  Best weight  the heaviest ever lifted, weight alone. Whatever reps happened to
+               go with it are noise against the number being asked for.
+  Best reps    the MOST reps ever done, with the weight they were done at. This
+               is usually a LIGHTER bar than the record, which is the whole
+               point of having the line — deriving it from the record set would
+               make it the record over again.
+  Most recent  the last session, even when below both records. A summary that
+               only ever shows personal bests cannot tell you where you are now.
+
+All three render always, with an em dash when empty. A line that disappears
+shifts the two below it, so the block changed shape as a movement accumulated
+history.
+
+Placement is to the right of the movement's own entry fields, in the same row.
+Under them was wrong: it pushed the action tiles down and read as a footnote to
+the card rather than as information about that one movement.
+
+`bestRepsOn` was added for the web's date column. The app omits dates and the
+repeated unit entirely — it has a third of a phone's width to work in, and the
+unit is already printed beside the weight box on the same row.
+
+## 2026-10 — One record, two plan queries (v0.568.0)
+
+The log card needed Best / Best reps / Last per movement. The two clients reach
+the log card through *different* queries — the web renders the weekly plan from
+`loadWorkoutsBoard`, the phone reads the day's plan from
+`loadTodayPlannedWorkouts` — so the obvious move was to compute the summary in
+each. That is how the web and the phone ended up disagreeing about reps, swaps
+and sessions over the last two days.
+
+So the computation went into `queries/movement-stats.ts` and both call it.
+`workout-log.ts` already imports `workouts.ts`, so putting it in either would
+have made them import each other; a third module costs nothing and ends the
+question. `doneOn` moved there too, since the summary has to report the day a
+workout was DONE, the same rule the charts use — and it was private to
+`workout-log.ts`, which is how a second copy starts.
+
+The API route needed no change at all: it passes `workouts` through wholesale,
+so the new field reached the phone the moment the query produced it.
+
+The summary attaches to the MOVEMENT, not the card. "Best bench" is meaningless
+on a card holding three lifts. On a single-movement card — most of them — that
+puts it exactly in the empty space above the action row, which is where it was
+asked for.
+
+The REPS tile was not broken. It means reps AT the record, and the record
+predates reps being stored, so it honestly said "none logged yet" while LAST,
+two tiles away, showed the same lift at ×2. Honest and still wrong to read, so
+it now falls back to the best rep count logged at any weight and says which
+weight that was.
+
+Dates: the web was formatting with `toLocaleDateString`, which prints "Oct 7"
+and, in another locale, could print 5/10 where the phone prints 10/5. Both now
+build the string from the ISO parts.
+
+## 2026-10 — Clearing the fields made a save look like a failure (v0.567.0)
+
+`completePlannedWorkout` finished with `setValues({})`. The numbers vanished the
+instant they were saved, and only came back on a full page refresh.
+
+The clear was wrong on its own terms: what is in those boxes after a successful
+save IS what the server holds, so emptying them reports the opposite of what
+happened. And nothing was going to refill them, because the prefill runs in a
+`useState` initialiser — that does not re-run when revalidation delivers new
+props, only on remount, which is exactly why navigating away and back "fixed" it.
+
+So the save no longer clears. No syncing effect was added to chase the
+revalidated props: an effect that writes into the same state the user is typing
+into can clobber an edit in progress, and it buys nothing here, since a remount
+already re-reads from the server.
+
+The overdue cards still get no `loggedByPool`, which is correct and worth not
+"fixing" later: that map holds TODAY's logged sets, and a card about a missed
+Monday would prefill Monday with today's numbers.
+
+## 2026-10 — One logging function, not two (v0.566.0)
+
+Reps typed on the web never reached the database. `completePlannedWorkout` built
+its set with `switch (e.metric) { case "WEIGHT": set.weight = e.value; }` and
+never read `e.reps` — a field its own input type declared. `mark.ts`, which the
+phone goes through, had handled it correctly the whole time.
+
+Hunting that turned up two more holes in the same function: it dropped
+`swappedFrom` as well (also declared, also ignored), and it called
+`workoutSession.create` unconditionally, so "Edit weight" appended a second
+session for the day rather than editing the first.
+
+Three bugs, one cause: two implementations of the same operation, one of which
+quietly fell behind. Yesterday's `completedOn` work hit this exact seam from the
+other direction — the web action had the feature and `mark.ts` did not. That
+made it the second time in two days, which is the point at which patching the
+symptom is the wrong move.
+
+So `completePlannedWorkout` no longer implements anything. It does the two things
+that are genuinely the web's business — `requireCanActFor` and `refresh()` —
+and delegates to `logPlannedWorkout`. The entry shapes already matched field for
+field, which is the tell that these were one function wearing two hats. About
+sixty lines of parallel logic are gone, and there is now no copy left to drift.
+
+Two behaviour changes fall out of it, both wanted. Re-logging edits the day's
+existing session instead of adding another, which is what the button has said
+since it was relabelled "Edit weight". And a web log now reuses a session the
+phone created, and vice versa, because both finally agree on what a session for a
+plan on a day is.
+
+Reps logged on the web before this are gone. They were discarded server-side
+rather than stored wrongly, so there is nothing to recover from — no backfill
+is possible, unlike the `completedOn` repair where `createdAt` still held the
+answer.
+
+## 2026-10 — A goal outlives its month (v0.565.0)
+
+September's family goal "ended" on October 1. Nothing expired it. `seasonKey` is a
+plain string (`"2026-09-01"`) and `loadCoop()` filters on whichever key is current,
+so on October 1 the query started asking for `"2026-10-01"` and found nothing. The
+proposals and votes were never deleted — they became unreachable, which looked
+identical to being gone.
+
+A `SELECTED` proposal from an earlier window now loads alongside the current
+window's, as `carried`, and stays live until a parent checks it off. `PROPOSED`
+rows do not carry (a losing idea is just a past idea) and `GRANTED` ones do not
+(they are finished). Only one carries, newest first, so an abandoned goal from
+months back cannot outrank a more recent one.
+
+The hard part was the gate, not the carry. "Everyone finished their month" was
+computed as a single number for the current window, and a carried goal needs the
+answer for ITS window — a question October's counter cannot answer. So
+`monthlyCleanDays` is now derived from a new `cleanDaysBySeason` map: the same
+one pass over day buckets, keyed by the window each day resolves into rather than
+filtered to the current one. It uses `resolveSeasonWindow`, the same resolver the
+live window uses, so it stays correct in "weeks" mode instead of assuming calendar
+months.
+
+This matters for fairness in a specific way. If the kids finished September and a
+parent simply forgot to hand out the reward, re-testing the gate against October
+would close a gate the family had already earned — moving the finish line after
+the race. The gate for a past window is a settled fact, so it is read as one.
+
+No migration. The carry is a different query against rows that were already there.
+
+`grantCoopCore` now enforces the gate itself. It only checked status before; the
+web UI hid the button when the gate wasn't met, which meant the rule held on the
+web and nowhere else — the `/api/v1` route and the app call the same function
+directly. A rule that lives in a disabled button is not enforced.
+
+The home banner streams inside a Suspense boundary. It needs `loadProgression()`,
+the heaviest read in the app, and the home page is the most-visited page; awaiting
+it there would have made every visit pay for the goal card. `bump()` also
+revalidates `/` now, or checking the goal off from the banner would leave the
+banner stale — the one thing the person who just pressed the button is looking at.
+
+## 2026-10 — Two log paths, not one (v0.564.0)
+
+`completedOn` was wired through `completePlannedWorkout` (the web server action)
+and that looked complete, because the app's charts and history read dates the
+server already resolves — so no app change appeared necessary.
+
+It was not complete. The app does not use that action. It posts to
+`/api/v1/workouts/log`, which calls `logPlannedWorkout` in `lib/workouts/mark.ts`
+— a separate implementation whose own doc comment says it "mirrors the web's
+completePlannedWorkout". A mirror is not the same object, and only one of the two
+had been changed.
+
+Both now take the day actually logged on. The route reads it as an optional body
+field so a phone on an older build omits it and is unaffected instead of failing
 validation.
 
-## 2026-10 — Workout days was drawing off the edge of the phone (v0.373.0)
+One asymmetry worth keeping: on the edit path `logPlannedWorkout` only ever SETS
+`completedOn`, never clears it. That path also runs when an existing session is
+re-logged, and a client sending no `completedOn` — an older app, or a same-day
+edit from the web — must not erase the day a catch-up was recorded on.
 
-0.371 fixed the date window and the current week still did not appear, because the window was never
-the whole problem. The grid drew a fixed sixteen columns: 16 x (18dp + 4dp gap) + a 12dp weekday
-rail is ~364dp, and a phone's content width after card padding is ~330-360dp. The newest columns,
-the week in progress among them, were laid out past the right edge of a Row that does not scroll.
-The data was right, the dates were right, and the pixels were off-screen.
+## 2026-10 — A session has a due day and a done day (v0.563.0)
 
-`BoxWithConstraints` now measures the available width and draws as many weeks as fit
-(`(maxWidth - rail - gap) / (cell + gap)`, clamped 4..16), anchored so the current week is always
-the last column. 14 weeks on a 360dp phone, 16 on a 412dp one, and older weeks fall away on their
-own as time moves forward — which is the behaviour asked for rather than a fixed horizon.
+`WorkoutSession.date` is the day a workout *counts for*. Adherence is built on it:
+`loadOverdueWorkoutDays` walks back through the plan and asks `loadTodayPlannedWorkouts(iso)`
+whether that day's session exists, so moving `date` to the day someone caught up on would make a
+missed Monday retroactively not missed. That is the one thing the column must never do.
 
-The lesson for next time: when a layout fix does not take, check whether the thing is being drawn
-somewhere you cannot see before changing the logic again. Two releases went into the date maths
-while the real fault was that the row was wider than the screen.
+But a chart that draws Tuesday's weights on Monday's square is lying about when the work happened,
+and Recent workouts dating it 10/5 reads as a bug because it is one.
 
-## 2026-10 — Three, four, five muscle groups on a day (v0.372.0)
+So: a second nullable column, `completedOn DATE`, written only when the two differ. `date` stays
+the due day and keeps owning adherence; every DISPLAY read resolves `completedOn ?? date`. One
+helper, `doneOn()` in `workout-log.ts`, so the fallback is written once rather than at each of the
+four series sites.
 
-Matching the web: three and four cut from the centre via a hard-stop `Brush.sweepGradient` — thirds
-as wedges, four as quadrants — because every piece meets in the middle and stays legible at 18dp.
-Five or more would be slivers from a centre point, so those keep the horizontal bands.
+`createdAt` was considered and rejected: it is when the row was inserted, which is right for a
+catch-up and wrong for deliberate backdating — logging Saturday's lift on Sunday morning from the
+date picker would move it to Sunday. The ISO date the UI was actually logging *for* is the only
+honest source, so `completePlannedWorkout` takes `completedOnISO` and stores it only when it
+differs from `dateISO`.
 
-Compose's sweep starts at 3 o'clock where CSS conic starts at 12, so the pieces sit a quarter turn
-round from the web's. At this size that is not perceptible and it is not worth the rotation
-gymnastics to match exactly; what reads is "three wedges" or "four quarters", not which colour is
-where.
+The overdue cards were left alone on purpose. `TodayPlan` and `PlanRow` thread the new prop
+through and render nothing new from it — the request was for the data to be right, not for the
+cards to grow a second date.
 
-## 2026-10 — Grid window, stripes, and the Swap button (v0.371.0)
+No app release. The app's attendance grid (`byDate.getOrPut(p.date)`) and its history list read
+dates the server already resolved, so the field name is unchanged and only the value moves. Room
+caches the payload verbatim and refreshes on next sync, so there is no schema change there either.
 
-The attendance window had the same off-by-a-week fault as the web: `today.minusDays(111)` snapped
-back to Sunday moved the start earlier without moving the end, so it finished at
-`today - dayOfWeek` and the week in progress was missing. Now `startOfWeek(today).minusWeeks(15)`.
+## 2026-10 — Two plans on one page, one of them unwired (v0.562.0)
 
-Three or more muscle groups on a day become equal vertical bands via a hard-stop
-`Brush.horizontalGradient`; two keeps the diagonal. See the web DECISIONS entry for why.
+`workouts-grid.tsx` renders `TodayPlan` twice: once for today on the main Log workout step, and
+once for a chosen date on "plan for this day". Only the second was passed `loggedByPool`, so the
+one people actually use had no prefill at all — while the home page's single copy worked, which is
+exactly why it looked like a sync problem rather than a missing prop.
 
-`Swap` sat after a name pinned to `Modifier.width(150.dp)`, so the button was parked at the same x
-whatever the name was and floated over empty space beside anything short. The name is
-`Modifier.weight(1f, fill = false)` now: it takes only the width it needs so Swap follows it, and a
-long name still ellipsizes at the weighted bound rather than pushing the button off the row. The
-buttons no longer line up with each other, which is the point — they belong to the names.
+The main step gets its own `loggedToday`, loaded for `todayISO` and deliberately NOT shared with
+the date picker's state: that follows whatever day is being browsed, and handing it to a card about
+today would prefill the wrong day the moment someone looked at another one.
+
+It is also gated on its own loading flag. The prefill is read once in a `useState` initialiser when
+the rows mount, so a card that mounts before the fetch returns captures nothing and never recovers.
+Toggling between the loading line and the plan unmounts and remounts it, which is what makes the
+home page work and what this copy was missing.
+
+### `\u2026` in JSX text
+
+Two "Loading logged weights\u2026" strings rendered the escape literally. Inside a JSX text node
+`\u2026` is six characters, not an ellipsis — only a JS string literal interprets it. `version.ts`
+records a fix for this exact class before, so it has now regressed once; `&hellip;` is used instead.
+
+### The attendance window advances
+
+Confirmed by simulation across several dates on both clients: the window is derived from
+`today` at render, so it rolls forward a week at a time and the oldest week falls off the left.
+Checked 2026-10-07 through 2027-06-30 — the current week is in range on every date tested, and the
+start advances exactly 7 days per week elapsed.
+
+## 2026-10 — Logged rows keep their fields (v0.561.0 / app 0.373.0)
+
+The compact "✓ bent over row — Logged" row goes away. It was a reasonable-looking idea and the
+wrong one: the reason you reopen a day is to see WHAT you lifted, and collapsing the row to a tick
+hid exactly that. A logged movement keeps its ordinary row with weight and reps prefilled and the
+button reading "Edit weight", which is how the phone has always behaved.
+
+Worth recording as a pattern, since this is the second time: "it is done, so show less" removed
+information at the moment it became most useful. Done is a reason to show the numbers, not to
+replace them with a word.
+
+### Compare orders by date, not by weight
+
+Sorting each person's bars lightest-to-heaviest made every lifter look like a neat staircase
+whatever actually happened. Chronological order shows the progression — including a week that went
+backwards, which is the part a tidy sort was quietly hiding.
+
+## 2026-10 — Today was the one day excluded from its own prefill (v0.560.0 / app 0.372.0)
+
+Adding `reps` to `loadLoggedWeights` in 0.559 changed nothing, because the fetch never ran for
+today. Both call sites were guarded:
+
+```ts
+if (logDate !== todayISO) { loadLoggedWeights(...) } else { setLoggedByPool({}); }
+```
+
+The launcher's comment said it outright — "already-logged weights for a BACK-DATED day". Today was
+deliberately excluded, so the one day you are most likely to be correcting was the only day whose
+fields came up blank, under a button offering to log it afresh. Both now fetch for the date being
+shown, today included.
+
+Worth noting how this hid: 0.559's change was real and correct, and verifying it by reading the
+query would have shown reps coming back. The thing that was broken sat one layer up, in a
+condition that decided whether to ask at all. A fix to the right function is still no fix when
+nothing calls it.
+
+### Compare tops out at the heaviest lift
+
+The plot ceiling was the ROUNDED top (`grid.yMax`), leaving headroom above the heaviest lift and
+then drawing lines into it — a solid one first, and after that was suppressed, a dotted one. The
+ceiling is now the tallest bar itself, and both tick lists are filtered to it. The top gets a
+labelled line only when it is a load someone would recognise; an odd number leaves the bar standing
+above the last line, which is honest.
+
+### Three, four, five muscle groups
+
+Three and four cut from the centre — thirds as wedges, four as true quadrants (`from 0deg`, so the
+boundaries land on the axes). Every piece meets in the middle, which is what keeps them legible at
+18px. Five or more would be slivers from a centre point, so those become equal vertical bands.
+Verified by rendering all six cases at 18px before shipping.
+
+## 2026-10 — The attendance grid never reached this week (v0.559.0 / app 0.371.0)
+
+Both clients built the window as `today - 111 days`, then snapped that start back to Sunday, then
+drew 16 weeks. Snapping moved the START earlier without moving the END, so the range finished at
+`today - dayOfWeek`. On a Wednesday it stopped the previous Saturday and today could not appear at
+all; only on a Sunday was it correct. Verified against 2026-10-07: the old window ran to Oct 3, the
+new one to Oct 10.
+
+Both now anchor to the current week and count back — `startOfWeek(today) - 15 weeks` — so the last
+column is always the week in progress.
+
+### Three or more muscle groups in a day
+
+Two reads best as a diagonal split and that stays. Three cannot extend it, and wedges or quarters
+in an 18px square turn to mud, so 3+ becomes equal vertical bands with hard stops. One rule that
+degrades predictably, and the change of grammar is itself a signal that the day holds more than two.
+
+### Prefilling a logged day
+
+`loadLoggedWeights` selected `poolExerciseId` and `weight` only. Reopening a logged day therefore
+filled in what was lifted but not how many times, under a button still offering to "Log weight" —
+for something plainly already in the boxes. It returns `{ weight, reps }` now, both prefill, and the
+button reads "Edit" when every movement in the workout is already recorded. The phone has behaved
+this way for a while; this is the web catching up.
+
+### Compare's top gridline
+
+Adding the rounded ceiling unconditionally put a 190 label on top of a 185 one when the tallest bar
+was itself a common load. It is only added when something actually rises above the highest labelled
+line.
 
 ## 2026-10 — Completion is identity, not a label (v0.557.0, shipped in v0.558.0)
 
@@ -2651,6 +5934,29 @@ keeps the same weakness.
 
 The general shape: a label is a rendering of a thing, not the thing. Any time two rows can carry
 the same label, matching on it is a coin flip that happens to be right while the data is sparse.
+
+The same mistake, one line further on: the logged row rendered `workout.name` — the muscle-group
+label again — so a Back card holding two logged plans read "Back / Back / Back". It names the
+movements now, falling back to the plan name only for HIIT and metric-only workouts, which have no
+movements to name.
+
+### Recent workouts excluded today
+
+`where: { userId, date: { lt: today } }`. Not a sync problem and not a caching problem: the web's
+history query asked for everything BEFORE today, so a session logged this morning could not appear
+in it however many times the page reloaded. The phone reads `loadWorkoutProgress`, a different
+query without that bound, which is exactly why the two disagreed — the phone was right. Now `lte`.
+
+### The overlay kept its scroll between steps
+
+The person card is one `overflow-y-auto` container with the steps swapped inside it. Scrolling down
+the menu to reach "Recent workouts" and opening it left the new screen at the old offset, which
+reads as the list opening at its bottom. A ref on the pane and a `scrollTo({ top: 0 })` on every
+step change.
+
+Not fixed because it is already fixed: the phone showing "Log weight" on an already-logged movement
+is 0.351.0 behaviour. Current code reads `block.logged -> "edit weight"`. That device needs the
+update, not a patch.
 
 ## 2026-10 — Gridlines, the rep floor, and the reset icon (v0.556.0 / app 0.370.0)
 

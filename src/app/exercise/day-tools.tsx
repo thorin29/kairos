@@ -17,7 +17,7 @@ import type { WarmupStep } from "@/lib/workouts/warmup-library";
 /**
  * The workout day's buttons (v0.813, like the app's): Train (the day's Family
  * WOD, Log another) and Tools (Timer, Routines, Calculator). Starting a walk
- * or run is the phone's (GPS). Log another is a page of five choices;
+ * or run is the phone's (GPS). Log another is a page of four choices;
  * Mobility, Stretching and Isometrics are under Routines.
  */
 type LogKind = "strength" | "sport" | "other";
@@ -25,12 +25,11 @@ type Page = "log" | "conditioning" | "cardio" | LogKind | "routines" | "timer" |
 
 const LOG_TITLE = { strength: "Strength", sport: "Sport", other: "Log a workout" } as const;
 
-const CHOICES: { key: "strength" | "cardio" | "sport" | "conditioning" | "other"; name: string; sub: string; Icon: typeof DumbbellIcon }[] = [
+const CHOICES: { key: "strength" | "cardio" | "sport" | "conditioning"; name: string; sub: string; Icon: typeof DumbbellIcon }[] = [
   { key: "strength", name: "Strength", sub: "Weights, sets and reps", Icon: DumbbellIcon },
   { key: "cardio", name: "Cardio", sub: "Run, row, ruck or bike · distance and time", Icon: RunIcon },
   { key: "sport", name: "Sport", sub: "Practice, game or open skate", Icon: HockeyIcon },
   { key: "conditioning", name: "Conditioning", sub: "Pick a WOD or make one, with the timer", Icon: BoltIcon },
-  { key: "other", name: "Something else", sub: "Search every movement", Icon: ChevronRightIcon },
 ];
 
 export function DayTools({
@@ -42,6 +41,7 @@ export function DayTools({
   logOther,
   addCardio,
   onFamilyWod,
+  hasFamilyWod,
 }: {
   userId: string;
   dateISO: string;
@@ -52,8 +52,9 @@ export function DayTools({
   logOther?: (kind: LogKind, onDone: () => void) => React.ReactNode;
   /** Cardio: the Cardio card's Add page. */
   addCardio?: (onDone: () => void, onBack: () => void) => React.ReactNode;
-  /** The day's Family WOD, when it has one. */
-  onFamilyWod?: () => void;
+  /** The Family WOD page (always a button, v0.813.1); `hasFamilyWod` says Today. */
+  onFamilyWod: () => void;
+  hasFamilyWod: boolean;
 }) {
   const [page, setPage] = useState<Page | null>(null);
   const done = () => {
@@ -64,7 +65,7 @@ export function DayTools({
   return (
     <div className="space-y-3">
       <ActionGroup kind="Train" title="Today">
-        {onFamilyWod && <ActionButton icon={PeopleIcon} label="Family WOD" sub="Today" onClick={onFamilyWod} />}
+        <ActionButton icon={PeopleIcon} label="Family WOD" sub={hasFamilyWod ? "Today" : undefined} onClick={onFamilyWod} />
         <ActionButton icon={PlusIcon} label="Log another" onClick={() => setPage("log")} primary />
       </ActionGroup>
       <ActionGroup kind="Tools" title="">
@@ -85,7 +86,7 @@ export function DayTools({
                 className="flex min-h-[4rem] w-full items-center gap-3.5 border-t border-hairline px-4 py-2.5 text-left hover:bg-ground"
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
-                  {c.key === "other" ? <span className="text-lg font-bold leading-none">···</span> : <c.Icon className="h-5 w-5" />}
+                  <c.Icon className="h-5 w-5" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[15px] font-semibold">{c.name}</span>
