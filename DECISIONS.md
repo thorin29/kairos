@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-11 — A stop at a zone without the zone (v0.813.2)
+
+- Five stops at home on Nov 23 were unnamed spots 2–14 m from the house:
+  their points carried no zone (Home Assistant hadn't reported Home yet, or
+  only for part of the stop). A stop with no zone whose middle is within
+  50 m (`ZONE_NEAR_M`) of a zone's learned centre now counts as that zone
+  (`zoneNear` in `zones.ts`, used by `loadDay`), for History and visits
+  alike. A stop added by hand keeps what it was given.
+
+## 2026-11 — Family WOD always a button; no Something else (v0.813.1, app 0.585.2)
+
+- The day's Family WOD tile shows every day (Today under it when the day has
+  one) and opens the Family WOD page, where a parent sets one and anyone can
+  suggest one: what Log another's Family WOD used to do.
+- Something else is gone from Log another: it opened the log form with every
+  category, all of which Strength, Cardio, Sport, Conditioning and Routines
+  already reach.
+
 ## 2026-11 — One timer, the workout day's buttons, tracked workouts by name (v0.813.0, app 0.585.0)
 
 - Every timer (Conditioning, warm-ups and routines, the each-side timer, the

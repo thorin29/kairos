@@ -7,7 +7,7 @@ import { dayEnd, dayStart } from "@/lib/places/day-bounds";
 import { MPS_TO_MPH, planDay, smoothPath, totalsOf, type DayPoint, type KnownPlace, type Leg } from "@/lib/places/day";
 import { snappedDrive } from "@/lib/places/roads";
 import { placeFor } from "@/lib/places/live";
-import { zoneCenters } from "@/lib/places/zones";
+import { zoneCenters, zoneNear } from "@/lib/places/zones";
 import { applyEdits, type AddedStop, type StopEdit } from "@/lib/places/day-edits";
 import { shortAddress } from "@/lib/places/geo";
 import type { DayData, DayItem, DayRemovedStop } from "@/lib/places/history-types";
@@ -94,8 +94,11 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
     if (it.kind === "stop") {
       n++;
       const added = "editId" in it ? (it as AddedStop) : null;
+      // In a zone by its points, or (v0.813.2) a few metres from a zone's
+      // centre when the phone didn't report one.
+      const zone = it.zone ?? (added ? null : zoneNear(centers, { lat: it.lat, lng: it.lng }));
       // A stop inside a zone is pinned at the zone's centre.
-      const centre = it.zone ? centers.get(it.zone) : undefined;
+      const centre = zone ? centers.get(zone) : undefined;
       const lat = centre?.lat ?? it.lat;
       const lng = centre?.lng ?? it.lng;
       items.push({
@@ -107,13 +110,13 @@ export async function loadDay(userId: string, dateISO: string, opts: { names: bo
         lng,
         place: added?.name
           ? { name: added.name, address: shortAddress(added.address), kind: "saved" }
-          : trip && !added && !it.zone && it.end.getTime() - it.start.getTime() >= CAMP_MS
+          : trip && !added && !zone && it.end.getTime() - it.start.getTime() >= CAMP_MS
             ? { name: "Camp", address: null, kind: "saved" }
             : opts.names
-            ? await placeFor(lat, lng, 30, userId, it.zone)
+            ? await placeFor(lat, lng, 30, userId, zone)
             : null,
         editId: added?.editId ?? null,
-        zone: it.zone ?? null,
+        zone,
         ...("lastSeen" in it && it.lastSeen ? { lastSeen: true } : {}),
       });
       continue;

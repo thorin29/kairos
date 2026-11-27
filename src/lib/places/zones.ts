@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { metres } from "@/lib/places/geo";
 
 /**
  * Where each Home Assistant zone really is, learned from the points phones
@@ -35,4 +36,22 @@ export async function zoneCenters(): Promise<Map<string, ZoneCenter>> {
   }
   cache = { at: now, centers };
   return centers;
+}
+
+/** How close a stop's middle must be to a zone's centre to count as in it
+ *  when the phone didn't say so (v0.813.2). */
+export const ZONE_NEAR_M = 50;
+
+/**
+ * The zone a stop is in when its points carried none (v0.813.2): Home
+ * Assistant can be slow to report a zone, so a stop a few metres from the
+ * house was an unnamed spot. Null when no zone's centre is that close.
+ */
+export function zoneNear(centers: Map<string, ZoneCenter>, p: ZoneCenter): string | null {
+  let best: { zone: string; d: number } | null = null;
+  for (const [zone, c] of centers) {
+    const d = metres(p, c);
+    if (d <= ZONE_NEAR_M && (!best || d < best.d)) best = { zone, d };
+  }
+  return best?.zone ?? null;
 }
