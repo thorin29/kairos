@@ -852,3 +852,42 @@ export function BoltIcon({ className = "h-5 w-5" }: IconProps) {
     </svg>
   );
 }
+
+/** Rower — rowing (v0.814). */
+export function RowIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 18h18M6 18l4-8 4 3 4-6" />
+      <circle cx="10" cy="6.5" r="1.6" />
+    </svg>
+  );
+}
+
+/** Bicycle — cycling (v0.814). */
+export function BikeIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="6" cy="16.5" r="3.5" />
+      <circle cx="18" cy="16.5" r="3.5" />
+      <path d="M6 16.5 10 9h5l3 7.5M10 9l2 7.5M13.5 6h2" />
+    </svg>
+  );
+}
+
+/** Jump rope (v0.814). */
+export function JumpRopeIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M6 3v5M18 3v5M6 8c0 10 12 10 12 0" />
+    </svg>
+  );
+}
+
+/** Heart — other cardio (v0.814). */
+export function HeartIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z" />
+    </svg>
+  );
+}

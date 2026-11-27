@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11 — The Cardio page's activity picker (v0.814.0, app 0.586.0)
+
+- Activities show as icon-over-name segments, ordered by the last time each
+  was done. Up to five done in the chart's twelve weeks are all buttons; past
+  that, or with any not done in those weeks, four buttons and More. More
+  opens a menu over the page (it never pushes the page down) with "Last 12
+  weeks" and "Older". With More picked, its button shows the activity.
+- An activity stays on the page forever (its history keeps it); only where
+  it sits changes. Ordering is client-side from each activity's `last.date`
+  and the first week's start: no API change.
+- Menus that pick from a list open over the page rather than expanding in
+  place, from here on.
+
 ## 2026-11 — A stop at a zone without the zone (v0.813.2)
 
 - Five stops at home on Nov 23 were unnamed spots 2–14 m from the house:

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Modal } from "./plan-file-panel";
 import { ChartTip, useChartTip } from "@/components/chart-tip";
+import { BackpackIcon, BikeIcon, HeartIcon, HikeIcon, HockeyIcon, JumpRopeIcon, RowIcon, RunIcon, WalkIcon } from "@/components/icons";
 import {
   clock,
   hoursText,
   split,
   type CardioActivity,
+  type CardioActivityKey,
   type CardioCharts,
   type ConditioningCharts,
   type ConditioningRepeat,
@@ -221,8 +223,9 @@ function PaceChart({ a }: { a: CardioActivity }) {
  * recent sessions. The same order as a lift's page.
  */
 export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () => void }) {
-  const [pick, setPick] = useState(data.activities[0]?.key);
-  const a = data.activities.find((x) => x.key === pick) ?? data.activities[0];
+  const ordered = orderActivities(data.activities);
+  const [pick, setPick] = useState(ordered.all[0]?.key);
+  const a = data.activities.find((x) => x.key === pick) ?? ordered.all[0];
   if (!a) return null;
   const per = a.pace?.per;
   const unitWord = a.measure === "min" ? "min" : a.measure;
@@ -231,23 +234,7 @@ export function CardioPage({ data, onClose }: { data: CardioCharts; onClose: () 
   return (
     <Modal title="Cardio" onClose={onClose}>
       <div className="space-y-4">
-        {data.activities.length > 1 && (
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Activity">
-            {data.activities.map((x) => (
-              <button
-                key={x.key}
-                type="button"
-                aria-pressed={x.key === a.key}
-                onClick={() => setPick(x.key)}
-                className={`inline-flex h-9 items-center rounded-full border px-3.5 text-xs font-semibold transition-colors ${
-                  x.key === a.key ? "border-accent bg-accent text-on-accent" : "border-hairline bg-surface hover:border-accent"
-                }`}
-              >
-                {x.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {data.activities.length > 1 && <ActivityPicker ordered={ordered} value={a.key} onPick={setPick} />}
         {a.pace && a.pace.points.length > 0 ? (
           <div className="rounded-xl border border-hairline bg-surface p-3">
             <div className="flex items-baseline justify-between">
@@ -536,5 +523,116 @@ export function ConditioningPage({ data, onClose }: { data: ConditioningCharts; 
         </Modal>
       )}
     </Modal>
+  );
+}
+
+const ACT_ICON: Record<CardioActivityKey, typeof RowIcon> = {
+  ROWING: RowIcon,
+  RUNNING: RunIcon,
+  RUCKING: BackpackIcon,
+  HIKING: HikeIcon,
+  WALKING: WalkIcon,
+  CYCLING: BikeIcon,
+  JUMP_ROPE: JumpRopeIcon,
+  CARDIO: HeartIcon,
+  SPORT: HockeyIcon,
+};
+
+/**
+ * The Cardio page's activities in order (v0.814): the ones done in the
+ * chart's twelve weeks, most recent first, then the older ones. Up to five
+ * recent ones are buttons; past that (or with any older one) four buttons and
+ * More, which opens over the page with the rest.
+ */
+function orderActivities(list: readonly CardioActivity[]) {
+  const from = list[0]?.weeks[0]?.start ?? "";
+  const byLast = (x: CardioActivity, y: CardioActivity) => (x.last.date < y.last.date ? 1 : -1);
+  const recent = list.filter((x) => x.last.date >= from).sort(byLast);
+  const older = list.filter((x) => x.last.date < from).sort(byLast);
+  const allFit = older.length === 0 && recent.length <= 5;
+  const shown = allFit ? recent : recent.slice(0, 4);
+  return { all: [...recent, ...older], shown, moreRecent: allFit ? [] : recent.slice(4), older };
+}
+
+function agoText(a: CardioActivity, today: string): string {
+  const weeks = Math.floor((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${a.last.date}T12:00:00Z`)) / (7 * 86_400_000));
+  return weeks <= 0 ? "This week" : weeks === 1 ? "1 wk ago" : `${weeks} wk ago`;
+}
+
+function ActivityPicker({ ordered, value, onPick }: { ordered: ReturnType<typeof orderActivities>; value: CardioActivityKey; onPick: (k: CardioActivityKey) => void }) {
+  const [open, setOpen] = useState(false);
+  const extra = [...ordered.moreRecent, ...ordered.older];
+  const pickedExtra = extra.find((x) => x.key === value);
+  const thisYear = new Date().getFullYear();
+  const today = new Date().toLocaleDateString("en-CA");
+  const seg = (on: boolean) =>
+    `flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[9px] px-1 pb-1 pt-1.5 text-[11px] font-semibold ${on ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"}`;
+  const row = (x: CardioActivity, sub: string) => {
+    const Icon = ACT_ICON[x.key];
+    return (
+      <button
+        key={x.key}
+        type="button"
+        role="menuitemradio"
+        aria-checked={x.key === value}
+        onClick={() => {
+          onPick(x.key);
+          setOpen(false);
+        }}
+        className={`flex min-h-[44px] w-full items-center gap-2.5 border-t border-hairline px-3 text-left text-sm hover:bg-ground ${x.key === value ? "font-semibold" : ""}`}
+      >
+        <Icon className="h-4 w-4 shrink-0 text-muted" />
+        <span className="min-w-0 flex-1 truncate">{x.label}</span>
+        <span className="text-xs text-muted">{sub}</span>
+      </button>
+    );
+  };
+  return (
+    <div className="relative">
+      <div className="flex gap-[3px] rounded-xl bg-ground p-[3px]" role="group" aria-label="Activity">
+        {ordered.shown.map((x) => {
+          const Icon = ACT_ICON[x.key];
+          return (
+            <button key={x.key} type="button" aria-pressed={x.key === value} onClick={() => onPick(x.key)} className={seg(x.key === value)}>
+              <Icon className={`h-[18px] w-[18px] ${x.key === value ? "text-accent" : ""}`} />
+              <span className="max-w-full truncate">{x.label}</span>
+            </button>
+          );
+        })}
+        {extra.length > 0 && (
+          <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} className={seg(!!pickedExtra)}>
+            {pickedExtra ? (
+              (() => {
+                const Icon = ACT_ICON[pickedExtra.key];
+                return <Icon className="h-[18px] w-[18px] text-accent" />;
+              })()
+            ) : (
+              <span className="flex h-[18px] items-center text-base leading-none">···</span>
+            )}
+            <span className="max-w-full truncate">{pickedExtra ? `${pickedExtra.label} ▾` : "More ▾"}</span>
+          </button>
+        )}
+      </div>
+      {open && (
+        <>
+          {/* Opens over the page (v0.814), not pushing it down. */}
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-hairline bg-surface shadow-lg">
+            {ordered.moreRecent.length > 0 && (
+              <>
+                <p className="px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted">Last 12 weeks</p>
+                {ordered.moreRecent.map((x) => row(x, agoText(x, today)))}
+              </>
+            )}
+            {ordered.older.length > 0 && (
+              <>
+                <p className={`px-3 py-2 text-[11px] font-bold uppercase tracking-[0.08em] text-muted ${ordered.moreRecent.length ? "border-t border-hairline" : ""}`}>Older</p>
+                {ordered.older.map((x) => row(x, Number(x.last.date.slice(0, 4)) === thisYear ? MONTH[Number(x.last.date.slice(5, 7)) - 1] : `${MONTH[Number(x.last.date.slice(5, 7)) - 1]} ${x.last.date.slice(0, 4)}`))}
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
