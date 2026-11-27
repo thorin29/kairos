@@ -152,8 +152,10 @@ export default async function Home({
       <main className="mx-auto max-w-7xl px-6 py-6">
         {/* The shared home (v0.801): person cards on the left, all one size;
             the family goal and today's schedule in a column on the right,
-            where only the schedule scrolls. */}
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+            where only the schedule scrolls. v0.814.1: the column ends where
+            the cards do (it's as tall as their rows; the schedule scrolls
+            inside), so the two bottoms line up. */}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
           <div className="min-w-0">
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -174,7 +176,8 @@ export default async function Home({
 
           </div>
 
-          <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:h-[calc(100dvh-7rem)]">
+          <aside className="relative min-w-0 lg:min-h-[24rem]">
+            <div className="flex flex-col gap-4 lg:absolute lg:inset-0">
             {/* Streamed, not awaited: the goal needs the progression query,
                 the heaviest read here. */}
             <Suspense fallback={<div className="h-[5.5rem] shrink-0 animate-pulse rounded-[18px] border border-hairline bg-surface" />}>
@@ -191,6 +194,7 @@ export default async function Home({
                 nextHref={`/?day=${addDays(scheduleDay, 1)}`}
                 todayHref={scheduleDay === today ? undefined : "/"}
               />
+            </div>
             </div>
           </aside>
         </div>

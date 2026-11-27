@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11 — Home's right column ends with the cards (v0.814.1)
+
+- The family goal and schedule column was the window's height (sticky), so it
+  ran past the person cards. It's now as tall as the cards' rows: the column's
+  content sits absolutely inside the grid cell, so it never makes the row
+  taller, and the schedule scrolls inside. At least 24rem when there's only
+  one row of cards. Phones are unchanged.
+
 ## 2026-11 — The Cardio page's activity picker (v0.814.0, app 0.586.0)
 
 - Activities show as icon-over-name segments, ordered by the last time each
