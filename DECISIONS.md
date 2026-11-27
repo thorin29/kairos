@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11 — The Timer button sets up on the timer's face (v0.815.0, app 0.587.0)
+
+- The Timer page was a form in a sheet, with its own look. It's now the
+  shared timer face idle (`TimerFace`, new `top` slot above the clock): the
+  six types as a 3×2 grid of icon tiles, the total on the clock with the
+  rounds under it, the length steppers in a panel below, and Start along
+  the bottom. Back, Sound and ⚙ are the timer's own, so a change of look
+  shows here too. The explanatory lines are gone.
+- Start opens the running timer already going (`autoStart` on
+  `ConditioningTimer`), so there's one Start, not two. Back from it returns
+  to the setup.
+- The warm-up timer shows Get ready above Rest between steps before Start
+  (`SecondChips`). It's the same setting as ⚙ Get ready; either place
+  changes both.
+
 ## 2026-11 — Home's right column ends with the cards (v0.814.1)
 
 - The family goal and schedule column was the window's height (sticky), so it

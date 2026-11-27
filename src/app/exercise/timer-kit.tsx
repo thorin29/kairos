@@ -205,7 +205,8 @@ export function timerInk(C: Palette, look: Look, state: TimerState): TimerInk {
  * The timer's screen. `progress` is how much of the current part is left
  * (0–1; null for a stopwatch, which shows a full ring). `bar` is the current
  * part and how many there are. `now` and `next` are what's being done and
- * what comes after. `children` sit under them (rounds, a result to log).
+ * what comes after. `children` sit under them (rounds, a result to log);
+ * `top` sits above the clock (the free Timer's types, v0.815).
  */
 export function TimerFace({
   family = false,
@@ -221,6 +222,7 @@ export function TimerFace({
   next,
   buttons,
   onBack,
+  top,
   children,
 }: {
   family?: boolean;
@@ -236,6 +238,7 @@ export function TimerFace({
   next?: string | null;
   buttons: TimerButton[];
   onBack: () => void;
+  top?: (ink: TimerInk) => ReactNode;
   children?: (ink: TimerInk) => ReactNode;
 }) {
   const C = usePalette();
@@ -275,6 +278,7 @@ export function TimerFace({
           </button>
         </header>
         <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 text-center">
+          {top?.(ink)}
           {caption && (
             <span className="text-sm" style={{ color: ink.soft }}>
               {caption}
@@ -485,6 +489,26 @@ export function TimerSettingsSheet({ settings, set, onClose }: { settings: Timer
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** A row of second choices on the timer face (0s, 5s, …), v0.815. */
+export function SecondChips({ options, value, ink, onPick }: { options: readonly number[]; value: number; ink: TimerInk; onPick: (v: number) => void }) {
+  return (
+    <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+      {options.map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={value === v}
+          onClick={() => onPick(v)}
+          className="min-h-[36px] min-w-[44px] rounded-full border text-sm font-semibold"
+          style={{ borderColor: value === v ? ink.text : ink.line, background: value === v ? ink.text : "transparent", color: value === v ? ink.bg : ink.soft }}
+        >
+          {v}s
+        </button>
+      ))}
     </div>
   );
 }

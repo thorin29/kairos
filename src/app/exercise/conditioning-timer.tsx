@@ -156,6 +156,7 @@ export function ConditioningTimer({
   family = false,
   custom,
   logging = true,
+  autoStart = false,
 }: {
   userId?: string;
   workout: TimerWorkout;
@@ -167,6 +168,8 @@ export function ConditioningTimer({
   family?: boolean;
   custom?: TimerPlan;
   logging?: boolean;
+  /** Begin at once: the free Timer's Start already chose to go (v0.815). */
+  autoStart?: boolean;
 }) {
   const plan = useMemo(
     () => custom ?? timerPlanFor(workout.type, workout.capSec, workout.movements.map((m) => m.name)),
@@ -267,6 +270,14 @@ export function ConditioningTimer({
       if (leadLeft > 0 && elapsed === 0) leadStart.current = performance.now() - (lead - leadLeft) * 1000;
     }
   };
+  const started = useRef(false);
+  useEffect(() => {
+    if (autoStart && !started.current) {
+      started.current = true;
+      start();
+    }
+    // Once, on open.
+  }, []);
   const pause = () => {
     if (phase === "run") base.current = base.current + (performance.now() - runStart.current) / 1000;
     setPhase("paused");

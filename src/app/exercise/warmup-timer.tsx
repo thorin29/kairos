@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { clockText } from "@/lib/workouts/timer";
+import { LEADS, clockText } from "@/lib/workouts/timer";
 import { WARMUP_GAPS, warmupAt, warmupIntervals, warmupSchedule, warmupTotal, type WarmupStep } from "@/lib/workouts/warmup-library";
 import { readPref, writePref } from "./conditioning-timer";
-import { TimerFace, useTimerCues, useTimerSettings, type TimerButton, type TimerState } from "./timer-kit";
+import { SecondChips, TimerFace, useTimerCues, useTimerSettings, type TimerButton, type TimerState } from "./timer-kit";
 
 type Phase = "idle" | "run" | "paused" | "done";
 
@@ -14,8 +14,9 @@ const GAP_KEY = "kairos.warmup.gap";
  * The warm-up countdown (v0.625; on the shared timer face v0.813): each
  * timed step after the one picked (both sides of an each-side step), a bar of
  * steps, now and next, 3-2-1 and a tone at each change, Reset, Pause and
- * Skip. Get ready, the side to start on and the pause between sides come from
- * Timer settings; the rest between steps is chosen here. The steps it ran are
+ * Skip. The side to start on and the pause between sides come from Timer
+ * settings; get ready (also in settings, v0.815) and the rest between steps
+ * are chosen here. The steps it ran are
  * ticked off at the end.
  */
 export function WarmupTimer({
@@ -30,7 +31,7 @@ export function WarmupTimer({
   onFinished: (stepIndexes: number[]) => void;
   onClose: () => void;
 }) {
-  const [settings] = useTimerSettings();
+  const [settings, setSettings] = useTimerSettings();
   const cues = useTimerCues(settings);
   const side = settings.rightFirst ? "right" : "left";
   const intervals = useMemo(() => warmupIntervals(steps, from, side), [steps, from, side]);
@@ -157,28 +158,28 @@ export function WarmupTimer({
       onBack={onClose}
     >
       {(ink) =>
-        phase === "idle" && intervals.length > 1 ? (
+        phase === "idle" ? (
           <>
             <span className="text-sm" style={{ color: ink.soft }}>
-              Rest between steps
+              Get ready
             </span>
-            <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
-              {WARMUP_GAPS.map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  aria-pressed={gap === v}
-                  onClick={() => {
+            <SecondChips options={LEADS} value={settings.lead} ink={ink} onPick={(v) => setSettings({ lead: v })} />
+            {intervals.length > 1 && (
+              <>
+                <span className="mt-3 text-sm" style={{ color: ink.soft }}>
+                  Rest between steps
+                </span>
+                <SecondChips
+                  options={WARMUP_GAPS}
+                  value={gap}
+                  ink={ink}
+                  onPick={(v) => {
                     setGap(v);
                     writePref(GAP_KEY, String(v));
                   }}
-                  className="min-h-[36px] min-w-[44px] rounded-full border text-sm font-semibold"
-                  style={{ borderColor: gap === v ? ink.text : ink.line, background: gap === v ? ink.text : "transparent", color: gap === v ? ink.bg : ink.soft }}
-                >
-                  {v}s
-                </button>
-              ))}
-            </div>
+                />
+              </>
+            )}
           </>
         ) : null
       }
