@@ -79,12 +79,13 @@ export function dayLabel(sessions: readonly { label: string; category: string | 
 }
 
 /** A rotation's session, "Arms · Dumbbell pump" (v0.815.4): listed as "Arms
- *  rotation", the workout leading the line under it, so the days read apart. */
+ *  rotation", with just the workout's name in the line under it (v0.815.5),
+ *  not its movements, so the days read apart at a glance. */
 const ROTATION_NAME = /^(Core|Arms|Isometric|Circuit|Carry) \u00b7 (.+)$/;
 export function asRotation(s: HistorySession): HistorySession {
   const m = ROTATION_NAME.exec(s.label.trim());
   if (!m) return s;
-  return { ...s, label: `${m[1]} rotation`, result: [m[2], s.result].filter(Boolean).join(" \u00b7 ") };
+  return { ...s, label: `${m[1]} rotation`, result: m[2] };
 }
 
 export function groupHistory(

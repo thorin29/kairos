@@ -14,7 +14,7 @@ describe("Recent: rotation days (v0.815.4)", () => {
     );
     const by = new Map(days.map((d) => [d.date, d]));
     expect(by.get("2026-11-25")?.label).toBe("Core rotation · Isometric rotation");
-    expect(by.get("2026-11-25")?.result).toBe("Hanging core · 4 movements · Rack pulls and holds");
+    expect(by.get("2026-11-25")?.result).toBe("Hanging core · Rack pulls and holds");
     expect(by.get("2026-11-21")?.label).toBe("Arms rotation");
     expect(by.get("2026-11-21")?.result).toBe("Dumbbell pump");
     // A plain Core entry isn't a rotation.
