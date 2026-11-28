@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11 — Recent lists rotation days by the rotation (v0.815.4)
+
+- A rotation's session is named "Arms · Dumbbell pump". In Recent, with the
+  program in front and several sessions joined, those days read alike.
+  `groupHistory` now lists one as "Arms rotation" (Core, Isometric, Circuit,
+  Carry the same) and puts the workout first in the line under it
+  (`asRotation`). The stored session names are unchanged; the web and the
+  app both take Recent from the server, so the app needs nothing.
+
 ## 2026-11 — Rotation days ahead show the workout due then (v0.815.3, app 0.589.0)
 
 - Seen: "Arms has been Dumbbell pump for three weeks; Core has been Hanging

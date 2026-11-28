@@ -78,6 +78,15 @@ export function dayLabel(sessions: readonly { label: string; category: string | 
   return { label: "", used: [] };
 }
 
+/** A rotation's session, "Arms · Dumbbell pump" (v0.815.4): listed as "Arms
+ *  rotation", the workout leading the line under it, so the days read apart. */
+const ROTATION_NAME = /^(Core|Arms|Isometric|Circuit|Carry) \u00b7 (.+)$/;
+export function asRotation(s: HistorySession): HistorySession {
+  const m = ROTATION_NAME.exec(s.label.trim());
+  if (!m) return s;
+  return { ...s, label: `${m[1]} rotation`, result: [m[2], s.result].filter(Boolean).join(" \u00b7 ") };
+}
+
 export function groupHistory(
   sessions: readonly HistorySession[],
   spans: readonly ProgramSpan[],
@@ -85,7 +94,8 @@ export function groupHistory(
 ): HistoryDay[] {
   const byDate = new Map<string, HistorySession[]>();
   const out: HistoryDay[] = [];
-  for (const s of sessions) {
+  for (const raw of sessions) {
+    const s = asRotation(raw);
     if (s.own && !s.isRest) {
       out.push({ id: s.id, ids: [s.id], date: s.date, label: s.label, result: s.result, isRest: false });
       continue;
