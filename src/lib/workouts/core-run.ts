@@ -22,6 +22,7 @@ import {
   type RotationKind,
   libraryKeyFor,
   plusDays,
+  rotationStepsAhead,
   stepCoreDay,
   switchesSides,
   type CoreDay,
@@ -397,4 +398,70 @@ export function coreDayView(
   return d
     ? { rotation: d.rotation, test: d.test, at: d.at, withTest: d.withTest, kind: rotationKindOf(d.kind) }
     : null;
+}
+
+/** The workout a rotation entry will hold on a day still to come (v0.815.3). */
+export type ProjectedRotation = {
+  name: string;
+  exercises: { poolExerciseId: string; metric: string; scheme: string; tracked: true; poolExercise: { name: string } }[];
+  core: CoreDay;
+};
+
+/**
+ * A rotation day ahead (v0.815.3): the entry holds the workout in place now,
+ * so a week ahead would show it again. Counting on each one being done in
+ * turn, the workout due on `dayISO` is the one in place plus a step for each
+ * week after the one it's done on (its logged day if already done, else its
+ * next weekday from today). Null when it's still the one in place.
+ */
+export async function projectedRotation(
+  userId: string,
+  dayISO: string,
+  raw: unknown,
+  plannedIds: string[],
+  today: string = todayISO(),
+): Promise<ProjectedRotation | null> {
+  const day = cleanCoreDay(raw, today);
+  if (!day || dayISO <= today) return null;
+  const logged = await loggedDays(userId, plannedIds, day.since, plusDays(today, 1));
+  const ahead = rotationStepsAhead(dayISO, logged, today);
+  if (ahead <= 0) return null;
+  let at = (day.at + ahead) % day.rotation.length;
+  let workout: CoreWorkout | null = null;
+  for (let i = 0; i < day.rotation.length; i++) {
+    workout = await coreWorkoutFor(userId, day.rotation[(at + i) % day.rotation.length]);
+    if (workout) {
+      at = (at + i) % day.rotation.length;
+      break;
+    }
+  }
+  if (!workout) return null;
+  const kind = rotationKindOf(day.kind);
+  // The month's test on the first such day of a month it isn't done in yet.
+  const month = dayISO.slice(0, 7);
+  const withTest =
+    hasRotationTest(kind) && day.test && day.testedMonth !== month && (Number(dayISO.slice(8, 10)) <= 7 || month === today.slice(0, 7));
+  const moves = await resolveMoves(userId, coreDayMoves(workout, withTest, kind));
+  return {
+    name: coreDayName(workout, kind),
+    exercises: moves.map((m) => ({ poolExerciseId: m.poolExerciseId, metric: coreMetric(m), scheme: coreScheme(m), tracked: true, poolExercise: { name: m.name } })),
+    core: { ...day, at, withTest },
+  };
+}
+
+/** A movement's planned sets on a rotation day ahead (v0.815.3), for its
+ *  read-only preview: the projected workout isn't in the plan yet. */
+export async function projectedSlotScheme(userId: string, dateISO: string, slot: string): Promise<{ scheme: string; muscleGroup: string | null } | null> {
+  if (dateISO <= todayISO()) return null;
+  const rows = (await prisma.plannedWorkout.findMany({
+    where: { userId, dayOfWeek: dayOfWeek(dateISO) },
+    select: { core: true, muscleGroup: true, exercises: { select: { poolExerciseId: true } } },
+  })) as { core: unknown; muscleGroup: string | null; exercises: { poolExerciseId: string }[] }[];
+  for (const r of rows) {
+    if (r.core == null) continue;
+    const next = await projectedRotation(userId, dateISO, r.core, r.exercises.map((x) => x.poolExerciseId));
+    const hit = next?.exercises.find((x) => x.poolExerciseId === slot);
+    if (hit) return { scheme: hit.scheme, muscleGroup: r.muscleGroup };
+  }
+  return null;
 }

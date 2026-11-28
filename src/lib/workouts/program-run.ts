@@ -12,7 +12,7 @@ import { applyLibrary, loadEquipment } from "@/lib/workouts/library-run";
 import { routineFor, routinesFor } from "@/lib/workouts/warmup-run";
 import { cleanVersion, setupDiffers, type ProgramVersion } from "@/lib/workouts/program-version";
 import { extraSlotFor } from "@/lib/workouts/day-extras-run";
-import { setCoreDay } from "@/lib/workouts/core-run";
+import { projectedSlotScheme, setCoreDay } from "@/lib/workouts/core-run";
 import { hasRotationTest, rotationKindOf, rotationLibrary } from "@/lib/workouts/core-library";
 import {
   ENDURANCE_CARDIO,
@@ -1573,7 +1573,10 @@ export async function plannedSlotFor(
   if (r) return { scheme: r.scheme, programRole: r.programRole, muscleGroup: r.plannedWorkout.muscleGroup, programId: r.plannedWorkout.programId };
   // An isometric workout added to the day (v0.667) brings its own sets.
   const extra = await extraSlotFor(userId, dateISO, slot);
-  return extra ? { scheme: extra, programRole: null, muscleGroup: null } : null;
+  if (extra) return { scheme: extra, programRole: null, muscleGroup: null };
+  // A rotation day ahead (v0.815.3): the workout it will hold then.
+  const ahead = await projectedSlotScheme(userId, dateISO, slot);
+  return ahead ? { scheme: ahead.scheme, programRole: null, muscleGroup: ahead.muscleGroup } : null;
 }
 
 /** "Nov 3" for a saved plan's name. */

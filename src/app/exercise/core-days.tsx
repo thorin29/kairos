@@ -398,7 +398,11 @@ export function CorePlanLine({ userId, pool, workout }: { userId: string; pool: 
         }}
         className="mt-0.5 block text-left text-xs font-semibold text-accent"
       >
-        {workout.name.replace(/^(Core|Arms|Isometric) · /, "") || label} ›
+        {/* Where it is in the order (v0.815.3): reads as a rotation. */}
+        {workout.name.includes(" · ")
+          ? `Up now: ${workout.name.slice(workout.name.indexOf(" · ") + 3)} · ${core.at + 1} of ${core.rotation.length}`
+          : label}{" "}
+        ›
       </button>
       {open && (
         <Modal title={`${label} rotation`} onClose={() => setOpen(false)}>

@@ -56,7 +56,7 @@ import { isWeightedHold } from "@/lib/workouts/library";
 import type { Suggestion } from "@/lib/workouts/suggest";
 import type { HeatMap } from "@/lib/workouts/heat";
 import { loadHeat } from "@/lib/workouts/heat-run";
-import { coreDayView, coreWorkoutsFor, syncCoreDays } from "@/lib/workouts/core-run";
+import { coreDayView, coreWorkoutsFor, projectedRotation, syncCoreDays } from "@/lib/workouts/core-run";
 import { isExtraId } from "@/lib/workouts/day-extras";
 import { dayExtrasFor, extraPlanRows } from "@/lib/workouts/day-extras-run";
 import { aboutWithBellNote } from "@/lib/workouts/bells";
@@ -664,7 +664,13 @@ export async function loadTodayPlannedWorkouts(
   // rotation's CURRENT workout, so a past day would show this week's workout
   // and read as not done. When that day logged another workout of the
   // rotation, the entry is that workout, as it was logged.
-  const plans = dayISO < todayISO() ? await asLoggedRotation(userId, dayISO, withExtraRows) : withExtraRows;
+  // A rotation day ahead (v0.815.3): the workout it will hold then, not now's.
+  const plans =
+    dayISO < todayISO()
+      ? await asLoggedRotation(userId, dayISO, withExtraRows)
+      : dayISO > todayISO()
+        ? await asProjectedRotation(userId, dayISO, withExtraRows)
+        : withExtraRows;
 
   // The day's skips and its sessions, read once for every plan below.
   const day = toDateColumn(dayISO);
@@ -3349,6 +3355,25 @@ async function asLoggedRotation<P extends { id: string; name: string; category: 
     const core = { ...(p.core as Record<string, unknown>), test: false, withTest: false };
     return { ...p, name: done.name as string, exercises, core, asLogged: true };
   });
+}
+
+/** Rotation entries on a day still to come (v0.815.3), as `projectedRotation`. */
+async function asProjectedRotation<P extends { id: string; name: string; core?: unknown; exercises: unknown[] }>(
+  userId: string,
+  dayISO: string,
+  plans: P[],
+): Promise<P[]> {
+  const out: P[] = [];
+  for (const p of plans) {
+    if (!p.core) {
+      out.push(p);
+      continue;
+    }
+    const ids = (p.exercises as { poolExerciseId: string }[]).map((x) => x.poolExerciseId);
+    const next = await projectedRotation(userId, dayISO, p.core, ids);
+    out.push(next ? { ...p, name: next.name, exercises: next.exercises, core: next.core } : p);
+  }
+  return out;
 }
 
 /** The day's pause as a line, or null (v0.678). */

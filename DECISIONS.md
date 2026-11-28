@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-11 — Rotation days ahead show the workout due then (v0.815.3, app 0.589.0)
+
+- Seen: "Arms has been Dumbbell pump for three weeks; Core has been Hanging
+  core every Wednesday." The logs showed both rotating in order every week
+  (EZ bar classic → Dumbbell pump; Core strength → Rotation and power →
+  Bodyweight core → Hanging core). What didn't move was the preview: a
+  rotation entry holds the workout in place now (`syncCoreDays` steps it a
+  week after the log), so every day ahead showed that one again.
+- `projectedRotation` works out the workout due on a day ahead, counting on
+  each being done in turn: a step a week from the day the one in place was
+  logged, or from its next weekday when it isn't done yet
+  (`rotationStepsAhead`, tested). The month's test shows on the first such
+  day of a month it isn't done in. `loadTodayPlannedWorkouts` uses it for
+  days ahead (as `asLoggedRotation` does for days past), and
+  `plannedSlotFor` falls back to it so a projected movement's preview has
+  its planned sets.
+- Your plan names the entry "<Kind> rotation" and its link "Up now: <workout>
+  · 2 of 7", so it reads as a rotation rather than one fixed workout.
+
 ## 2026-11 — A slow walk isn't a stop when the phone says it was moving (v0.815.2)
 
 - Seen: a dog walk, 8 minutes inside the 120 m stop radius, came out as a

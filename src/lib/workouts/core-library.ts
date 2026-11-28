@@ -492,3 +492,18 @@ export const testTitleFor = (kind: RotationKind) => (kind === "iso" ? "Monthly t
 /** The plan entry's name: "Core · Hanging core", "Arms · EZ bar classic". */
 export const coreDayName = (workout: CoreWorkout | null, kind: RotationKind = "core") =>
   workout ? `${rotationLabel(kind)} · ${workout.name}`.slice(0, 40) : rotationLabel(kind);
+
+/**
+ * How many workouts on from the one in place a rotation day ahead is
+ * (v0.815.3), counting on each being done in turn: a week a step, from the
+ * day the one in place was logged on (its weekday, since it went in place),
+ * else from its next weekday from today. `loggedOn` may hold any weekday.
+ */
+export function rotationStepsAhead(dayISO: string, loggedOn: readonly string[], todayISO: string): number {
+  const wd = (iso: string) => new Date(`${iso}T12:00:00Z`).getUTCDay();
+  const dow = wd(dayISO);
+  const logged = loggedOn.filter((d) => wd(d) === dow && d <= todayISO).sort();
+  let base = logged[logged.length - 1] ?? todayISO;
+  if (!logged.length) while (wd(base) !== dow) base = plusDays(base, 1);
+  return Math.max(0, Math.round((Date.parse(`${dayISO}T12:00:00Z`) - Date.parse(`${base}T12:00:00Z`)) / (7 * 86_400_000)));
+}
