@@ -14,6 +14,25 @@ const p = (m: number, min: number, speed: number | null = null, acc = 10): DayPo
 });
 
 describe("planDay", () => {
+  // A slow dog walk (v0.815.1): 8 minutes inside 120 m, the phone reading
+  // 1 m/s on about half its reports, as Home Assistant sent it.
+  const dogWalk = (from: number, startMin: number): DayPoint[] =>
+    Array.from({ length: 20 }, (_, k) => p(from + k * 5, startMin + k * 0.4, k % 2 === 0 ? 1 : 0, 9));
+
+  it("doesn't make a stop of a slow walk the phone says was moving", () => {
+    const home = (m: number, min: number): DayPoint => ({ ...p(m, min, 0), zone: "Home" });
+    const pts = [home(0, 0), home(5, 60), home(0, 120), ...dogWalk(300, 121), home(0, 135), home(5, 200)];
+    const stops = planDay(pts, at(0)).items.filter((i) => i.kind === "stop");
+    expect(stops.every((st) => st.kind === "stop" && st.zone === "Home")).toBe(true);
+  });
+
+  it("still makes a stop where the phone reads 0", () => {
+    const still = Array.from({ length: 20 }, (_, k) => p(3000 + (k % 3) * 5, 60 + k * 0.5, k === 7 ? 1 : 0, 9));
+    const pts = [p(0, 0), p(0, 30), p(1500, 45, 12), ...still, p(1500, 80, 12), p(0, 95), p(0, 120)];
+    const kinds = planDay(pts, at(0)).items.map((i) => i.kind);
+    expect(kinds.filter((k) => k === "stop")).toHaveLength(3);
+  });
+
   it("is empty with no points", () => {
     expect(planDay([], at(0)).items).toEqual([]);
   });

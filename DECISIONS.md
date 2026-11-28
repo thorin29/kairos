@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-11 — A slow walk isn't a stop when the phone says it was moving (v0.815.2)
+
+- Seen: a dog walk, 8 minutes inside the 120 m stop radius, came out as a
+  stop at a neighbour's address. Home Assistant's points over those minutes
+  read 1 m/s on 11 of 19 reports, at 4–11 m accuracy; at home before and
+  after they read 0 on all but one sharp report. `planDay` now skips the
+  5-minute stop rule for a cluster when at least 40% of its outdoor-sharp
+  reports (accuracy 20 m or better, at least four) read 0.95 m/s or more
+  (`walkingSlowly`). Not in a zone or at a known place, where standing
+  about is a stop anyway. Indoor fixes are fuzzier than 20 m, so wandering
+  a big store still counts as a stop.
+
+## 2026-11 — A tracked walk wins over Home Assistant's stops (v0.815.1, app 0.588.0)
+
+- Seen: a slow walk with the dog, tracked from Workouts. Home Assistant's
+  points stayed within 120 m long enough that "home" ran 13 minutes into the
+  walk and a neighbour's address showed as an 8-minute stop. A tracked
+  workout already replaced the trips in its time; now `withWorkouts` also
+  trims any stop it overlaps to the time outside it, splits one it sits
+  inside, and drops one that was all inside. Stops the family added stay.
+- Each trip in the timeline shows its start and end under the line, in the
+  stops' style.
+- App: a planned workout on a day still to come (Arms, Core, …) opens
+  read-only like a single movement's preview (v0.527): planned sets and
+  weights, "Preview · <day>" under the title, no Skip/Timer/Log bar, no Add
+  set or how-did-it-feel, and Back saves nothing.
+
 ## 2026-11 — The Timer button sets up on the timer's face (v0.815.0, app 0.587.0)
 
 - The Timer page was a form in a sheet, with its own look. It's now the

@@ -588,6 +588,10 @@ export function HistoryView({
                   {minutes(it.start, it.end)} · {miles(it.distanceM)}
                   {it.topMph != null && it.motion !== "walk" ? ` · top ${it.topMph} mph` : ""}
                 </span>
+                {/* When it started and ended (v0.815.1), like a stop's times. */}
+                <span className="block font-mono text-xs text-muted">
+                  {time(it.start)} – {time(it.end)}
+                </span>
                 {canEdit && (
                   // On the dashed line between the two stops: a small + and pin
                   // in the person's colour, softer until hovered or tapped; the

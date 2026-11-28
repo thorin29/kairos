@@ -57,7 +57,7 @@ describe("withWorkouts", () => {
     snapped: false, distanceM: 900, topMph: null, raw: [], times: [],
   });
 
-  it("replaces the trips recorded during the run and keeps the stops", () => {
+  it("replaces the trips and stops recorded during the run", () => {
     const items = [stop(1, -60, -1), leg(0, 14), stop(2, 15, 16), leg(16, 30), stop(3, 31, 90)];
     const w = {
       activity: "run",
@@ -67,8 +67,40 @@ describe("withWorkouts", () => {
       path: [[10, 20, S], [10.02, 20, S + 1_200_000]] as [number, number, number][],
     };
     const out = withWorkouts(items, [w]);
-    expect(out.map((i) => (i.kind === "stop" ? "stop" : i.motion))).toEqual(["stop", "workout", "stop", "stop"]);
+    expect(out.map((i) => (i.kind === "stop" ? "stop" : i.motion))).toEqual(["stop", "workout", "stop"]);
     const run = out[1];
     expect(run.kind !== "stop" && run.activity).toBe("Run");
+  });
+
+  const walk = (a: number, b: number) => ({
+    activity: "walk",
+    startAt: new Date(iso(a)),
+    endAt: new Date(iso(b)),
+    distanceM: 800,
+    path: [[10, 20, S], [10.01, 20, S + 600_000]] as [number, number, number][],
+  });
+
+  it("trims a stop that runs into a slow walk (v0.815.1)", () => {
+    // Home Assistant kept "home" going 13 minutes into the walk, and saw a
+    // stop at a neighbour's while the dog sniffed.
+    const items = [stop(1, -60, 13), leg(13, 14), stop(2, 14, 22), leg(22, 23), stop(3, 23, 90)];
+    const out = withWorkouts(items, [walk(0, 22)]);
+    expect(out.map((i) => i.kind === "stop" ? `stop ${i.start}–${i.end}` : i.motion)).toEqual([
+      `stop ${iso(-60)}–${iso(0)}`,
+      "workout",
+      "walk",
+      `stop ${iso(23)}–${iso(90)}`,
+    ]);
+  });
+
+  it("splits a stop a short walk sat inside, and keeps an added stop", () => {
+    const added: DayItem = { ...stop(2, 5, 5), editId: "e1" };
+    const out = withWorkouts([stop(1, -60, 90), added], [walk(0, 20)]);
+    const stops = out.filter((i) => i.kind === "stop");
+    expect(stops.map((i) => [i.start, i.end])).toEqual([
+      [iso(-60), iso(0)],
+      [iso(20), iso(90)],
+      [iso(5), iso(5)],
+    ]);
   });
 });

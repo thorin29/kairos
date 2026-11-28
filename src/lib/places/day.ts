@@ -171,6 +171,22 @@ function atKnownPlace(cluster: DayPoint[], known: KnownPlace[]): boolean {
   return known.some((k) => metres(c, k) <= k.radiusM);
 }
 
+/** A slow walk (a dog that sniffs every mailbox) can stay inside the stop
+ *  radius for five minutes. The phone's own speed tells: at a real stop it
+ *  reads 0 nearly every time; walking outdoors it reads 1 m/s on 40% of
+ *  reports or more (58% on the walk this came from, v0.815.1). Only outdoor-sharp fixes count (indoors, in a
+ *  big store, they're fuzzier), at least four, and never in a zone or at a
+ *  known place, where standing about is a stop anyway. */
+const WALK_SPEED_MPS = 0.95;
+const WALK_SHARE = 0.4;
+const OUTDOOR_M = 20;
+function walkingSlowly(cluster: DayPoint[], known: KnownPlace[]): boolean {
+  if (mainZone(cluster) || atKnownPlace(cluster, known)) return false;
+  const sharp = cluster.filter((p) => p.speed != null && p.accuracyM != null && p.accuracyM <= OUTDOOR_M);
+  if (sharp.length < 4) return false;
+  return sharp.filter((p) => (p.speed ?? 0) >= WALK_SPEED_MPS).length >= sharp.length * WALK_SHARE;
+}
+
 export function planDay(
   points: DayPoint[],
   dayStart: Date,
@@ -194,7 +210,7 @@ export function planDay(
     const lastOfDay = j >= pts.length;
     // The newest place someone is still at counts as a stop even if short.
     const isStop =
-      span >= STOP_MIN_MS ||
+      (span >= STOP_MIN_MS && !walkingSlowly(cluster, known)) ||
       (lastOfDay && cluster.length >= 2 && items.length > 0 && span > 0) ||
       // A quick stop at a zone or known place (a drop-off), but not just
       // driving through it: at least a minute, two reports, nobody speeding.
